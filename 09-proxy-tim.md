@@ -32,7 +32,43 @@ Conteneur LXC **201**, Debian 13, nginx 1.26.3. Migré depuis le VPS
 
 ---
 
+## La bascule DNS n'est pas faite — le proxy ne reçoit pas la production
+
+⚠️ Constat du 24/08/2026, vérifié sur les serveurs autoritaires (`ns17.ovh.net`,
+`ns102.ovh.net`) : **aucun nom public ne pointe encore sur `57.130.34.122`**.
+
+| Nom | DNS réel (Internet) | TTL |
+|---|---|---|
+| `pacs-secours.teleimagerie.net` | `51.75.203.20` — **ancien VPS** | 3600 |
+| `syngo.teleimagerie.net` | `51.75.203.20` — **ancien VPS** | 60 |
+| `syngo-via.teleimagerie.net` | `37.61.243.246` — **TSplus direct** | 60 |
+| `syngo-via.isoteam.mn` | `37.61.243.246` — **TSplus direct** | — |
+| `syngo.isoteam.mn` | **aucun enregistrement** | — |
+
+La production passe donc toujours par l'ancien VPS (`pacs-secours`, `syngo.*`)
+ou en direct (`syngo-via.*` → TSplus). Le proxy est prêt et vérifié conforme,
+mais ne voit que le trafic des machines dont le fichier hosts force les noms
+vers `57.130.34.122` — celles utilisées pour les tests
+([07-pieges.md](07-pieges.md#30-le-fichier-hosts-windows-fausse-tout-diagnostic-dns-sous-wsl2)).
+
+### Checklist pour le jour de la bascule
+
+1. Abaisser le TTL de `pacs-secours` (3600 → 60) au moins une heure avant.
+2. Vérifier que le relais ACME du port 80 vers TSplus répond
+   (commande dans [Diagnostic](#diagnostic)) : sans lui, le renouvellement
+   du certificat TSplus casse silencieusement.
+3. Basculer les enregistrements A vers `57.130.34.122`.
+4. Contrôler : certificat présenté par nom ([Diagnostic](#diagnostic)),
+   session RemoteApp réelle (chemin sans SNI), paires de lignes du relais dans
+   `stream_access.log`, IP réelles des clients dans les logs `pacs-secours`.
+5. Après stabilisation : décommissionner l'ancien VPS et remonter le TTL.
+
+---
+
 ## Ce qui est publié
+
+Ce que le proxy est **configuré** pour servir — voir ci-dessus pour ce qu'il
+reçoit réellement tant que la bascule DNS n'est pas faite.
 
 | Nom | Traitement | Destination |
 |---|---|---|
@@ -157,7 +193,14 @@ besoin, à évaluer séparément.
 ### `sites-available/syngo.teleimagerie.net.conf`
 
 Redirections 301 de `syngo.*` vers `syngo-via.*`, avec nos propres certificats,
-plus un bloc port 80 pour les quatre noms.
+plus deux blocs port 80 (scindés le 24/08/2026) :
+
+- `syngo.*` : redirection https, défis ACME servis localement ;
+- `syngo-via.*` : **les défis ACME sont relayés vers TSplus**
+  (`proxy_pass http://37.61.243.246`). C'est ce qui permettra à TSplus de
+  continuer à renouveler lui-même ses certificats après la bascule DNS, le
+  HTTP-01 de Let's Encrypt arrivant alors sur le proxy et non plus chez lui.
+  Sans ce relais, son renouvellement casserait silencieusement le jour J.
 
 Pourquoi rediriger plutôt que servir : en relais TLS c'est **le certificat de
 TSplus** qui est présenté, et il ne couvre que les noms `syngo-via.*`.
@@ -180,31 +223,64 @@ OPNsense ne mentionne plus aucun port 3389.
 
 ## Certificats
 
-Relevé sur le conteneur le 14/08/2026 (`openssl x509 -noout -enddate -ext
-subjectAltName`) :
+Relevé du 24/08/2026 :
 
-| Certificat | Emplacement | Noms (SAN) | Échéance |
-|---|---|---|---|
-| `pacs-secours` | `/etc/letsencrypt/live/pacs-secours.teleimagerie.net/` | `pacs-secours.teleimagerie.net` | **17/10/2026** |
-| `syngo-teleimagerie` | `/etc/nginx/certs/syngo-teleimagerie/` | `syngo.teleimagerie.net`, `syngo-via.teleimagerie.net` | **10/11/2026** |
-| `syngo-isoteam` | `/etc/nginx/certs/syngo-isoteam/` | `syngo.isoteam.mn`, `syngo-via.isoteam.mn` | **10/11/2026** |
+| Certificat | Emplacement | Noms (SAN) | Échéance | Renouvelé par |
+|---|---|---|---|---|
+| TSplus | sur le serveur TSplus | `syngo-via.teleimagerie.net`, `syngo-via.isoteam.mn` | **03/11/2026** | TSplus lui-même (Let's Encrypt intégré, HTTP-01) |
+| `pacs-secours` | `/etc/letsencrypt/live/pacs-secours.teleimagerie.net/` | `pacs-secours.teleimagerie.net` | **17/10/2026** | certbot du conteneur (`certbot.timer`) |
+| `syngo-teleimagerie` | `/etc/nginx/certs/syngo-teleimagerie/` | `syngo.teleimagerie.net`, `syngo-via.teleimagerie.net` | **22/11/2026** | acme.sh sur pve1, déployé automatiquement |
+| `syngo-isoteam` | `/etc/nginx/certs/syngo-isoteam/` | `syngo.isoteam.mn`, `syngo-via.isoteam.mn` | **10/11/2026** | idem |
 
-Les certificats `syngo` ne servent qu'aux **redirections 301** — le relais présente
-celui de TSplus.
+**Le proxy ne gère aucun certificat pour `syngo-via.*`** : ces noms sont en
+relais TLS brut, c'est TSplus qui présente et renouvelle le sien. Les SAN
+`syngo-via.*` des certificats locaux sont un sous-produit de leur émission
+groupée — seuls les noms `syngo.*` (redirections 301) les utilisent.
 
-> **Résidu à nettoyer** : `/etc/letsencrypt/live/syngo.teleimagerie.net/`
-> (échéance 05/10/2026, SAN `syngo.teleimagerie.net` seul) n'est **référencé par
-> aucune configuration nginx**. C'est un vestige de la migration, que certbot
-> continuera de renouveler pour rien. À supprimer avec
-> `certbot delete --cert-name syngo.teleimagerie.net`.
+### Renouvellement automatisé depuis pve1 — mis en place le 24/08/2026
 
-Émis par **DNS-01 depuis pve1** (`/opt/acme`), délibérément : la clé API OVH donne
-un droit d'écriture sur toute la zone et n'a pas à séjourner sur une machine
-exposée à Internet.
+pve1 n'avait **aucun automate** (ni cron — le paquet n'est pas installé — ni
+timer) : les certs syngo seraient morts le 10/11/2026 sans que rien ne les
+renouvelle, et sans mécanisme pour les pousser vers le conteneur. Désormais :
 
-**Après bascule DNS**, tous les noms pointeront ici et le renouvellement pourra
-passer en HTTP-01 depuis le conteneur, sans aucune clé. C'est la transition à
-faire, avec le retrait d'acme.sh de pve1.
+- timer systemd **`acme-renew.timer`** sur pve1 (quotidien, ~03h17 UTC) lance
+  `acme.sh --cron --home /opt/acme` ;
+- à chaque renouvellement, acme.sh pose les fichiers dans
+  `/opt/acme/deployed/<nom>/` puis exécute **`/opt/acme/deploy-syngo.sh`**
+  (hook enregistré par `--install-cert`, copie archivée dans
+  [scripts/deploy-syngo.sh](scripts/deploy-syngo.sh)), qui les copie en scp vers
+  `root@10.40.0.10:/etc/nginx/certs/<nom>/` et recharge nginx après `nginx -t`.
+  La cible est l'IP du CT, pas un nœud : insensible aux bascules HA. La clé
+  publique de root@pve1 a été ajoutée aux `authorized_keys` du conteneur ;
+- chaîne testée de bout en bout le 24/08 (`--renew --force` sur
+  `syngo.teleimagerie.net` : émission DNS-01, déploiement, reload — d'où son
+  échéance décalée au 22/11).
+
+L'émission reste en **DNS-01 depuis pve1** (`/opt/acme`), délibérément : la clé
+API OVH donne un droit d'écriture sur toute la zone et n'a pas à séjourner sur
+une machine exposée à Internet. Passer en HTTP-01 local au conteneur après la
+bascule DNS resterait possible, mais n'a plus d'intérêt : l'automate est en
+place et la clé ne quitte pas pve1.
+
+> Le résidu `/etc/letsencrypt/live/syngo.teleimagerie.net/` signalé ici a été
+> **supprimé le 24/08/2026** (`certbot delete`). Ne restent sous certbot que
+> les fichiers de `pacs-secours`.
+
+---
+
+## Incident : certificat TSplus expiré (19–24/08/2026)
+
+Du 19 au 24/08, TSplus a présenté un certificat **expiré** aux utilisateurs
+(qui le joignent en direct, la bascule DNS n'étant pas faite). Il avait
+pourtant **renouvelé avec succès le 05/08** — son HTTP-01 fonctionne tant que
+le DNS pointe droit sur lui — mais servait toujours l'ancien : le
+renouvellement n'active pas le nouveau certificat tant que le serveur web
+TSplus n'est pas relancé. La réinitialisation du certificat dans l'AdminTool le
+24/08 a activé le bon (échéance 03/11/2026), vérifié ensuite sur tous les
+chemins : direct, via le proxy avec chaque SNI, et sans SNI.
+
+Leçon : surveiller l'échéance **présentée sur le fil** (`openssl s_client`),
+pas la date du dernier renouvellement — les deux peuvent diverger.
 
 ---
 
@@ -222,6 +298,11 @@ echo | openssl s_client -connect 57.130.34.122:443 -servername <nom> 2>/dev/null
 # simuler le client RDP (sans SNI) : doit rendre le certificat TSplus
 echo | openssl s_client -connect 57.130.34.122:443 -noservername 2>/dev/null \
      | openssl x509 -noout -subject
+
+# le relais ACME du port 80 vers TSplus : la réponse doit venir de TSplus
+# (302 vers https), pas un 404 local
+curl -sS -o /dev/null -w '%{http_code}\n' -H 'Host: syngo-via.teleimagerie.net' \
+     http://57.130.34.122/.well-known/acme-challenge/test
 ```
 
 **Lire `stream_access.log`** : chaque connexion relayée y apparaît deux fois — une

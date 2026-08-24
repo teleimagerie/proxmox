@@ -33,7 +33,23 @@ Ce qui reste ouvert sur le sujet :
 
 ---
 
-## 2. Abonnement Proxmox
+## 2. Bascule DNS vers `proxy-tim`
+
+La migration du 12/08 a préparé le proxy, mais **les enregistrements DNS n'ont
+jamais été basculés** (constat du 24/08/2026) : `pacs-secours` et
+`syngo.teleimagerie.net` pointent toujours sur l'ancien VPS `51.75.203.20`,
+`syngo-via.*` en direct sur TSplus. L'ancien VPS reste donc en production — et
+facturé.
+
+Les prérequis sont en place depuis le 24/08 : relais ACME du port 80 vers
+TSplus (son renouvellement de certificat survivra à la bascule) et
+renouvellement automatisé des certs syngo depuis pve1. La marche à suivre du
+jour J est dans
+[09-proxy-tim.md](09-proxy-tim.md#checklist-pour-le-jour-de-la-bascule).
+
+---
+
+## 3. Abonnement Proxmox
 
 Le cluster fonctionne sur `pve-no-subscription` : bandeau à chaque connexion, et
 surtout paquets **moins validés**.
@@ -66,7 +82,7 @@ apt update && apt full-upgrade
 
 ---
 
-## 3. Supervision
+## 4. Supervision
 
 Aucun monitoring. Le cluster expose des métriques exploitables :
 
@@ -85,7 +101,7 @@ Les notifications mail fonctionnent déjà (fencing, tâches en échec) vers
 
 ---
 
-## 4. IP publiques pour les VM
+## 5. IP publiques pour les VM
 
 Les VM sont aujourd'hui sur le réseau privé `10.30.0.0/24` (vmbr1), sans accès
 entrant ni sortant.
@@ -101,7 +117,7 @@ Deux voies :
 
 ---
 
-## 5. Swap non redondé
+## 6. Swap non redondé
 
 `p4` est une partition de swap **indépendante sur chaque disque**, hors RAID —
 défaut du template OVH. La perte d'un NVMe fait disparaître la moitié du swap et
@@ -116,7 +132,7 @@ Deux corrections possibles si l'on veut le supprimer :
 
 ---
 
-## 6. Divers
+## 7. Divers
 
 - **Un 4ᵉ nœud** rendrait l'auto-guérison Ceph possible et supprimerait la
   dégradation durable après panne. À considérer si la charge grandit.
@@ -143,7 +159,7 @@ Deux corrections possibles si l'on veut le supprimer :
 
 ---
 
-## 7. VPN site-à-site — points ouverts
+## 8. VPN site-à-site — points ouverts
 
 Le tunnel vers le pfSense distant est opérationnel depuis le 14/08/2026
 ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)). Ce qui n'a pas été

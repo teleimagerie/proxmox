@@ -5,7 +5,8 @@ leur résolution. C'est le fichier à relire avant toute intervention comparable
 
 Ordre chronologique : 1 à 21 le déploiement (11/08), 22 le proxy et le premier
 tunnel (12-13/08), 23 le site-à-site pfSense (14/08), 24 à 28 le NAS-HA et les
-sauvegardes (13-15/08), 29 le déploiement headscale (15/08).
+sauvegardes (13-15/08), 29 le déploiement headscale (15/08), 30 le diagnostic
+certificats syngo-via (24/08).
 
 ---
 
@@ -624,3 +625,31 @@ Reflection*), puis `configctl filter reload`. Vérification immédiate :
 **Leçon** — Une règle de réflexion visible dans `pfctl -sn` ne prouve que
 l'aller. En épingle à cheveux, toujours tester le flux **depuis le réseau
 interne**, et se souvenir que le retour a besoin de son propre NAT.
+
+---
+
+## 30. Le fichier hosts Windows fausse tout diagnostic DNS sous WSL2
+
+**Symptôme** — Le 24/08/2026, en cherchant pourquoi le proxy « semblait gérer »
+les certificats syngo-via : `dig` renvoyait `57.130.34.122` pour les quatre
+noms publiés. Tout indiquait que la bascule DNS avait eu lieu — trafic dans les
+logs du relais, certificats cohérents, chaque test « confirmait » un état qui
+n'existait pas sur Internet.
+
+**Cause** — Sous WSL2, la résolution passe par le **résolveur Windows** (DNS
+tunneling), qui applique le fichier `C:\Windows\System32\drivers\etc\hosts`.
+Des entrées y avaient été forcées pour tester le proxy avant bascule. Même
+`dig`, qui ignore pourtant le `/etc/hosts` Linux, recevait ces valeurs : c'est
+le résolveur Windows qui répondait à sa place. Le trafic vu dans
+`stream_access.log` n'était que celui des machines à hosts forcé.
+
+**Résolution** — Retirer les entrées forcées, et surtout : tout diagnostic DNS
+doit interroger le serveur **autoritaire** (`dig +short NS <zone>` puis
+`dig @<ns> <nom>`), jamais le seul résolveur local. Comparer avec
+`getent ahostsv4 <nom>`, qui montre ce que la machine utilise réellement.
+
+**Leçon** — Le piège n° 10 (mauvais serveur de noms interrogé) a un jumeau
+inversé : un résolveur local qui **répond avec conviction des valeurs
+fausses**. Au passage, le vrai état DNS a révélé que la bascule vers le proxy
+n'avait jamais été faite, et que `syngo.isoteam.mn` n'a aucun enregistrement —
+voir [09-proxy-tim.md](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production).
