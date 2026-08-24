@@ -53,6 +53,12 @@ vers `57.130.34.122` — celles utilisées pour les tests
 
 ### Checklist pour le jour de la bascule
 
+0. **Basculer avant le 17/10/2026.** La copie du certificat `pacs-secours` du
+   conteneur expire à cette date et son certbot ne peut pas la renouveler tant
+   que le DNS pointe sur le VPS (la validation HTTP-01 aboutit chez lui — ses
+   tentatives, à partir de la mi-septembre, échoueront en silence). Après la
+   bascule, le renouvellement local refonctionne. Si la date approche,
+   re-synchroniser la copie depuis le VPS avant de basculer.
 1. Abaisser le TTL de `pacs-secours` (3600 → 60) au moins une heure avant.
 2. Vérifier que le relais ACME du port 80 vers TSplus répond
    (commande dans [Diagnostic](#diagnostic)) : sans lui, le renouvellement
