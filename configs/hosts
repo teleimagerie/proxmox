@@ -1,0 +1,19 @@
+127.0.0.1	localhost
+::1	localhost	ip6-localhost	ip6-loopback
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+
+# --- Cluster Proxmox : vRack VLAN 100 (Corosync + trafic inter-noeuds) ---
+10.100.0.11	pve1.tim.lan	pve1
+10.100.0.12	pve2.tim.lan	pve2
+10.100.0.13	pve3.tim.lan	pve3
+
+# --- Ceph : vRack VLAN 200 (MTU 9000) ---
+10.200.0.11	pve1-ceph
+10.200.0.12	pve2-ceph
+10.200.0.13	pve3-ceph
+
+# --- IP publiques OVH ---
+91.134.84.222	pve1-pub	ns3245256.ip-91-134-84.eu
+51.68.240.48	pve2-pub	ns3245278.ip-51-68-240.eu
+51.68.240.191	pve3-pub	ns3258339.ip-51-68-240.eu

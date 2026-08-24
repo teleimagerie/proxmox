@@ -1,0 +1,13 @@
+[DEFAULT]
+backend  = systemd
+bantime  = 3600
+findtime = 600
+maxretry = 5
+
+[sshd]
+enabled = true
+
+[proxmox]
+enabled = true
+port    = 8006,22
+filter  = proxmox

@@ -1,0 +1,114 @@
+# Cluster Proxmox `tim-cluster` — documentation
+
+Cluster de virtualisation haute disponibilité à 3 nœuds, stockage Ceph répliqué
+synchrone, hébergé chez OVHcloud (datacenter GRA4).
+
+**Déployé le 11 août 2026.** État : **en production**. Quatre machines y tournent :
+le pare-feu OPNsense (VM 100), le reverse proxy `proxy-tim` (CT 201), le
+serveur de sauvegarde PBS (VM 102) et le plan de contrôle VPN `headscale`
+(CT 202, pour les passerelles DICOM des sites distants).
+
+---
+
+## Les 3 serveurs
+
+| | **pve1** | **pve2** | **pve3** |
+|---|---|---|---|
+| **Nom OVH** | `ns3245256.ip-91-134-84.eu` | `ns3245278.ip-51-68-240.eu` | `ns3258339.ip-51-68-240.eu` |
+| **FQDN** | `pve1.infra.teleimagerie.net` | `pve2.infra.teleimagerie.net` | `pve3.infra.teleimagerie.net` |
+| **IP publique** | `91.134.84.222` | `51.68.240.48` | `51.68.240.191` |
+| Corosync (VLAN 100) | `10.100.0.11` | `10.100.0.12` | `10.100.0.13` |
+| Ceph (VLAN 200) | `10.200.0.11` | `10.200.0.12` | `10.200.0.13` |
+| VM (VLAN 300) | `10.30.0.11` | `10.30.0.12` | `10.30.0.13` |
+
+Repère : **le dernier octet vRack = le numéro du nœud**. Et pve1 est le seul en
+`91.134.84.x` — pve2 et pve3 partagent `51.68.240.x`, c'est là qu'on se trompe.
+
+Détail complet (NIC, OSD, ID Corosync) dans
+[01-architecture.md](01-architecture.md#inventaire-des-nœuds--table-de-correspondance).
+
+## Accès
+
+| | |
+|---|---|
+| Interface web | `https://pve{1,2,3}.infra.teleimagerie.net:8006` |
+| Compte | `matt` / realm *Proxmox VE authentication server* (**pas** `matt@pve` dans le champ nom) |
+| Second facteur | TOTP obligatoire sur `matt@pve` et `root@pam`, 10 clés de secours chacun |
+| SSH | `ssh root@pve1.infra.teleimagerie.net` (clé `~/.ssh/id_ed25519` uniquement) |
+
+Le certificat est un Let's Encrypt valide : aucun avertissement navigateur attendu.
+Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers.
+
+---
+
+## Sommaire
+
+| Fichier | Contenu |
+|---|---|
+| [01-architecture.md](01-architecture.md) | Matériel, réseau, disques, plan d'adressage |
+| [02-deploiement.md](02-deploiement.md) | Journal de ce qui a été fait, et pourquoi |
+| [03-exploitation.md](03-exploitation.md) | Diagnostic, pannes disque et nœud, procédures courantes |
+| [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
+| [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
+| [06-reste-a-faire.md](06-reste-a-faire.md) | Abonnement, supervision, IP publiques VM, points ouverts du VPN |
+| [07-pieges.md](07-pieges.md) | **Les 29 pièges rencontrés et leur résolution** |
+| [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
+| [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
+| [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
+| [11-headscale.md](11-headscale.md) | Plan de contrôle VPN (tailnet) : passerelles DICOM, ACLs, DERP, enrôlement |
+| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale) |
+| `configs/` | Copie des configurations en production, pour comparaison ou restauration |
+
+Si vous reprenez ce dossier après une longue interruption, lisez
+[07-pieges.md](07-pieges.md) en premier : il contient ce qui a réellement coûté
+du temps.
+
+Aucun secret ne figure dans ces fichiers — ils vivent tous dans `/etc/pve/priv/`
+sur le cluster. Voir [04-securite.md](04-securite.md#secrets--où-ils-vivent).
+
+---
+
+## État en une page
+
+```
+tim-cluster  ·  3 nœuds  ·  quorum 2/3  ·  Corosync 2 anneaux
+Proxmox VE 9.2.10        (Debian 13 Trixie, noyau 7.0.14-11-pve)
+Ceph Tentacle 20.2.2     HEALTH_OK · 6 OSD · 4,3 Tio bruts → 1,4 Tio utilisables
+Réseau                   vRack 25 Gb/s · bridge VLAN-aware · jumbo MTU 9000 validé
+                         VLAN 100 Corosync · 200 Ceph · 300 infra · 400 LAN VM
+                         non tagué = bloc public 57.130.34.120/29
+HA                       4 ressources : vm:100 · vm:102 · ct:201 · ct:202
+                         watchdog softdog · fencing testé en conditions réelles
+Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
+Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
+                         WireGuard wg0 nomades · wg2 site-à-site pfSense (51822)
+VPN DICOM                headscale 0.29.3 (CT 202) · tailnet 100.72.0.0/16
+                         DERP embarqué · data plane testé continu pendant bascule
+Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix
+                         quotidien 02:00 sauf VM 102 · rétention 7j/4s/6m
+                         restauration testée et mesurée
+```
+
+**Capacité réellement exploitable** : ~1,36 Tio de disque Ceph (seuil `nearfull` à
+85 %), **700 Gio de plus sur le NAS** pour le stockage froid, et **~100 Go de RAM
+VM cumulée** sur tout le cluster si l'on veut pouvoir absorber la perte d'un nœud.
+Voir [01-architecture.md](01-architecture.md#dimensionnement).
+
+---
+
+## Les trois choses à ne pas oublier
+
+1. **Les sauvegardes existent depuis le 13/08/2026, et une sauvegarde se vérifie.**
+   Ceph protège d'une panne matérielle, pas d'une suppression, d'un ransomware ou
+   d'une corruption applicative : les trois répliques sont détruites ensemble.
+   C'est PBS qui couvre ce risque — encore faut-il que les tâches passent.
+   Refaire une restauration de test après toute évolution majeure.
+   Voir [10-sauvegardes.md](10-sauvegardes.md).
+
+2. **Avec 3 nœuds, Ceph ne se répare pas seul.** La perte d'un nœud laisse le cluster
+   en `HEALTH_WARN` dégradé — les VM tournent, mais aucune 3ᵉ réplique n'est recréée
+   faute d'un 4ᵉ hôte. C'est normal, pas une avarie.
+
+3. **La clé SSH `~/.ssh/id_ed25519` est l'issue de secours ultime.** Elle seule permet
+   de désactiver un TOTP perdu ou de réparer un firewall mal configuré. Ne la perdez pas,
+   et gardez la console KVM/IPMI OVH comme dernier recours.

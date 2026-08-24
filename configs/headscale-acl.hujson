@@ -1,0 +1,21 @@
+{
+  // ACL du tailnet tim — headscale v0.29 (policy v2).
+  // Defaut : tout est refuse. Notamment : AUCUN trafic gateway <-> gateway.
+  // Copie de reference : proxmox/configs/headscale-acl.hujson
+
+  // Qui a le droit de poser quel tag (cles pre-auth taguees ou --advertise-tags)
+  "tagOwners": {
+    "tag:gateway": ["admin@"],   // passerelles DICOM des sites distants
+    "tag:pacs":    ["admin@"],   // serveurs heberges sur le cluster
+  },
+
+  "acls": [
+    // Passerelles DICOM -> serveurs heberges : ports DICOM uniquement.
+    // 104 = port DICOM historique, 11112 = port DICOM non privilegie.
+    // A resserrer au port reel quand le PACS existera.
+    { "action": "accept", "src": ["tag:gateway"], "dst": ["tag:pacs:104,11112"] },
+
+    // Administration : les postes du user admin joignent tout (SSH, web, DICOM).
+    { "action": "accept", "src": ["admin@"], "dst": ["tag:gateway:*", "tag:pacs:*"] },
+  ],
+}

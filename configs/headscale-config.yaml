@@ -1,0 +1,104 @@
+---
+# /etc/headscale/config.yaml — headscale v0.29.3, CT 202 (tim-cluster)
+# Genere le 15/08/2026. Copie de reference : proxmox/configs/headscale-config.yaml
+
+server_url: https://headscale.teleimagerie.net
+listen_addr: 0.0.0.0:443
+metrics_listen_addr: 127.0.0.1:9090          # candidat supervision (06-reste-a-faire §3)
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: false
+trusted_proxies: []
+
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+prefixes:
+  # DANS 100.64.0.0/10 (exige par les clients) mais HORS 100.64.0.0/24 :
+  # 100.64.0.1 est la passerelle publique OVH des hyperviseurs (CGNAT).
+  v4: 100.72.0.0/16
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+derp:
+  server:
+    enabled: true                            # DERP embarque — aucun relais tiers
+    region_id: 999
+    region_code: "tim"
+    region_name: "TIM GRA4 (embedded DERP)"
+    verify_clients: true                     # seuls les noeuds du tailnet relaient
+    stun_listen_addr: "0.0.0.0:3478"
+    private_key_path: /var/lib/headscale/derp_server_private.key
+    automatically_add_embedded_derp_region: true
+    ipv4: 57.130.34.123
+  urls: []                                   # pas de DERPs publics Tailscale
+  paths: []
+  auto_update_enabled: false
+  update_frequency: 24h
+
+disable_check_updates: true
+
+node:
+  expiry: 0                                  # les passerelles n'expirent jamais
+  ephemeral:
+    inactivity_timeout: 30m
+  routes:
+    ha:
+      probe_interval: 10s
+      probe_timeout: 5s
+
+database:
+  type: sqlite
+  debug: false
+  gorm:
+    prepare_stmt: true
+    parameterized_queries: true
+    skip_err_record_not_found: true
+    slow_threshold: 1000
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+    write_ahead_log: true
+    wal_autocheckpoint: 1000
+
+# TLS : Let's Encrypt integre, TLS-ALPN-01 sur :443.
+# Regle maison : AUCUNE cle API OVH sur une machine exposee (pas de DNS-01 ici).
+acme_url: https://acme-v02.api.letsencrypt.org/directory
+acme_email: "mcapon@teleimagerie.net"
+tls_letsencrypt_hostname: "headscale.teleimagerie.net"
+tls_letsencrypt_cache_dir: /var/lib/headscale/cache
+tls_letsencrypt_challenge_type: TLS-ALPN-01
+tls_cert_path: ""
+tls_key_path: ""
+
+log:
+  level: info
+  format: text
+
+policy:
+  mode: file
+  path: /etc/headscale/acl.hujson
+
+dns:
+  magic_dns: true
+  base_domain: ts.teleimagerie.net           # disjoint du server_url (exigence headscale)
+  # false : les passerelles gardent le DNS local de leur site (reseaux hospitaliers) ;
+  # MagicDNS ne resout que ts.teleimagerie.net via 100.100.100.100.
+  override_local_dns: false
+  nameservers:
+    global:
+      - 1.1.1.1
+      - 9.9.9.9
+    split: {}
+  search_domains: []
+  extra_records: []
+
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+logtail:
+  enabled: false                             # rien ne part chez Tailscale Inc.
+
+taildrop:
+  enabled: false                             # partage de fichiers inutile ici
+
+auto_update:
+  enabled: false
