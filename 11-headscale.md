@@ -12,7 +12,7 @@ hébergés ici (PACS à venir), et être administrées depuis ici.
 | Nom public | `headscale.teleimagerie.net` (A → `.123`, TTL 300, record OVH 5429302185) |
 | Ports exposés | **443/tcp** (contrôle + DERP) · **3478/udp** (STUN) |
 | Ressources | 2 vCPU, 2 Go RAM, disque 10 Go sur Ceph (`vm-storage`) |
-| Accès | `ssh root@10.40.0.30` depuis un nœud ayant accès au VLAN 400 |
+| Accès | `ssh -t root@pve1.infra.teleimagerie.net pct enter 202` (sur le nœud qui héberge le CT — `ha-manager status`) · ou `ssh root@10.40.0.30` depuis un nœud du VLAN 400 (première fois : accepter la clé d'hôte du CT — jamais fait depuis pve1 au 25/08/2026, un accès non-interactif échoue) |
 | Haute dispo | **ressource HA** depuis le 15/08/2026 (`max_restart 3`, `max_relocate 3`) |
 | Nœud courant | **pve1** depuis le test de bascule du 15/08/2026 |
 | Plage tailnet | **`100.72.0.0/16`** (v4) · `fd7a:115c:a1e0::/48` (v6) |
@@ -178,14 +178,22 @@ Les appareils personnels s'enrôlent sous le user `admin`, en **interactif** —
 jamais par clé pré-auth taguée : leurs droits viennent du **user** (`admin@`
 dans l'ACL), pas d'un tag. Le principe est le même sur tous les OS : le client
 est pointé vers `https://headscale.teleimagerie.net`, il ouvre une page web qui
-affiche une clé machine (`mkey:...`), et l'enrôlement s'approuve **sur le
-CT 202** :
+affiche une demande d'enregistrement (`hskey-authreq-...`), et l'enrôlement
+s'approuve **sur le CT 202** :
 
 ```bash
-# La commande exacte (avec la clé) s'affiche dans le navigateur du client
-headscale nodes register --user admin --key mkey:...
+# La commande exacte s'affiche dans le navigateur du client, avec USERNAME
+# en placeholder : headscale ne sait pas à qui est l'appareil, c'est ici
+# qu'on le déclare — remplacer USERNAME par admin.
+headscale auth register --auth-id hskey-authreq-... --user admin
 headscale nodes list          # le nœud apparaît, IP en 100.72.x
 ```
+
+> Syntaxe **v0.29** — `headscale nodes register --key mkey:...`, que montrent
+> encore d'anciennes docs, est **déprécié** (constaté le 25/08/2026 sur le
+> CT 202). La demande `hskey-authreq` est éphémère : si l'approbation tarde
+> et que la commande échoue, relancer la connexion côté client pour obtenir
+> un nouvel identifiant.
 
 Mise en route par OS (chemins d'interface vérifiés le 25/08/2026, doc
 headscale, pages `usage/connect/`) :
