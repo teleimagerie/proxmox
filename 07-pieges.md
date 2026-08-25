@@ -6,7 +6,7 @@ leur résolution. C'est le fichier à relire avant toute intervention comparable
 Ordre chronologique : 1 à 21 le déploiement (11/08), 22 le proxy et le premier
 tunnel (12-13/08), 23 le site-à-site pfSense vers TELLIS (14/08), 24 à 28 le NAS-HA et les
 sauvegardes (13-15/08), 29 le déploiement headscale (15/08), 30 le diagnostic
-certificats syngo-via (24/08).
+certificats syngo-via (24/08), 31 les premiers enrôlements headscale (25/08).
 
 ---
 
@@ -655,3 +655,31 @@ inversé : un résolveur local qui **répond avec conviction des valeurs
 fausses**. Au passage, le vrai état DNS a révélé que la bascule vers le proxy
 n'avait jamais été faite, et que `syngo.isoteam.mn` n'a aucun enregistrement —
 voir [09-proxy-tim.md](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production).
+
+---
+
+## 31. Les nœuds enrôlés par clé taguée n'appartiennent pas au user de la clé
+
+**Symptôme** — Le 25/08/2026, première passerelle réelle enrôlée (`gw-qum`,
+clé pré-auth `tag:gateway` créée sous le user `site-QUM`) : dans
+`headscale nodes list`, le nœud apparaît sous un user **`tagged-devices`**
+(« Tagged Devices », ID 2147455555), que personne n'a créé — et pas sous
+`site-QUM`.
+
+**Cause** — Comportement de headscale v0.29 (policy v2) : dès qu'un nœud porte
+un tag, **le tag remplace le user comme identité et comme propriétaire**. Les
+nœuds tagués sont regroupés sous le user synthétique `tagged-devices` ; le user
+de la clé ne subsiste que comme provenance, dans les métadonnées de la clé
+(`pre_auth_key.user` de la sortie `headscale nodes list -o json-line`).
+
+**Résolution** — Le modèle « révoquer un site = supprimer son user
+`site-<code>` » ne supprime donc pas ses nœuds. Révoquer une passerelle :
+`headscale nodes delete <id>` — les nœuds d'un site se retrouvent par leur nom
+`gw-<code>`, ou par la clé d'origine dans la sortie JSON. Les users
+`site-<code>` restent utiles pour ranger et tracer les clés, pas pour le cycle
+de vie des nœuds.
+
+**Leçon** — Vérifier un mécanisme de révocation **en réel** avant d'en faire
+une promesse d'architecture : la matrice ACL avait été testée le 15/08 avec des
+CT jetables, la révocation par user, jamais. Corrigé dans
+[11-headscale.md](11-headscale.md#organisation-du-tailnet).

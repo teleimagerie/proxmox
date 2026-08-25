@@ -86,7 +86,8 @@ et [configs/headscale-acl.hujson](configs/headscale-acl.hujson).
 |---|---|---|
 | user `admin` (ID 1) | postes d'administration | enrôlement interactif |
 | user `infra` (ID 2) | serveurs hébergés sur le cluster | clés pré-auth `tag:pacs` |
-| users `site-<code>` | un par site distant, créés au fil des déploiements | clés pré-auth `tag:gateway` — révoquer un site = supprimer ses nœuds sans toucher au reste |
+| users `site-<code>` | un par site distant, créés au fil des déploiements | portent les clés pré-auth `tag:gateway` ; **leurs nœuds atterrissent sous `tagged-devices`** — révoquer un site = `headscale nodes delete` de ses `gw-<code>` ([07-pieges.md, piège 31](07-pieges.md#31-les-nœuds-enrôlés-par-clé-taguée-nappartiennent-pas-au-user-de-la-clé)) |
+| user `tagged-devices` (synthétique) | créé par headscale | propriétaire de tous les nœuds tagués — le tag remplace le user comme identité (constaté le 25/08/2026) |
 | `tag:gateway` | passerelles DICOM | n'atteint que `tag:pacs:104,11112` |
 | `tag:pacs` | serveurs DICOM hébergés | n'initie rien |
 
@@ -155,6 +156,10 @@ l'enrôlement boucle en erreur (procédure officielle) : arrêter Tailscale,
 supprimer `C:\Users\<user>\AppData\Local\Tailscale`, supprimer le nœud côté
 headscale, relancer. L'instance publie aussi ses instructions par OS sur
 `/windows` et `/apple` (ex. `https://headscale.teleimagerie.net/windows`).
+
+Première passerelle de production enrôlée le 25/08/2026 par la procédure
+Windows ci-dessus : `gw-qum` (clé du user `site-QUM`, `100.72.0.2`,
+`tag:gateway` posé, en ligne du premier coup).
 
 **Serveur hébergé ici (futur PACS)** : clé `--tags tag:pacs` sous le user
 `infra`. En VM, rien de spécial. En **CT non privilégié**, tailscaled a besoin
