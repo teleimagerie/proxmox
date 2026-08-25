@@ -179,7 +179,11 @@ fait ou pas été prouvé :
   Restes de ce chantier : **(a)** ⚠️ relever le contenu des deux alias ;
   **(b)** décider de la persistance des routes de test (`10.40.0.0/24 via
   .59` sur prod01 et les `/32` ActiveStore sur pacs03 — toutes volatiles, un
-  reboot les efface) ; **(c)** à terme, restreindre les règles « tout
+  reboot les efface), en retenant que **les deux côtés vont par paire** : si
+  la `/32` de pacs03 disparaît (reboot) alors que prod01 garde sa route, les
+  réponses de pacs03 partiront dans le tunnel direct avec la source
+  `10.40.0.40` et le pfSense les jettera (cryptokey routing) — poser ou
+  retirer **les deux ensemble** ; **(c)** à terme, restreindre les règles « tout
   protocole / tout port » aux hôtes et ports réellement nécessaires.
 - **La segmentation n'a pas été éprouvée depuis TELLIS.** Les règles
   bloquant Corosync, Ceph et `10.30.0.0/24` sont bien chargées dans `pf`, ce qui
