@@ -100,6 +100,7 @@ vRack/`wg2` est un chantier futur, consigné dans
 | HTTP backend privé vs public | ✅ réponses identiques (`404` de référence, `Microsoft-HTTPAPI/2.0`, 315 octets) |
 | Chaîne complète client → VIP `57.130.34.122` → nginx → `10.40.0.40` | ✅ répond après la bascule du vhost |
 | Application par la chaîne complète | ✅ `https://pacs-secours.teleimagerie.net/xaconsolepacs/` → `200` |
+| pacs03 → pfSense TELLIS (`172.33.0.1`) par wg2 | ✅ 15–16 ms, TTL 63, traceroute `10.40.0.1` → `172.33.0.1` — route de test `/32` temporaire (ActiveStore) via OPNsense |
 
 > **L'application vit sous `/xaconsolepacs/`** — la racine `/` renvoie un `404`
 > (page par défaut de `http.sys`), et c'est le comportement de base : vérifié

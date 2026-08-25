@@ -182,7 +182,11 @@ fait ou pas été prouvé :
   une fois les flux TELLIS↔pacs03 basculés sur `wg2`/vRack. Décision du
   25/08/2026 : **pour le moment il doit perdurer** — c'est lui qui route
   `192.168.101.48/28` et `.96/28` vers le serveur, et aucune route équivalente
-  n'a été posée via OPNsense (les doubler créerait un conflit).
+  n'a été posée via OPNsense (les doubler créerait un conflit). Premier jalon
+  mesuré le 25/08/2026 : pacs03 joint le pfSense (`172.33.0.1`) par wg2 en
+  15 ms (route `/32` de test temporaire). Restent à prouver : un hôte TELLIS
+  de bout en bout dans les deux sens, et la tenue du MTU 1420 de wg2 pour un
+  flux de réplication.
 
 ### ⚠️ Deux clés privées ont été exposées
 
