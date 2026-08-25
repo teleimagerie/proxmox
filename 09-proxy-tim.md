@@ -81,13 +81,17 @@ reçoit réellement tant que la bascule DNS n'est pas faite.
 | `pacs-secours.teleimagerie.net` | terminaison TLS | `http://188.165.77.137` |
 | `syngo.teleimagerie.net` | redirection 301 | → `syngo-via.teleimagerie.net` |
 | `syngo.isoteam.mn` | redirection 301 | → `syngo-via.isoteam.mn` |
-| `syngo-via.teleimagerie.net` | **relais TLS brut** | `37.61.243.246:443` (TSplus) |
-| `syngo-via.isoteam.mn` | **relais TLS brut** | `37.61.243.246:443` (TSplus) |
+| `syngo-via.teleimagerie.net` | **relais TLS brut** | `37.61.243.246:443` (TSplus, DC TELLIS) |
+| `syngo-via.isoteam.mn` | **relais TLS brut** | `37.61.243.246:443` (TSplus, DC TELLIS) |
 
-> **`37.61.243.246` est aussi le WAN du pfSense** du tunnel site-à-site monté le
-> 14/08/2026 ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)). Les deux
-> chantiers desservent donc le même site distant, par deux chemins indépendants :
-> ce relais sort sur l'Internet public, le tunnel passe par WireGuard. Le relais
+> **`37.61.243.246` est le WAN du pfSense du DC TELLIS**
+> ([13-tellis.md](13-tellis.md)), le même que celui du tunnel site-à-site monté
+> le 14/08/2026 ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)).
+> Derrière ce NAT, la cible est le serveur TSplus `192.168.101.102` (📋 déclaré,
+> non vérifié). Les deux chantiers desservent donc le même site, par deux
+> chemins indépendants : ce relais sort sur l'Internet public, le tunnel passe
+> par WireGuard — vue d'ensemble dans
+> [12-architecture-hds.md](12-architecture-hds.md#flux-inter-datacenters). Le relais
 > pourrait emprunter le tunnel et viser une adresse privée du site — le trafic
 > serait chiffré de bout en bout et cesserait de dépendre de l'exposition du
 > port 443 côté distant. **Non fait, et non trivial** : cela déplace une

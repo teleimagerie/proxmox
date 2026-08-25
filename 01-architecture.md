@@ -71,8 +71,8 @@ vRack **`pn-1165892`**, 25 Gb/s. Depuis le 11/08/2026, la carte vRack porte un
 | `vmbr1.100` | 100 | `10.100.0.0/24` | 1500 | Corosync ring0 + trafic inter-nœuds |
 | `vmbr1.200` | 200 | `10.200.0.0/24` | **9000** | Ceph public + cluster, migration à chaud |
 | `vmbr1.300` | 300 | `10.30.0.0/24` | 1500 | Infrastructure — VM PBS (`10.30.0.20`) |
-| `vmbr1` + `tag=400` | 400 | `10.40.0.0/24` | 1500 | LAN des VM (derrière pfSense) |
-| `vmbr1` **sans tag** | — | bloc public OVH | 1500 | **WAN pfSense uniquement** |
+| `vmbr1` + `tag=400` | 400 | `10.40.0.0/24` | 1500 | LAN des VM (derrière OPNsense) |
+| `vmbr1` **sans tag** | — | bloc public OVH | 1500 | **WAN OPNsense uniquement** |
 | `vmbr0` (`<nic publique>`) | — | IP publiques | 1500 | Management, Corosync ring1 |
 
 ```
@@ -88,7 +88,7 @@ iface vmbr1 inet manual
 
 **Ajouter un VLAN ne demande plus aucune modification des hôtes** : il suffit de
 poser `tag=N` sur la carte réseau de la VM. C'est le bénéfice principal de cette
-structure, au-delà de pfSense.
+structure, au-delà d'OPNsense.
 
 Sur le VLAN 400, les machines sont allouées par dizaines : `.1` passerelle
 (OPNsense), `.10` proxy-tim (CT 201), `.20` PBS (VM 102, sortie APT), `.30`
@@ -100,7 +100,7 @@ dans le tailnet.
 
 > ⚠️ **Une carte sans `tag` sur `vmbr1` est raccordée au bloc public OVH.** Toute
 > VM de production doit porter `tag=400`. Oublier le tag expose la machine
-> directement sur Internet. La carte WAN de pfSense est la seule carte
+> directement sur Internet. La carte WAN d'OPNsense est la seule carte
 > légitimement sans tag du cluster.
 
 Le filtrage VLAN par port empêche une VM d'émettre ou de recevoir sur un VLAN qui

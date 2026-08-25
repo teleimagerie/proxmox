@@ -8,6 +8,11 @@ le pare-feu OPNsense (VM 100), le reverse proxy `proxy-tim` (CT 201), le
 serveur de sauvegarde PBS (VM 102) et le plan de contrôle VPN `headscale`
 (CT 202, pour les passerelles DICOM des sites distants).
 
+Ce cluster est l'un des **deux datacenters** de l'architecture HDS ; l'autre,
+le **DC TELLIS** (production imagerie), est opéré par un prestataire — vue
+d'ensemble dans [12-architecture-hds.md](12-architecture-hds.md), inventaire
+dans [13-tellis.md](13-tellis.md).
+
 ---
 
 ## Les 3 serveurs
@@ -51,11 +56,13 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
 | [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
 | [06-reste-a-faire.md](06-reste-a-faire.md) | Abonnement, supervision, IP publiques VM, points ouverts du VPN |
-| [07-pieges.md](07-pieges.md) | **Les 29 pièges rencontrés et leur résolution** |
+| [07-pieges.md](07-pieges.md) | **Les 30 pièges rencontrés et leur résolution** |
 | [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
 | [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
 | [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
 | [11-headscale.md](11-headscale.md) | Plan de contrôle VPN (tailnet) : passerelles DICOM, ACLs, DERP, enrôlement |
+| [12-architecture-hds.md](12-architecture-hds.md) | Vue d'ensemble HDS : les deux datacenters, interconnexions, flux, DNS |
+| [13-tellis.md](13-tellis.md) | **DC TELLIS (site distant)** : inventaire, pfSense, tunnels WireGuard, checklist de collecte |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale) |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 
@@ -81,7 +88,9 @@ HA                       4 ressources : vm:100 · vm:102 · ct:201 · ct:202
                          watchdog softdog · fencing testé en conditions réelles
 Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
 Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
-                         WireGuard wg0 nomades · wg2 site-à-site pfSense (51822)
+                         WireGuard wg0 nomades · wg2 site-à-site TELLIS (51822)
+Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
+                         wg2 · relais TLS syngo-via → TSplus · inventaire déclaré
 VPN DICOM                headscale 0.29.3 (CT 202) · tailnet 100.72.0.0/16
                          DERP embarqué · data plane testé continu pendant bascule
 Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix

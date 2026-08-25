@@ -161,14 +161,14 @@ Deux corrections possibles si l'on veut le supprimer :
 
 ## 8. VPN site-à-site — points ouverts
 
-Le tunnel vers le pfSense distant est opérationnel depuis le 14/08/2026
+Le tunnel vers le pfSense TELLIS ([13-tellis.md](13-tellis.md)) est opérationnel depuis le 14/08/2026
 ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)). Ce qui n'a pas été
 fait ou pas été prouvé :
 
-- **Le sens site distant → nos VM n'a jamais été testé.** Toutes les mesures sont
+- **Le sens TELLIS → nos VM n'a jamais été testé.** Toutes les mesures sont
   parties de chez nous. Le pfSense joint `10.40.0.1` et `10.90.0.1`, mais aucune
   connexion n'a été initiée depuis un serveur distant vers une de nos machines.
-- **La segmentation n'a pas été éprouvée depuis le site distant.** Les règles
+- **La segmentation n'a pas été éprouvée depuis TELLIS.** Les règles
   bloquant Corosync, Ceph et `10.30.0.0/24` sont bien chargées dans `pf`, ce qui
   a été vérifié — mais une règle chargée n'est pas une règle prouvée.
 - **Le comportement du tunnel pendant une bascule HA de la VM 100 n'est pas
@@ -186,12 +186,12 @@ privées WireGuard ont transité en clair dans un historique de terminal :
 | Clé | Portée |
 |---|---|
 | instance `wg-nomades` (OPNsense) | notre VPN nomades |
-| tunnel `tun_wg0` (pfSense distant) | **le VPN nomades du site distant, en production** |
+| tunnel `tun_wg0` (pfSense TELLIS) | **le VPN nomades du DC TELLIS, en production** |
 
 Les régénérer impose de redistribuer les profils clients des deux côtés — d'où
 le report. Tant que ce n'est pas fait, quiconque a eu accès à cet historique peut
 usurper l'un ou l'autre serveur VPN. La seconde n'est pas sous notre contrôle :
-c'est au responsable du site distant d'arbitrer, et il doit en être informé.
+c'est au prestataire TELLIS d'arbitrer, et il doit en être informé.
 
 > **Voie de sortie proposée depuis le 15/08/2026** : le tailnet headscale
 > ([11-headscale.md](11-headscale.md)) sait aussi faire le VPN nomades — enrôler
@@ -199,3 +199,20 @@ c'est au responsable du site distant d'arbitrer, et il doit en être informé.
 > et sa clé compromise**. Le pair `nomade-01` n'a plus été vu depuis le
 > 13/08/2026 : la migration ne dérangerait personne. Réglerait la première ligne
 > du tableau ci-dessus sans redistribution de profils WireGuard.
+
+---
+
+## 9. DC TELLIS — collecte et vérification de l'inventaire
+
+Le DC TELLIS a désormais sa fiche de référence ([13-tellis.md](13-tellis.md)),
+mais l'inventaire y est **majoritairement déclaratif** : une seule adresse a été
+contrôlée par le tunnel. La liste détaillée de ce qu'il reste à collecter est
+dans [13-tellis.md](13-tellis.md#checklist-de-collecte) — ne pas la dupliquer
+ici. Les trois points saillants :
+
+- **l'export `config.xml` des deux pfSense** (`192.168.101.59` et `.62`) —
+  règles, NAT, WireGuard ; à conserver hors dépôt, il contient des clés privées ;
+- **le contenu de la VM `prod01`** (`192.168.101.54`) — personne ne sait
+  précisément ce qui y tourne ;
+- **informer le prestataire de l'exposition de la clé `tun_wg0`** et suivre sa
+  rotation (voir le § 8 ci-dessus).

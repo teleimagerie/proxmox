@@ -69,8 +69,8 @@ Règles dans l'ordre d'évaluation (la première qui correspond gagne) :
 | `wan` | rdr+pass | TCP **443** et UDP **3478** vers `.123` → `10.40.0.30` (headscale) |
 | `opt1` | **block** ×3 | Nomades → les trois réseaux d'infrastructure |
 | `opt1` | pass | Nomades → tout |
-| `opt3` | **block** ×3 | Site distant → les trois réseaux d'infrastructure |
-| `opt3` | pass | Site distant → tout |
+| `opt3` | **block** ×3 | TELLIS (site distant) → les trois réseaux d'infrastructure |
+| `opt3` | pass | TELLIS (site distant) → tout |
 
 > Depuis le 13/08/2026, le blocage `LAN → 10.30.0.0/24` protège aussi le serveur
 > de sauvegarde PBS (`10.30.0.20`) : une VM compromise sur le LAN ne peut pas
@@ -136,8 +136,9 @@ l'interface web, faire précéder cette commande d'un
 
 ### Site-à-site — `wg2`, UDP 51822
 
-Déployé le 14/08/2026. **L'OPNsense est client**, le pfSense distant est serveur :
-c'est lui qui détient l'adressage du tunnel et qui a alloué `172.33.0.7/32`.
+Déployé le 14/08/2026. **L'OPNsense est client**, le pfSense du **DC TELLIS**
+([13-tellis.md](13-tellis.md)) est serveur : c'est lui qui détient l'adressage
+du tunnel et qui a alloué `172.33.0.7/32`.
 L'adressage `10.91.0.0/30` un temps envisagé n'a jamais été utilisé.
 
 | | |
@@ -148,17 +149,20 @@ L'adressage `10.91.0.0/30` un temps envisagé n'a jamais été utilisé.
 | Pair | `site-pfsense-v2`, endpoint `37.61.243.246:51822`, keepalive 25 s |
 | Réseaux distants | `192.168.101.48/28`, `192.168.101.96/28`, `192.168.111.0/24` |
 | Annoncé au distant | `172.33.0.7/32`, `10.40.0.0/24`, `10.90.0.0/24` |
+| Site distant | **DC TELLIS** — inventaire complet dans [13-tellis.md](13-tellis.md) |
 
-Côté pfSense, le tunnel s'appelle `tun_wg2` « VPN-Wireguard-SiteTIM », porte
+Côté pfSense TELLIS (`192.168.101.59`), le tunnel s'appelle `tun_wg2` « VPN-Wireguard-SiteTIM », porte
 `172.33.0.1/24`, et est **assigné** à l'interface `OPT3` — condition nécessaire
 pour lui attacher une passerelle `172.33.0.7` et les routes statiques vers
 `10.40.0.0/24` et `10.90.0.0/24`.
 
 **Un tunnel dédié, et non un pair ajouté au tunnel des nomades.** Le premier
-essai plaçait notre pair sur `tun_wg0`, qui porte les nomades du site distant.
+essai plaçait notre pair sur `tun_wg0`, qui porte les nomades de TELLIS.
 Assigner ce tunnel — indispensable au routage — l'a sorti du groupe d'interfaces
 `WireGuard` et a coupé tous ses utilisateurs, dont l'administrateur connecté.
 Un tunnel dédié ne portant que ce lien, son assignation n'expose personne.
+La clé privée de `tun_wg0` a par ailleurs été exposée lors de ces manipulations —
+voir [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts).
 
 **Les serveurs distants ont besoin de routes explicites.** Le pfSense route nos
 préfixes, mais ses serveurs répondent à leur passerelle par défaut. Chaque
@@ -166,7 +170,9 @@ machine à joindre doit connaître `10.40.0.0/24` et `10.90.0.0/24` via l'adress
 du pfSense sur son propre réseau — `192.168.101.59`, `192.168.101.110` ou
 `192.168.111.254` selon le sous-réseau — et autoriser ces sources dans son
 pare-feu local. Les équipements réseau dont la route par défaut pointe déjà sur
-le pfSense fonctionnent sans rien ajouter.
+le pfSense fonctionnent sans rien ajouter. La liste des machines concernées est
+l'inventaire de [13-tellis.md](13-tellis.md#inventaire-par-bloc-fonctionnel) —
+seule `192.168.101.52` a reçu ce traitement à ce jour.
 
 Ajouter `172.33.0.0/24` à ces routes n'est pas nécessaire au service, mais
 conserve un point de mesure : si `172.33.0.7` joint un serveur alors que
@@ -176,12 +182,13 @@ les routes.
 ### Validation du 14/08/2026
 
 Mesuré, pas déduit : handshake établi, routes présentes des deux côtés, pfSense
-joignant `10.40.0.1` et `10.90.0.1`, serveur `192.168.101.52` joint depuis le LAN
+joignant `10.40.0.1` et `10.90.0.1`, serveur `192.168.101.52` (le Vue PACS
+Philips, [13-tellis.md](13-tellis.md#imagerie-philips)) joint depuis le LAN
 et depuis les nomades, et **paquet de 1392 octets transmis sans fragmentation** —
 ce dernier point valide le MTU 1420 de bout en bout, qu'un `ping` court n'aurait
 pas révélé.
 
-Les nomades atteignent le site distant sans règle supplémentaire : leur trafic
+Les nomades atteignent TELLIS sans règle supplémentaire : leur trafic
 entre par `opt1`, ne correspond à aucun des trois blocages, et sort par la règle
 `pass` existante.
 
@@ -195,7 +202,7 @@ site : aucune plage distante ne doit croiser `10.40.0.0/24`, `10.90.0.0/24`,
 du tailnet headscale, [11-headscale.md](11-headscale.md)). Un chevauchement ne
 se voit qu'une fois le tunnel monté.
 
-> Le pfSense maîtrisant le tunnel, tout changement de son côté — port, IP
+> Le pfSense TELLIS maîtrisant le tunnel, tout changement de son côté — port, IP
 > publique, révocation de clé — coupe le lien sans préavis ici.
 
 ---
@@ -283,7 +290,7 @@ mais elles vivent sur la VM — inutiles si la VM est perdue.
 
 ## Points d'attention
 
-**pfSense/OPNsense est un point de défaillance unique pour l'accès Internet des VM.**
+**OPNsense est un point de défaillance unique pour l'accès Internet des VM.**
 Sur panne du nœud porteur, la HA la relance ailleurs en ~2 min. Les VM continuent
 de tourner, elles perdent seulement le réseau ; Ceph n'est pas affecté.
 

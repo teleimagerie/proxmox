@@ -4,7 +4,7 @@ Les obstacles réellement rencontrés du 11 au 15 août 2026, avec leur cause et
 leur résolution. C'est le fichier à relire avant toute intervention comparable.
 
 Ordre chronologique : 1 à 21 le déploiement (11/08), 22 le proxy et le premier
-tunnel (12-13/08), 23 le site-à-site pfSense (14/08), 24 à 28 le NAS-HA et les
+tunnel (12-13/08), 23 le site-à-site pfSense vers TELLIS (14/08), 24 à 28 le NAS-HA et les
 sauvegardes (13-15/08), 29 le déploiement headscale (15/08), 30 le diagnostic
 certificats syngo-via (24/08).
 

@@ -52,7 +52,8 @@ hébergés ici (PACS à venir), et être administrées depuis ici.
   est la passerelle publique OVH des trois hyperviseurs** (CGNAT). Corollaire :
   **ne jamais enrôler un nœud Proxmox dans le tailnet.** Elle évite aussi
   `100.100.100.100` (résolveur MagicDNS des clients) et ne croise aucune plage
-  du cluster ni des sites (10.40/10.90/10.30/10.100/10.200, 172.33, 192.168.101/111).
+  du cluster ni des sites (10.40/10.90/10.30/10.100/10.200, 172.33,
+  192.168.101/111 — TELLIS, [13-tellis.md](13-tellis.md)).
 - **DERP embarqué** (région 999 « tim », `verify_clients: true` : seuls les nœuds
   du tailnet peuvent relayer) — aucun relais public Tailscale (`urls: []`),
   aucune télémétrie (`logtail: false`). Même relayé, le trafic reste chiffré de
