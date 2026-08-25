@@ -195,6 +195,17 @@ headscale nodes list          # le nœud apparaît, IP en 100.72.x
 > et que la commande échoue, relancer la connexion côté client pour obtenir
 > un nouvel identifiant.
 
+Le `hskey-authreq-...` est une **session en attente**, pas une clé stockée :
+l'approbation la consomme, `headscale auth reject --auth-id hskey-authreq-...`
+l'annule, et elle expire seule sinon. Une fois consommée ou expirée il n'y a
+**rien à nettoyer** — vérifié le 25/08/2026 : un `reject` sur un identifiant
+déjà consommé répond `NotFound`. Ce qui persiste et se gère, ce sont les clés
+pré-auth taguées : `headscale preauthkeys list|expire|delete --user <ID>`.
+
+Premier appareil de production enrôlé le 25/08/2026 par la procédure Android
+ci-dessus, vérifiée en réel : le téléphone du poste d'administration
+(`z-fold4-de-matthieu`, user `admin`, `100.72.0.1`, sans expiration).
+
 Mise en route par OS (chemins d'interface vérifiés le 25/08/2026, doc
 headscale, pages `usage/connect/`) :
 

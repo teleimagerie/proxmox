@@ -69,8 +69,9 @@ Trois liens distincts entre les deux mondes :
   TELLIS, pour l'administration et les flux privés
   ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)) ;
 - **(b) le tailnet headscale** — plan de contrôle VPN des passerelles DICOM des
-  sites d'acquisition vers le futur PACS ([11-headscale.md](11-headscale.md)),
-  pointillé : rien n'y est encore enrôlé en production.
+  sites d'acquisition vers le futur PACS ([11-headscale.md](11-headscale.md)).
+  Premier nœud de production enrôlé le 25/08/2026 (téléphone du poste admin,
+  user `admin`) ; le pointillé reste : aucune passerelle ni PACS encore.
 
 ---
 
