@@ -147,13 +147,28 @@ Ce qui est établi :
 - constaté le 25/08/2026 sur `prod01` : la passerelle par défaut des serveurs
   du bloc production est **le second pfSense `.62`** (via DHCP), pas le `.59` —
   d'où la nécessité des routes retour explicites ;
-- même avec la route retour posée, **les connexions *initiées* depuis le LAN
-  TELLIS vers nos réseaux sont bloquées** (testé depuis `prod01` le
-  25/08/2026 : `10.40.0.1`, `.10` et `.40` injoignables, capture vide côté
-  cluster, alors que les *réponses* aux flux initiés de chez nous passent).
-  Suspect principal : la patte `.59` du pfSense sans règle `pass` — détail et
-  correctif proposé dans
-  [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts).
+- le 25/08/2026, il a été prouvé que **les connexions *initiées* depuis le LAN
+  TELLIS vers nos réseaux étaient bloquées** (depuis `prod01` : `10.40.0.1`,
+  `.10` et `.40` injoignables, capture vide côté cluster, alors que les
+  *réponses* aux flux initiés de chez nous passaient) : la patte `.59` — 
+  interface **`OPT1_TIM`** dans le pfSense — n'avait **aucune règle `pass`**,
+  donc deny par défaut.
+
+### Règles posées sur `OPT1_TIM` le 25/08/2026 (sens TELLIS → DC OVH)
+
+| Proto | Source | Destination | Description |
+|---|---|---|---|
+| IPv4 * | alias `SRV_TIM_WFMCORE` | alias `DC_OVH_TIM` | — |
+| IPv4 * | `192.168.101.54` (prod01) | alias `DC_OVH_TIM` | « prod01 vers DC OVH » |
+
+Validées aussitôt : ping prod01 → `10.40.0.40` en 17–23 ms TTL 126, session
+TCP complète ([15-pacs-secours.md](15-pacs-secours.md#mesures-du-25082026)).
+⚠️ À relever : le contenu exact des alias `SRV_TIM_WFMCORE` (quel(s)
+serveur(s) ? le cœur Workflow de la Vue PACS ?) et `DC_OVH_TIM`
+(vraisemblablement `10.40.0.0/24` — inclut-il `10.90.0.0/24` ?) — à ajouter à
+la [checklist de collecte](#checklist-de-collecte) du pfSense. Règles en
+« tout protocole / tout port » : à restreindre quand les flux réels seront
+arrêtés ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)).
 
 Ce qui est inconnu ⚠️ : le rôle du second pfSense `.62` « FW-Passerelle », qui
 route réellement entre les trois sous-réseaux (le pfSense seul ? le routeur

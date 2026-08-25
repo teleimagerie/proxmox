@@ -104,7 +104,7 @@ vRack/`wg2` est un chantier futur, consigné dans
 | pacs03 → `192.168.101.52` par le tunnel direct (référence) | ✅ 20–21 ms, TTL 127 |
 | pacs03 → prod01 (`192.168.101.54`) par wg2 | ✅ 16–39 ms, TTL 62 (OPNsense + pfSense) — route `/32` de test + route retour `via 192.168.101.59` posée sur prod01 |
 | MTU wg2 depuis pacs03 | ✅ payload 1392 passe ; 1472+DF refusé **proprement** par `10.40.0.1` (ICMP « à fragmenter ») → PMTUD fonctionnel, MTU 1420 confirmé |
-| prod01 → pacs03 (initiation TELLIS→OVH) | ❌ **échec** — ping `10.40.0.40`, `10.40.0.10` et même `10.40.0.1` sans réponse ; capture sur l'interface du CT 201 **vide** → bloqué en amont du VLAN 400 ; suspect : patte `.59` du pfSense sans règle `pass` ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
+| prod01 → pacs03 (initiation TELLIS→OVH) | ✅ **réussi après ajout d'une règle `pass` sur le pfSense** (25/08/2026 au soir) — le premier échec (capture vide côté cluster) avait bien pour cause la patte `.59` sans règle. Ping 17–23 ms, TTL 126 ; `curl http://10.40.0.40/` → `404 Microsoft-HTTPAPI` : session TCP complète à travers wg2, MSS/MTU 1420 OK. Bonus : le pare-feu Windows de pacs03 accepte ICMP et TCP 80 depuis une source hors sous-réseau local. Règles pfSense : voir [13-tellis.md](13-tellis.md#règles-posées-sur-opt1_tim-le-25082026-sens-tellis--dc-ovh) |
 
 > **L'application vit sous `/xaconsolepacs/`** — la racine `/` renvoie un `404`
 > (page par défaut de `http.sys`), et c'est le comportement de base : vérifié

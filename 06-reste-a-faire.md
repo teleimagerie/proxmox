@@ -165,19 +165,22 @@ Le tunnel vers le pfSense TELLIS ([13-tellis.md](13-tellis.md)) est opérationne
 ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)). Ce qui n'a pas été
 fait ou pas été prouvé :
 
-- **Le sens TELLIS → nos VM est testé depuis le 25/08/2026 : il ÉCHOUE.**
-  Depuis `prod01` (route retour `via .59` posée), ping vers `10.40.0.40`,
-  `10.40.0.10` et même `10.40.0.1` : 100 % de perte, et une capture sur
-  l'interface du CT 201 n'a vu **aucun paquet**. Les *réponses* de prod01 aux
-  flux initiés de chez nous passent, elles (états pf) — seules les
-  *initiations* meurent. Diagnostic le plus probable : **la patte `.59` du
-  pfSense est une interface sans règle `pass`** (deny par défaut pfSense) — le
-  test du 14/08 « le pfSense joint `10.40.0.1` » partait du pfSense lui-même,
-  pas d'une machine du LAN. Côté OPNsense, `opt3` est en `pass` source `any`
-  ([08-opnsense.md](08-opnsense.md#filtrage)) et n'est pas en cause a priori.
-  À faire : vérifier les journaux pare-feu des deux côtés pendant un ping de
-  test, puis poser côté pfSense une règle `pass` sur la patte `.59`
-  (src `192.168.101.48/28` → dst `10.40.0.0/24`).
+- ~~**Le sens TELLIS → nos VM n'a jamais été testé.**~~ — **réglé le
+  25/08/2026**, en deux temps. Premier essai depuis `prod01` (route retour
+  `via .59` posée) : 100 % de perte vers `10.40.0.40`, `10.40.0.10` et même
+  `10.40.0.1`, capture vide sur l'interface du CT 201 — cause : **la patte
+  `.59` du pfSense n'avait aucune règle `pass`** (deny par défaut ; le test du
+  14/08 « le pfSense joint `10.40.0.1` » partait du pfSense lui-même). Après
+  ajout d'une règle `pass` côté pfSense : ping prod01 → pacs03 en 17–23 ms
+  TTL 126, et session TCP complète (`curl http://10.40.0.40/` → 404 de
+  référence) — MSS/MTU 1420 compris. Les règles posées (interface `OPT1_TIM`,
+  alias `SRV_TIM_WFMCORE` et `DC_OVH_TIM`) sont transcrites dans
+  [13-tellis.md](13-tellis.md#règles-posées-sur-opt1_tim-le-25082026-sens-tellis--dc-ovh).
+  Restes de ce chantier : **(a)** ⚠️ relever le contenu des deux alias ;
+  **(b)** décider de la persistance des routes de test (`10.40.0.0/24 via
+  .59` sur prod01 et les `/32` ActiveStore sur pacs03 — toutes volatiles, un
+  reboot les efface) ; **(c)** à terme, restreindre les règles « tout
+  protocole / tout port » aux hôtes et ports réellement nécessaires.
 - **La segmentation n'a pas été éprouvée depuis TELLIS.** Les règles
   bloquant Corosync, Ceph et `10.30.0.0/24` sont bien chargées dans `pf`, ce qui
   a été vérifié — mais une règle chargée n'est pas une règle prouvée.
