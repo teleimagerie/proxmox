@@ -160,7 +160,9 @@ tiers**, et détacher les mesures avec `systemd-run` plutôt qu'un `nohup … &`
 renvoyait rien. Faux négatif qui aurait pu faire recréer des entrées en double.
 
 **Cause** — Requête envoyée à `dns108.ovh.net`, qui n'héberge pas la zone. Les
-serveurs réels sont `ns17.ovh.net` et `dns17.ovh.net`.
+serveurs réels sont `ns17.ovh.net` et `dns17.ovh.net`. (Chaque zone du compte a
+sa propre paire — `isoteam.mn` vit par exemple sur `ns102`/`dns102.ovh.net` :
+[14-noms-de-domaine.md](14-noms-de-domaine.md#serveurs-autoritaires).)
 
 **Résolution** — Récupérer les NS avant de tester :
 `dig +short NS <zone>`, puis interroger `@1.1.1.1` **et** le NS faisant autorité.

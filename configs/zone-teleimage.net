@@ -1,0 +1,32 @@
+$TTL 3600
+@	IN SOA dns20.ovh.net. tech.ovh.net. (2020030210 86400 3600 3600000 300)
+        IN NS     dns20.ovh.net.
+        IN NS     ns20.ovh.net.
+   3600 IN MX     1 aspmx.l.google.com.
+   3600 IN MX     5 alt1.aspmx.l.google.com.
+   3600 IN MX     5 alt2.aspmx.l.google.com.
+   3600 IN MX     10 alt3.aspmx.l.google.com.
+   3600 IN MX     10 alt4.aspmx.l.google.com.
+        IN A     213.186.33.5
+        IN TXT     "v=spf1 include:mx.ovh.com ~all"
+        IN TXT     "1|www.teleimagerie.net"
+        IN TXT     "google-site-verification=RkLoQ6FdeLQT9MJ2nCuD8Kflc9MqP7zWuAVBKyHujio"
+        IN TXT     "google-site-verification=hBe09qUfvKakmVhYBS3Fd9Zya5XSz1Y5sgEhgxeA5GY"
+_autodiscover._tcp        IN SRV     0 0 443 mailconfig.ovh.net.
+_imaps._tcp        IN SRV     0 0 993 ssl0.ovh.net.
+_submission._tcp        IN SRV     0 0 465 ssl0.ovh.net.
+autoconfig        IN CNAME     mailconfig.ovh.net.
+autodiscover        IN CNAME     mailconfig.ovh.net.
+ftp        IN CNAME     teleimage.net.
+imap        IN CNAME     ssl0.ovh.net.
+mail        IN CNAME     ssl0.ovh.net.
+pop3        IN CNAME     ssl0.ovh.net.
+smtp        IN CNAME     ssl0.ovh.net.
+www        IN MX     1 aspmx.l.google.com.
+www        IN MX     10 alt3.aspmx.l.google.com.
+www        IN MX     10 alt4.aspmx.l.google.com.
+www        IN MX     5 alt1.aspmx.l.google.com.
+www        IN MX     5 alt2.aspmx.l.google.com.
+www        IN A     213.186.33.5
+www        IN TXT     "3|welcome"
+www        IN TXT     "l|fr"

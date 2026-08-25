@@ -213,9 +213,12 @@ Forcer un renouvellement : `pvenode acme cert order --force`
 > faire le ménage dans les jetons.
 
 > **La clé API OVH en service** (application `proxmox`, AK `0357cf99f1ed0548`,
-> créée le 11/08/2026) a une **validité illimitée** et des droits en écriture sur
-> la zone `teleimagerie.net`. Elle sert au challenge DNS-01 du renouvellement
-> automatique des certificats.
+> créée le 11/08/2026) a une **validité illimitée** et des droits en écriture
+> sur **toutes les zones DNS du compte** — règles `/domain/zone/*`, donc les
+> six zones, mail et web de l'entreprise compris (vérifié par
+> `GET /auth/currentCredential` le 25/08/2026 —
+> [14-noms-de-domaine.md](14-noms-de-domaine.md#acme--ce-qui-dépend-de-quelle-zone)).
+> Elle sert au challenge DNS-01 du renouvellement automatique des certificats.
 >
 > **La supprimer casse le renouvellement** — silencieusement : rien ne se voit
 > jusqu'à l'expiration des certificats. C'est arrivé une fois le 11/08/2026, la

@@ -63,6 +63,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [11-headscale.md](11-headscale.md) | Plan de contrôle VPN (tailnet) : passerelles DICOM, ACLs, DERP, enrôlement |
 | [12-architecture-hds.md](12-architecture-hds.md) | Vue d'ensemble HDS : les deux datacenters, interconnexions, flux, DNS |
 | [13-tellis.md](13-tellis.md) | **DC TELLIS (site distant)** : inventaire, pfSense, tunnels WireGuard, checklist de collecte |
+| [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale) |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 

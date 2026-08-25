@@ -1,0 +1,20 @@
+$TTL 3600
+@	IN SOA dns102.ovh.net. tech.ovh.net. (2024011001 86400 3600 3600000 60)
+        IN NS     dns102.ovh.net.
+        IN NS     ns102.ovh.net.
+        IN MX     1 mx1.mail.ovh.net.
+        IN MX     5 mx2.mail.ovh.net.
+        IN MX     100 mx3.mail.ovh.net.
+        IN A     213.186.33.5
+        IN TXT     "v=spf1 include:mx.ovh.com -all"
+        IN TXT     "1|www.isoteam.healthcare"
+_autodiscover._tcp        IN SRV     0 0 443 mailconfig.ovh.net.
+_imaps._tcp        IN SRV     0 0 993 ssl0.ovh.net.
+_submission._tcp        IN SRV     0 0 465 ssl0.ovh.net.
+autoconfig        IN CNAME     mailconfig.ovh.net.
+autodiscover        IN CNAME     mailconfig.ovh.net.
+ftp        IN CNAME     isoteam.healthcare.
+gestion        IN A     77.158.128.112
+gestion        IN A     37.61.243.245
+www        IN A     213.186.33.5
+www        IN TXT     "3|welcome"

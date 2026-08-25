@@ -34,8 +34,11 @@ Conteneur LXC **201**, Debian 13, nginx 1.26.3. Migré depuis le VPS
 
 ## La bascule DNS n'est pas faite — le proxy ne reçoit pas la production
 
-⚠️ Constat du 24/08/2026, vérifié sur les serveurs autoritaires (`ns17.ovh.net`,
-`ns102.ovh.net`) : **aucun nom public ne pointe encore sur `57.130.34.122`**.
+⚠️ Constat du 24/08/2026, vérifié sur les serveurs autoritaires
+(`ns17.ovh.net`/`dns17.ovh.net` pour `teleimagerie.net`,
+`ns102.ovh.net`/`dns102.ovh.net` pour `isoteam.mn` — chaque zone a sa paire,
+[14-noms-de-domaine.md](14-noms-de-domaine.md#serveurs-autoritaires)) :
+**aucun nom public ne pointe encore sur `57.130.34.122`**.
 
 | Nom | DNS réel (Internet) | TTL |
 |---|---|---|

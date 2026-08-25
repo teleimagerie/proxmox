@@ -238,7 +238,8 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 
 **Reverse proxy nginx `192.168.101.61`** :
 
-- [ ] `nginx -T` — noms servis, backends, certificats et leurs échéances
+- [ ] `nginx -T` — noms servis, backends, certificats et leurs échéances — à
+  rapprocher de l'inventaire des noms ([14-noms-de-domaine.md](14-noms-de-domaine.md))
 
 **RIS VENUS** :
 

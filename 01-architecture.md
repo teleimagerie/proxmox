@@ -132,6 +132,9 @@ le réseau privé à 25 Gb/s. `nsswitch.conf` place `files` avant `myhostname`,
 ce qui garantit que `pve1` résout bien en `10.100.0.11`.
 
 Entrées annexes disponibles : `pveN-ceph` (VLAN 200) et `pveN-pub` (IP publique).
+Les FQDN du fichier sont en `tim.lan`, domaine interne qui n'existe que dans ce
+`/etc/hosts` — aucun serveur DNS ne le sert
+([14-noms-de-domaine.md](14-noms-de-domaine.md#résolution-interne)).
 
 ## Disques
 

@@ -1,0 +1,35 @@
+$TTL 3600
+@	IN SOA dns102.ovh.net. tech.ovh.net. (2086618585 86400 3600 3600000 60)
+        IN NS     dns102.ovh.net.
+        IN NS     ns102.ovh.net.
+        IN MX     0 isoteam-mn.mail.protection.outlook.com.
+        IN A     185.230.63.107
+        IN TXT     "v=spf1 a mx ptr ip4:37.61.243.245 ip4:77.158.128.112 include:spf.protection.outlook.com include:spf.mailjet.com ~all"
+        IN TXT     "MS=ms67156779"
+        IN TXT     "google-site-verification=hqSENzEu8Ak-3RliWV6WQGdvpXxqZbHVWOUinpZ34rM"
+*.staging        IN A     79.137.100.184
+_autodiscover._tcp        IN SRV     0 0 443 mailconfig.ovh.net.
+_imaps._tcp        IN SRV     0 0 993 ssl0.ovh.net.
+_submission._tcp        IN SRV     0 0 465 ssl0.ovh.net.
+app        IN A     146.59.233.170
+app-staging        IN A     79.137.100.184
+autoconfig        IN CNAME     mailconfig.ovh.net.
+autodiscover        IN CNAME     autodiscover.outlook.com.
+espace        IN A     213.186.33.5
+espace     60 IN TXT     "1|https://telimet.sharepoint.com/"
+ftp        IN CNAME     isoteam.mn.
+gestion        IN A     146.59.233.170
+gestion-staging        IN A     79.137.100.184
+mailjet._domainkey        IN TXT     "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDZApmyswCYRJM11UPQrN2xAdz6kpq2/R0qqd4aWvDLM4oOSUTExjFKNF0WMARlRsFRa1pqLEk1dISzRojtauqVVAWpZg540hoidKZ9zibflnFv0x3kWN7WhS8VnOMy6HnVUuZQuXMl99gW1L+olIOn76wE1RS5LFszHQJtpcyPVQIDAQAB"
+mailjet._e86d2130        IN TXT     "e86d213085f9c26c1c1f4602d86bbed1"
+preprod-app        IN A     79.137.100.184
+preprod-facturation        IN A     46.105.64.17
+preprod-gestion        IN A     79.137.100.184
+sftp        IN A     37.61.243.246
+syngo-via     60 IN A     37.61.243.246
+venus        IN A     77.158.128.112
+venus        IN A     37.61.243.245
+vpn-angers        IN A     37.61.243.246
+www        IN CNAME     pointing.wixdns.net.
+www.espace        IN A     213.186.33.5
+www.espace     60 IN TXT     "1|https://telimet.sharepoint.com/"

@@ -93,7 +93,8 @@ Trois liens distincts entre les deux mondes :
 
 Cibles d'architecture uniquement — **l'état DNS réel du moment se lit dans
 [09-proxy-tim.md](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production)**,
-ne pas maintenir deux tables :
+les zones, registrars et serveurs autoritaires dans
+[14-noms-de-domaine.md](14-noms-de-domaine.md) — ne pas maintenir deux tables :
 
 | Nom | Cible d'architecture | Service rendu |
 |---|---|---|
@@ -110,6 +111,7 @@ ne pas maintenir deux tables :
 | Sujet | Fichier |
 |---|---|
 | Le tunnel `wg2` vu du DC OVH (OPNsense, filtrage, validation) | [08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822) |
+| Les zones DNS : registrars, échéances, inventaire des six zones | [14-noms-de-domaine.md](14-noms-de-domaine.md) |
 | Le DC TELLIS : inventaire, pfSense, flux internes, checklist de collecte | [13-tellis.md](13-tellis.md) |
 | Le relais TLS `syngo-via.*` et la bascule DNS | [09-proxy-tim.md](09-proxy-tim.md) |
 | Le tailnet headscale (passerelles DICOM, ACL) | [11-headscale.md](11-headscale.md) |
