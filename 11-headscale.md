@@ -109,6 +109,13 @@ quand le PACS existera**.
 
 ## Enrôler une passerelle DICOM (procédure par site)
 
+Deux modes d'enrôlement coexistent, et le choix n'est pas cosmétique. Les
+machines sans humain devant (passerelles, serveurs hébergés) s'enrôlent par
+**clé pré-auth taguée** : l'identité ACL vient du **tag**, l'opération est
+scriptable. Les appareils d'administration s'enrôlent en **interactif** sous le
+user `admin` (section suivante) : l'identité vient du **user**. Une passerelle,
+donc, toujours par clé `tag:gateway` :
+
 ```bash
 # 1. Sur le CT 202 : créer le user du site (une fois), puis une clé
 headscale users create site-<code>
@@ -132,11 +139,22 @@ tailscale status          # le nœud apparaît, IP en 100.72.x
 tailscale netcheck        # une seule région DERP : "tim"
 ```
 
-**Poste admin (Windows/WSL2)** : installer le client Tailscale **Windows** (il
-couvre aussi WSL2 via le réseau de l'hôte — ne pas doubler d'un tailscaled dans
-WSL2), puis `tailscale login --login-server https://headscale.teleimagerie.net`
-et, sur le CT 202, `headscale nodes register --user admin --key mkey:...`
-(la commande exacte s'affiche dans le navigateur).
+**Passerelle Windows** : même logique, seule la pose du client change.
+Installer le client Tailscale Windows officiel, puis dans un PowerShell
+administrateur :
+
+```powershell
+tailscale up --login-server=https://headscale.teleimagerie.net `
+  --auth-key=<clé> --hostname=gw-<code>
+```
+
+Ensuite **activer « Run unattended »** (icône Tailscale de la zone de
+notification → préférences) : sans cette option le tunnel s'arrête à la
+fermeture de la session Windows — rédhibitoire pour une passerelle. Si
+l'enrôlement boucle en erreur (procédure officielle) : arrêter Tailscale,
+supprimer `C:\Users\<user>\AppData\Local\Tailscale`, supprimer le nœud côté
+headscale, relancer. L'instance publie aussi ses instructions par OS sur
+`/windows` et `/apple` (ex. `https://headscale.teleimagerie.net/windows`).
 
 **Serveur hébergé ici (futur PACS)** : clé `--tags tag:pacs` sous le user
 `infra`. En VM, rien de spécial. En **CT non privilégié**, tailscaled a besoin
@@ -151,6 +169,52 @@ lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
 Depuis le VLAN 400, `headscale.teleimagerie.net` se joint par la VIP publique en
 épingle à cheveux — fonctionne grâce au correcteur de réflexion NAT
 ([07-pieges.md, piège 29](07-pieges.md#29-la-réflexion-nat-seule-ne-suffit-pas--il-faut-aussi-le-nat-sortant-du-retour)).
+
+---
+
+## Enrôler un appareil d'administration (poste, téléphone)
+
+Les appareils personnels s'enrôlent sous le user `admin`, en **interactif** —
+jamais par clé pré-auth taguée : leurs droits viennent du **user** (`admin@`
+dans l'ACL), pas d'un tag. Le principe est le même sur tous les OS : le client
+est pointé vers `https://headscale.teleimagerie.net`, il ouvre une page web qui
+affiche une clé machine (`mkey:...`), et l'enrôlement s'approuve **sur le
+CT 202** :
+
+```bash
+# La commande exacte (avec la clé) s'affiche dans le navigateur du client
+headscale nodes register --user admin --key mkey:...
+headscale nodes list          # le nœud apparaît, IP en 100.72.x
+```
+
+Mise en route par OS (chemins d'interface vérifiés le 25/08/2026, doc
+headscale, pages `usage/connect/`) :
+
+- **Windows/WSL2** : installer le client Tailscale **Windows** (il couvre aussi
+  WSL2 via le réseau de l'hôte — **ne pas doubler d'un tailscaled dans WSL2**),
+  puis `tailscale login --login-server https://headscale.teleimagerie.net`.
+- **Linux** : `curl -fsSL https://tailscale.com/install.sh | sh` puis
+  `tailscale up --login-server=https://headscale.teleimagerie.net` — sans
+  `--auth-key`, la commande imprime l'URL d'enrôlement à ouvrir.
+- **Android** (app Tailscale du Play Store) : menu réglages en haut à droite →
+  `Accounts` → menu ⋮ → **Use an alternate server** → saisir l'URL du serveur
+  et suivre les instructions. Le client se connecte seul dès le `register`.
+- **iOS** (app Tailscale de l'App Store) : icône de compte → `Log in…` → menu
+  en haut à droite → **Use custom coordination server** → saisir l'URL, même
+  approbation côté CT 202.
+
+Nommer chaque appareil clairement (`--hostname` sur les postes, nom de
+l'appareil dans l'app mobile) : c'est ce nom qui devient
+`<machine>.ts.teleimagerie.net` en MagicDNS.
+
+Ce que l'ACL ([configs/headscale-acl.hujson](configs/headscale-acl.hujson),
+deny par défaut) donne à chaque type de client :
+
+| Client | Initie vers | Reçoit de |
+|---|---|---|
+| appareil `admin@` | `tag:gateway:*`, `tag:pacs:*` | personne — **pas non plus de trafic téléphone ↔ poste** (aucune règle `admin@ → admin@`, Taildrop désactivé) |
+| `tag:gateway` | `tag:pacs:104,11112` uniquement | `admin@` |
+| `tag:pacs` | rien | `tag:gateway` (ports DICOM), `admin@` |
 
 ---
 
