@@ -99,6 +99,13 @@ vRack/`wg2` est un chantier futur, consigné dans
 | MTU du chemin (payload 1472, DF) | ✅ passe — MTU 1500 confirmé de bout en bout, GRA4↔GRA3 compris |
 | HTTP backend privé vs public | ✅ réponses identiques (`404` de référence, `Microsoft-HTTPAPI/2.0`, 315 octets) |
 | Chaîne complète client → VIP `57.130.34.122` → nginx → `10.40.0.40` | ✅ répond après la bascule du vhost |
+| Application par la chaîne complète | ✅ `https://pacs-secours.teleimagerie.net/xaconsolepacs/` → `200` |
+
+> **L'application vit sous `/xaconsolepacs/`** — la racine `/` renvoie un `404`
+> (page par défaut de `http.sys`), et c'est le comportement de base : vérifié
+> identique octet pour octet entre l'ancien VPS de production et le nouveau
+> chemin. Un `404` sur `/` n'est donc **pas** un signe de panne ; pour tester le
+> service, viser `/xaconsolepacs/`.
 
 ---
 

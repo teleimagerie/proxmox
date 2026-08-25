@@ -119,7 +119,9 @@ cible (*restart migration*). Le disque étant sur Ceph, rien n'est copié — le
 
 Vérifications après bascule : `pct exec 201 -- nginx -t` OK, les 5 URLs publiées
 répondent (le 404 sur `/` de `pacs-secours` est le comportement de base — la
-racine n'est pas servie — vérifié identique avant la bascule).
+racine n'est pas servie, l'application vit sous `/xaconsolepacs/` qui doit
+répondre `200` — vérifié identique avant la bascule ;
+[15-pacs-secours.md](15-pacs-secours.md#mesures-du-25082026)).
 
 ## Synthèse
 
