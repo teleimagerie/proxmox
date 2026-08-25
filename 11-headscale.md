@@ -159,7 +159,11 @@ headscale, relancer. L'instance publie aussi ses instructions par OS sur
 
 Première passerelle de production enrôlée le 25/08/2026 par la procédure
 Windows ci-dessus : `gw-qum` (clé du user `site-QUM`, `100.72.0.2`,
-`tag:gateway` posé, en ligne du premier coup).
+`tag:gateway` posé, en ligne du premier coup). Mesuré depuis le site le même
+jour : `netcheck` **UDP ok** (sortie publique découverte, DERP `tim` seul à
+22,3 ms) ; `tailscale ping` vers le téléphone admin passe mais reste
+`via DERP(tim)` — direct non établi avec un mobile en CGNAT, attendu et non
+représentatif du futur flux gateway → pacs (deux extrémités fixes).
 
 **Serveur hébergé ici (futur PACS)** : clé `--tags tag:pacs` sous le user
 `infra`. En VM, rien de spécial. En **CT non privilégié**, tailscaled a besoin
