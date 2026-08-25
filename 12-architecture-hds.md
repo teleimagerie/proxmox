@@ -70,9 +70,9 @@ Trois liens distincts entre les deux mondes :
   ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)) ;
 - **(b) le tailnet headscale** — plan de contrôle VPN des passerelles DICOM des
   sites d'acquisition vers le futur PACS ([11-headscale.md](11-headscale.md)).
-  Premiers nœuds de production enrôlés le 25/08/2026 : le téléphone du poste
-  admin (user `admin`) et la passerelle `gw-qum` ; le pointillé reste côté
-  flux : le PACS n'existe pas encore.
+  Premiers nœuds de production enrôlés le 25/08/2026 : le téléphone et le
+  poste admin (user `admin`) et la passerelle `gw-qum` (direct vérifié,
+  32 ms) ; le pointillé reste côté flux : le PACS n'existe pas encore.
 
 ---
 

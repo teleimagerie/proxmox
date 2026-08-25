@@ -163,7 +163,12 @@ Windows ci-dessus : `gw-qum` (clé du user `site-QUM`, `100.72.0.2`,
 jour : `netcheck` **UDP ok** (sortie publique découverte, DERP `tim` seul à
 22,3 ms) ; `tailscale ping` vers le téléphone admin passe mais reste
 `via DERP(tim)` — direct non établi avec un mobile en CGNAT, attendu et non
-représentatif du futur flux gateway → pacs (deux extrémités fixes).
+représentatif du futur flux gateway → pacs (deux extrémités fixes). Entre
+extrémités fixes, justement, le direct est confirmé le même jour : poste
+admin ↔ `gw-qum` en `direct` à 32 ms (contre ~40 ms via DERP). **La montée
+en direct prend quelques dizaines de secondes** : les premiers pongs d'un
+`tailscale ping` passent par DERP, ce n'est pas un échec — laisser tourner
+avant de conclure.
 
 **Serveur hébergé ici (futur PACS)** : clé `--tags tag:pacs` sous le user
 `infra`. En VM, rien de spécial. En **CT non privilégié**, tailscaled a besoin
@@ -211,9 +216,13 @@ l'annule, et elle expire seule sinon. Une fois consommée ou expirée il n'y a
 déjà consommé répond `NotFound`. Ce qui persiste et se gère, ce sont les clés
 pré-auth taguées : `headscale preauthkeys list|expire|delete --user <ID>`.
 
-Premier appareil de production enrôlé le 25/08/2026 par la procédure Android
-ci-dessus, vérifiée en réel : le téléphone du poste d'administration
-(`z-fold4-de-matthieu`, user `admin`, `100.72.0.1`, sans expiration).
+Premiers appareils de production enrôlés le 25/08/2026, procédures vérifiées
+en réel : le téléphone du poste d'administration (`z-fold4-de-matthieu`,
+Android, `100.72.0.1`) puis le poste Windows/WSL2 (`lenovo-mca2`,
+`100.72.0.3`), tous deux sous `admin`, sans expiration. Constaté au passage :
+les deux appareils admin **ne se voient pas** dans `tailscale status` —
+aucun flux `admin ↔ admin` n'étant autorisé, headscale ne les présente même
+pas l'un à l'autre. C'est voulu, pas une panne.
 
 Mise en route par OS (chemins d'interface vérifiés le 25/08/2026, doc
 headscale, pages `usage/connect/`) :
