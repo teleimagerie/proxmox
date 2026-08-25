@@ -165,9 +165,19 @@ Le tunnel vers le pfSense TELLIS ([13-tellis.md](13-tellis.md)) est opérationne
 ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)). Ce qui n'a pas été
 fait ou pas été prouvé :
 
-- **Le sens TELLIS → nos VM n'a jamais été testé.** Toutes les mesures sont
-  parties de chez nous. Le pfSense joint `10.40.0.1` et `10.90.0.1`, mais aucune
-  connexion n'a été initiée depuis un serveur distant vers une de nos machines.
+- **Le sens TELLIS → nos VM est testé depuis le 25/08/2026 : il ÉCHOUE.**
+  Depuis `prod01` (route retour `via .59` posée), ping vers `10.40.0.40`,
+  `10.40.0.10` et même `10.40.0.1` : 100 % de perte, et une capture sur
+  l'interface du CT 201 n'a vu **aucun paquet**. Les *réponses* de prod01 aux
+  flux initiés de chez nous passent, elles (états pf) — seules les
+  *initiations* meurent. Diagnostic le plus probable : **la patte `.59` du
+  pfSense est une interface sans règle `pass`** (deny par défaut pfSense) — le
+  test du 14/08 « le pfSense joint `10.40.0.1` » partait du pfSense lui-même,
+  pas d'une machine du LAN. Côté OPNsense, `opt3` est en `pass` source `any`
+  ([08-opnsense.md](08-opnsense.md#filtrage)) et n'est pas en cause a priori.
+  À faire : vérifier les journaux pare-feu des deux côtés pendant un ping de
+  test, puis poser côté pfSense une règle `pass` sur la patte `.59`
+  (src `192.168.101.48/28` → dst `10.40.0.0/24`).
 - **La segmentation n'a pas été éprouvée depuis TELLIS.** Les règles
   bloquant Corosync, Ceph et `10.30.0.0/24` sont bien chargées dans `pf`, ce qui
   a été vérifié — mais une règle chargée n'est pas une règle prouvée.

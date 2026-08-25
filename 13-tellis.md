@@ -52,7 +52,7 @@ Le site compte **deux pfSense** et son propre reverse proxy nginx — trois
 | IP | Machine | Rôle | Mainteneur | Statut |
 |---|---|---|---|---|
 | `192.168.101.59` | pfSense principal | pare-feu du site, serveur du tunnel `wg2` et du VPN nomades `tun_wg0` ; pattes `192.168.101.59`, `192.168.101.110`, `192.168.111.254` | ⚠️ | pattes ✅ (mise en place du tunnel, 14/08/2026) ; règles, NAT et WireGuard ⚠️ à vérifier précisément |
-| `192.168.101.62` | pfSense « FW-Passerelle » | **second pfSense** — rôle inconnu (segmentation interne ? passerelle dédiée ?) | ⚠️ | ⚠️ |
+| `192.168.101.62` | pfSense « FW-Passerelle » | **second pfSense** — c'est lui la **passerelle par défaut des serveurs du bloc production** (et leur DHCP : route `proto dhcp` sur prod01) ; rôle complet et règles ⚠️ | ⚠️ | ✅ passerelle+DHCP constatés sur prod01 le 25/08/2026 ; le reste ⚠️ |
 | `192.168.101.61` | Reverse proxy nginx | reverse proxy local du site — noms servis, certificats et backends inconnus | ⚠️ | 📋 existence, ⚠️ rôle |
 | `192.168.101.60` | Routeur vers Philips | routage vers l'environnement Philips (lié au PACS et à la télémaintenance ?) | ⚠️ | 📋 existence, ⚠️ rôle |
 
@@ -125,7 +125,7 @@ facturation. Déploiement classique en trois tiers.
 
 | IP | Machine | Rôle | Statut |
 |---|---|---|---|
-| `192.168.101.54` | VM Ubuntu `prod01` | **contenu inconnu** — première cible de la [checklist de collecte](#checklist-de-collecte) | ⚠️ |
+| `192.168.101.54` | VM Ubuntu `prod01` (`tim-ubuntu`) | bannière « **PROD01 GESTION ISOTEAM Prod server** » ✅ (25/08/2026) — serveur de production de l'application de gestion ISOTEAM ; VM (NIC virtio `ens18`), adresse par DHCP depuis `.62` ; services précis ⚠️ ([checklist](#checklist-de-collecte)) | ⚠️ |
 | `.49`, `.50`, `.97`, `.99`, `.101`, `.104` → `.109`, et l'essentiel de `192.168.111.0/24` | — | jamais déclarées : libres ou occupées ? | ⚠️ demander la liste au prestataire |
 
 ---
@@ -143,6 +143,16 @@ Ce qui est établi :
   autres serveurs répondent à leur passerelle par défaut et sont injoignables
   depuis chez nous tant qu'ils n'ont pas reçu le même traitement — point ouvert
   documenté dans
+  [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts) ;
+- constaté le 25/08/2026 sur `prod01` : la passerelle par défaut des serveurs
+  du bloc production est **le second pfSense `.62`** (via DHCP), pas le `.59` —
+  d'où la nécessité des routes retour explicites ;
+- même avec la route retour posée, **les connexions *initiées* depuis le LAN
+  TELLIS vers nos réseaux sont bloquées** (testé depuis `prod01` le
+  25/08/2026 : `10.40.0.1`, `.10` et `.40` injoignables, capture vide côté
+  cluster, alors que les *réponses* aux flux initiés de chez nous passent).
+  Suspect principal : la patte `.59` du pfSense sans règle `pass` — détail et
+  correctif proposé dans
   [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts).
 
 Ce qui est inconnu ⚠️ : le rôle du second pfSense `.62` « FW-Passerelle », qui

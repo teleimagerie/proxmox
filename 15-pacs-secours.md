@@ -101,6 +101,10 @@ vRack/`wg2` est un chantier futur, consigné dans
 | Chaîne complète client → VIP `57.130.34.122` → nginx → `10.40.0.40` | ✅ répond après la bascule du vhost |
 | Application par la chaîne complète | ✅ `https://pacs-secours.teleimagerie.net/xaconsolepacs/` → `200` |
 | pacs03 → pfSense TELLIS (`172.33.0.1`) par wg2 | ✅ 15–16 ms, TTL 63, traceroute `10.40.0.1` → `172.33.0.1` — route de test `/32` temporaire (ActiveStore) via OPNsense |
+| pacs03 → `192.168.101.52` par le tunnel direct (référence) | ✅ 20–21 ms, TTL 127 |
+| pacs03 → prod01 (`192.168.101.54`) par wg2 | ✅ 16–39 ms, TTL 62 (OPNsense + pfSense) — route `/32` de test + route retour `via 192.168.101.59` posée sur prod01 |
+| MTU wg2 depuis pacs03 | ✅ payload 1392 passe ; 1472+DF refusé **proprement** par `10.40.0.1` (ICMP « à fragmenter ») → PMTUD fonctionnel, MTU 1420 confirmé |
+| prod01 → pacs03 (initiation TELLIS→OVH) | ❌ **échec** — ping `10.40.0.40`, `10.40.0.10` et même `10.40.0.1` sans réponse ; capture sur l'interface du CT 201 **vide** → bloqué en amont du VLAN 400 ; suspect : patte `.59` du pfSense sans règle `pass` ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
 
 > **L'application vit sous `/xaconsolepacs/`** — la racine `/` renvoie un `404`
 > (page par défaut de `http.sys`), et c'est le comportement de base : vérifié
