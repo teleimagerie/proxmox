@@ -81,11 +81,19 @@ reçoit réellement tant que la bascule DNS n'est pas faite.
 
 | Nom | Traitement | Destination |
 |---|---|---|
-| `pacs-secours.teleimagerie.net` | terminaison TLS | `http://188.165.77.137` |
+| `pacs-secours.teleimagerie.net` | terminaison TLS | `http://10.40.0.40` — pacs03 par le vRack |
 | `syngo.teleimagerie.net` | redirection 301 | → `syngo-via.teleimagerie.net` |
 | `syngo.isoteam.mn` | redirection 301 | → `syngo-via.isoteam.mn` |
 | `syngo-via.teleimagerie.net` | **relais TLS brut** | `37.61.243.246:443` (TSplus, DC TELLIS) |
 | `syngo-via.isoteam.mn` | **relais TLS brut** | `37.61.243.246:443` (TSplus, DC TELLIS) |
+
+> **Bascule du backend `pacs-secours` le 25/08/2026** : `http://188.165.77.137`
+> (IP publique de pacs03, trafic en HTTP clair sur Internet) →
+> `http://10.40.0.40` (même serveur, par le vRack sur le VLAN 400 —
+> [15-pacs-secours.md](15-pacs-secours.md)). Le segment proxy→backend ne quitte
+> plus le réseau privé ; latence mesurée 0,25 ms, MTU 1500 vérifié. Sauvegarde
+> de l'ancien vhost : `/root/pacs-secours.conf.bak-2026-08-25` dans le CT 201 ;
+> retour arrière = remettre l'ancienne ligne `proxy_pass` + reload.
 
 > **`37.61.243.246` est le WAN du pfSense du DC TELLIS**
 > ([13-tellis.md](13-tellis.md)), le même que celui du tunnel site-à-site monté

@@ -118,7 +118,7 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 |---|---|---|
 | `pacs01`, `pacs02` | `37.61.243.245` (TTL 60) + `77.158.128.112` | PACS de production 📋 TELLIS |
 | `prod01` | `37.61.243.245` + `77.158.128.112` (TTL 60) | VM `prod01` du DC TELLIS 📋 |
-| `pacs03` | `188.165.77.137` | serveur OVH — le backend du PACS de secours ✅ ([09](09-proxy-tim.md#ce-qui-est-publié)) |
+| `pacs03` | `188.165.77.137` | serveur OVH — le backend du PACS de secours ✅ ; aussi `10.40.0.40` en privé via le vRack depuis le 25/08/2026 ([15](15-pacs-secours.md)) |
 | `pacs04` | `162.19.25.107` | ⚠️ (IP partagée avec `api`/`www1`) |
 | `secours-tellis` | `37.61.243.245` | ⚠️ |
 | `dev.gestion` | `37.61.243.245` + `77.158.128.112` | environnement de dev côté TELLIS 📋 |

@@ -92,7 +92,9 @@ structure, au-delà d'OPNsense.
 
 Sur le VLAN 400, les machines sont allouées par dizaines : `.1` passerelle
 (OPNsense), `.10` proxy-tim (CT 201), `.20` PBS (VM 102, sortie APT), `.30`
-headscale (CT 202). S'y ajoute une plage **hors VLAN** : le tailnet headscale
+headscale (CT 202), `.40` pacs03 (PACS de secours, bare-metal Windows GRA3
+raccordé au vRack — [15-pacs-secours.md](15-pacs-secours.md)). S'y ajoute une
+plage **hors VLAN** : le tailnet headscale
 `100.72.0.0/16` ([11-headscale.md](11-headscale.md)) — choisie dans le CGNAT
 `100.64.0.0/10` mais **hors `100.64.0.0/24`**, car `100.64.0.1` est la
 passerelle publique OVH des trois nœuds : ne jamais enrôler un hyperviseur

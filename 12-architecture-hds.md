@@ -88,6 +88,8 @@ Trois liens distincts entre les deux mondes :
 | Admin → autres machines TELLIS | idem | `192.168.101.x`, `192.168.111.x` | — | dans `wg2` | ⚠️ routes retour posées sur `.52` seulement ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
 | TELLIS → nos VM | `192.168.101.x`, `192.168.111.x` | `10.40.0.0/24` | — | dans `wg2` | ⚠️ jamais testé dans ce sens ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
 | Passerelles DICOM des sites → futur PACS | sites d'acquisition | futur PACS (DC OVH) | DICOM `104`, `11112` | tailnet (`tag:gateway` → `tag:pacs`) | 📋 à venir ([11-headscale.md](11-headscale.md)) |
+| `proxy-tim` → backend PACS de secours | `10.40.0.10` | `10.40.0.40` (pacs03, GRA3) | TCP `80` | vRack VLAN 400, inter-DC GRA4↔GRA3 | ✅ basculé le 25/08/2026, 0,25 ms ([15-pacs-secours.md](15-pacs-secours.md)) — avant : HTTP clair vers `188.165.77.137` par Internet |
+| Réplication TELLIS → pacs03 | site TELLIS | `172.32.0.2` (pacs03) | WireGuard | tunnel direct `tun_wg1`, hors `wg2` | ✅ en production ; suppression à terme ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
 
 ---
 

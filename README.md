@@ -64,6 +64,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [12-architecture-hds.md](12-architecture-hds.md) | Vue d'ensemble HDS : les deux datacenters, interconnexions, flux, DNS |
 | [13-tellis.md](13-tellis.md) | **DC TELLIS (site distant)** : inventaire, pfSense, tunnels WireGuard, checklist de collecte |
 | [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
+| [15-pacs-secours.md](15-pacs-secours.md) | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale) |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 
@@ -92,6 +93,8 @@ Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
                          WireGuard wg0 nomades · wg2 site-à-site TELLIS (51822)
 Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
                          wg2 · relais TLS syngo-via → TSplus · inventaire déclaré
+PACS de secours          pacs03 (bare-metal Windows, GRA3) · vRack VLAN 400
+                         10.40.0.40 · backend pacs-secours servi en privé
 VPN DICOM                headscale 0.29.3 (CT 202) · tailnet 100.72.0.0/16
                          DERP embarqué · data plane testé continu pendant bascule
 Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix

@@ -177,6 +177,12 @@ fait ou pas été prouvé :
 - **Les routes ne sont posées que sur `192.168.101.52`.** Les autres serveurs à
   joindre doivent recevoir le même traitement, ou le pfSense doit masquer notre
   trafic derrière une de ses adresses locales.
+- **À terme : supprimer le tunnel direct « DC-TELLIS-PARTENAIRES » (`tun_wg1`)
+  entre pacs03 et le pfSense TELLIS** ([15-pacs-secours.md](15-pacs-secours.md)),
+  une fois les flux TELLIS↔pacs03 basculés sur `wg2`/vRack. Décision du
+  25/08/2026 : **pour le moment il doit perdurer** — c'est lui qui route
+  `192.168.101.48/28` et `.96/28` vers le serveur, et aucune route équivalente
+  n'a été posée via OPNsense (les doubler créerait un conflit).
 
 ### ⚠️ Deux clés privées ont été exposées
 

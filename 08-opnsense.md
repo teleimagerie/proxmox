@@ -198,9 +198,11 @@ WireGuard, pas une anomalie.
 
 **Le contrôle de recouvrement est la première chose à faire** avant d'ajouter un
 site : aucune plage distante ne doit croiser `10.40.0.0/24`, `10.90.0.0/24`,
-`10.30.0.0/24`, `10.100.0.0/24`, `10.200.0.0/24` ni **`100.72.0.0/16`** (plage
-du tailnet headscale, [11-headscale.md](11-headscale.md)). Un chevauchement ne
-se voit qu'une fois le tunnel monté.
+`10.30.0.0/24`, `10.100.0.0/24`, `10.200.0.0/24`, **`100.72.0.0/16`** (plage
+du tailnet headscale, [11-headscale.md](11-headscale.md)) ni `172.32.0.0/24`
+(tunnel WireGuard direct « DC-TELLIS-PARTENAIRES » entre pacs03 et le pfSense
+TELLIS, découvert le 25/08/2026 — [15-pacs-secours.md](15-pacs-secours.md)).
+Un chevauchement ne se voit qu'une fois le tunnel monté.
 
 > Le pfSense TELLIS maîtrisant le tunnel, tout changement de son côté — port, IP
 > publique, révocation de clé — coupe le lien sans préavis ici.
