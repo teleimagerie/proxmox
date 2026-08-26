@@ -80,8 +80,8 @@ Trois liens distincts entre les deux mondes :
 
 | Flux | Source | Destination | Port/proto | Chemin | Statut |
 |---|---|---|---|---|---|
-| Utilisateurs → TSplus (`syngo-via.*`) | Internet | `37.61.243.246` | TCP `443` | public, direct (DNS actuel) | ✅ en production |
-| Idem, après bascule DNS | Internet | `57.130.34.122` → relais TLS → `37.61.243.246` | TCP `443` | public, via `proxy-tim` | ✅ prêt et vérifié ; bascule **avant le 17/10/2026** ([09-proxy-tim.md](09-proxy-tim.md#checklist-pour-le-jour-de-la-bascule)) |
+| Utilisateurs → TSplus (`syngo-via.*`) | Internet | `37.61.243.246` | TCP `443` | public, direct (DNS actuel) | ✅ en production — seuls flux restés hors proxy après la bascule du 26/08/2026 |
+| Idem, si bascule de `syngo-via.*` un jour | Internet | `57.130.34.122` → relais TLS → `37.61.243.246` | TCP `443` | public, via `proxy-tim` | ✅ prêt et vérifié ; décision non prise ([09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026)) |
 | Défis ACME du certificat TSplus | Internet | `57.130.34.122` → relais → `37.61.243.246` | TCP `80` | public, via `proxy-tim` | ✅ testé le 24/08/2026 |
 | Transport du tunnel site-à-site | `57.130.34.121` | `37.61.243.246` | UDP `51822` | public (WireGuard) | ✅ monté le 14/08/2026 |
 | Admin / nomades → Vue PACS | `10.40.0.0/24`, `10.90.0.0/24` | `192.168.101.52` | — | dans `wg2` | ✅ testé le 14/08/2026 |
@@ -96,7 +96,7 @@ Trois liens distincts entre les deux mondes :
 ## Noms DNS et chemins d'accès
 
 Cibles d'architecture uniquement — **l'état DNS réel du moment se lit dans
-[09-proxy-tim.md](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production)**,
+[09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026)**,
 les zones, registrars et serveurs autoritaires dans
 [14-noms-de-domaine.md](14-noms-de-domaine.md) — ne pas maintenir deux tables :
 

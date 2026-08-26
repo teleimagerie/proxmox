@@ -1,5 +1,5 @@
 $TTL 3600
-@	IN SOA dns17.ovh.net. tech.ovh.net. (2086787425 86400 3600 3600000 300)
+@	IN SOA dns17.ovh.net. tech.ovh.net. (2087727699 86400 3600 3600000 300)
         IN NS     dns17.ovh.net.
         IN NS     ns17.ovh.net.
         IN MX     5 alt1.aspmx.l.google.com.
@@ -54,7 +54,7 @@ odoo        IN A     91.134.75.199
 odoo        IN AAAA     2001:41d0:304:200::675a
 ovhmo3202129-selector1._domainkey        IN CNAME     ovhmo3202129-selector1._domainkey.3302249.ot.dkim.mail.ovh.net.
 ovhmo3202129-selector2._domainkey        IN CNAME     ovhmo3202129-selector2._domainkey.3302248.ot.dkim.mail.ovh.net.
-pacs-secours        IN A     51.75.203.20
+pacs-secours     60 IN A     57.130.34.122
 pacs01     60 IN A     37.61.243.245
 pacs01        IN A     77.158.128.112
 pacs02     60 IN A     37.61.243.245
@@ -79,7 +79,7 @@ support        IN MX     5 mx2.mail.ovh.net.
 support        IN MX     10 mx3.mail.ovh.net.
 support        IN A     213.186.33.5
 support     60 IN TXT     "4|https://crm.teleimagerie.net/public/ticket/index.php"
-syngo     60 IN A     51.75.203.20
+syngo     60 IN A     57.130.34.122
 syngo-via     60 IN A     37.61.243.246
 test-01        IN A     37.59.114.69
 test-02        IN A     37.59.114.69

@@ -653,8 +653,9 @@ doit interroger le serveur **autoritaire** (`dig +short NS <zone>` puis
 **Leçon** — Le piège n° 10 (mauvais serveur de noms interrogé) a un jumeau
 inversé : un résolveur local qui **répond avec conviction des valeurs
 fausses**. Au passage, le vrai état DNS a révélé que la bascule vers le proxy
-n'avait jamais été faite, et que `syngo.isoteam.mn` n'a aucun enregistrement —
-voir [09-proxy-tim.md](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production).
+n'avait jamais été faite, et que `syngo.isoteam.mn` n'avait aucun
+enregistrement — deux constats soldés par la bascule du 26/08/2026, voir
+[09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026).
 
 ---
 

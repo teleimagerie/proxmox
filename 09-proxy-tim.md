@@ -32,52 +32,57 @@ Conteneur LXC **201**, Debian 13, nginx 1.26.3. Migré depuis le VPS
 
 ---
 
-## La bascule DNS n'est pas faite — le proxy ne reçoit pas la production
+## Bascule DNS du 26/08/2026
 
-⚠️ Constat du 24/08/2026, vérifié sur les serveurs autoritaires
-(`ns17.ovh.net`/`dns17.ovh.net` pour `teleimagerie.net`,
-`ns102.ovh.net`/`dns102.ovh.net` pour `isoteam.mn` — chaque zone a sa paire,
-[14-noms-de-domaine.md](14-noms-de-domaine.md#serveurs-autoritaires)) :
-**aucun nom public ne pointe encore sur `57.130.34.122`**.
+**Le proxy reçoit la production depuis le 26/08/2026** : les trois noms servis
+en HTTP local pointent sur `57.130.34.122` (TTL 60). Modification par l'API OVH
+depuis pve1, vérifiée sur les serveurs autoritaires (`ns17`/`dns17.ovh.net`
+pour `teleimagerie.net`, `ns102`/`dns102.ovh.net` pour `isoteam.mn` — chaque
+zone a sa paire, [14-noms-de-domaine.md](14-noms-de-domaine.md#serveurs-autoritaires)),
+sur `1.1.1.1` et `8.8.8.8`.
 
-| Nom | DNS réel (Internet) | TTL |
-|---|---|---|
-| `pacs-secours.teleimagerie.net` | `51.75.203.20` — **ancien VPS** | 3600 |
-| `syngo.teleimagerie.net` | `51.75.203.20` — **ancien VPS** | 60 |
-| `syngo-via.teleimagerie.net` | `37.61.243.246` — **TSplus direct** | 60 |
-| `syngo-via.isoteam.mn` | `37.61.243.246` — **TSplus direct** | — |
-| `syngo.isoteam.mn` | **aucun enregistrement** | — |
+| Nom | DNS réel (Internet) | TTL | Changement |
+|---|---|---|---|
+| `pacs-secours.teleimagerie.net` | `57.130.34.122` ✅ | 60 | était `51.75.203.20` (TTL 3600, abaissé à 60 une heure avant) |
+| `syngo.teleimagerie.net` | `57.130.34.122` ✅ | 60 | était `51.75.203.20` |
+| `syngo.isoteam.mn` | `57.130.34.122` ✅ | 60 | **créé** — n'existait pas (anomalie n°2 de [14](14-noms-de-domaine.md#anomalies-relevées-25082026), soldée) |
+| `syngo-via.teleimagerie.net` | `37.61.243.246` — TSplus direct | 60 | inchangé, volontairement |
+| `syngo-via.isoteam.mn` | `37.61.243.246` — TSplus direct | — | inchangé, volontairement |
 
-La production passe donc toujours par l'ancien VPS (`pacs-secours`, `syngo.*`)
-ou en direct (`syngo-via.*` → TSplus). Le proxy est prêt et vérifié conforme,
-mais ne voit que le trafic des machines dont le fichier hosts force les noms
-vers `57.130.34.122` — celles utilisées pour les tests
-([07-pieges.md](07-pieges.md#30-le-fichier-hosts-windows-fausse-tout-diagnostic-dns-sous-wsl2)).
+Contrôles post-bascule (26/08/2026, ~07 h UTC) :
 
-### Checklist pour le jour de la bascule
+- `https://pacs-secours.teleimagerie.net/xaconsolepacs/` → `200` par la chaîne
+  réelle VIP → nginx → `10.40.0.40`, certificat conforme (échéance 17/10/2026,
+  série identique à celle encore servie par le VPS — copies synchrones) ;
+- `syngo.teleimagerie.net` et `syngo.isoteam.mn` → `301` vers leur
+  `syngo-via.*` respectif, certificat valide ;
+- IP réelles des clients dans `access.log` du conteneur (proxy_protocol
+  fonctionnel, pas de `127.0.0.1`) ;
+- le certbot du conteneur peut de nouveau renouveler `pacs-secours` en HTTP-01
+  (le port 80 répond au nom, l'A pointe sur le proxy — l'échéance du
+  17/10/2026 n'est plus une contrainte).
 
-0. **Basculer avant le 17/10/2026.** La copie du certificat `pacs-secours` du
-   conteneur expire à cette date et son certbot ne peut pas la renouveler tant
-   que le DNS pointe sur le VPS (la validation HTTP-01 aboutit chez lui — ses
-   tentatives, à partir de la mi-septembre, échoueront en silence). Après la
-   bascule, le renouvellement local refonctionne. Si la date approche,
-   re-synchroniser la copie depuis le VPS avant de basculer.
-1. Abaisser le TTL de `pacs-secours` (3600 → 60) au moins une heure avant.
-2. Vérifier que le relais ACME du port 80 vers TSplus répond
-   (commande dans [Diagnostic](#diagnostic)) : sans lui, le renouvellement
-   du certificat TSplus casse silencieusement.
-3. Basculer les enregistrements A vers `57.130.34.122`.
-4. Contrôler : certificat présenté par nom ([Diagnostic](#diagnostic)),
-   session RemoteApp réelle (chemin sans SNI), paires de lignes du relais dans
-   `stream_access.log`, IP réelles des clients dans les logs `pacs-secours`.
-5. Après stabilisation : décommissionner l'ancien VPS et remonter le TTL.
+Retour arrière si besoin : `python3 /root/bascule-3noms.py revert` sur pve1
+(repointe les deux noms sur `51.75.203.20` et supprime `syngo.isoteam.mn`),
+effectif en ~60 s grâce au TTL abaissé. Copie du script archivée dans
+[scripts/bascule-3noms.py](scripts/bascule-3noms.py).
+
+### Après stabilisation (voir [06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage))
+
+- décommissionner l'ancien VPS `51.75.203.20` quand ses logs ne montrent plus
+  de trafic légitime ;
+- remonter le TTL des trois noms (60 → 3600) ;
+- décider (ou pas) de la bascule de `syngo-via.*` vers le relais TLS du proxy —
+  session RemoteApp réelle et paires de lignes `stream_access.log` à contrôler
+  ce jour-là ; le relais ACME du port 80 vers TSplus est prêt.
 
 ---
 
 ## Ce qui est publié
 
-Ce que le proxy est **configuré** pour servir — voir ci-dessus pour ce qu'il
-reçoit réellement tant que la bascule DNS n'est pas faite.
+Ce que le proxy est **configuré** pour servir. Depuis la bascule du
+26/08/2026, il reçoit réellement le trafic des trois premiers noms ; les
+`syngo-via.*` continuent d'arriver en direct chez TSplus (voir ci-dessus).
 
 | Nom | Traitement | Destination |
 |---|---|---|
@@ -219,9 +224,10 @@ plus deux blocs port 80 (scindés le 24/08/2026) :
 - `syngo.*` : redirection https, défis ACME servis localement ;
 - `syngo-via.*` : **les défis ACME sont relayés vers TSplus**
   (`proxy_pass http://37.61.243.246`). C'est ce qui permettra à TSplus de
-  continuer à renouveler lui-même ses certificats après la bascule DNS, le
-  HTTP-01 de Let's Encrypt arrivant alors sur le proxy et non plus chez lui.
-  Sans ce relais, son renouvellement casserait silencieusement le jour J.
+  continuer à renouveler lui-même ses certificats si les A de `syngo-via.*`
+  sont un jour basculés vers le proxy (non fait au 26/08/2026), le HTTP-01 de
+  Let's Encrypt arrivant alors sur le proxy et non plus chez lui. Sans ce
+  relais, son renouvellement casserait silencieusement ce jour-là.
 
 Pourquoi rediriger plutôt que servir : en relais TLS c'est **le certificat de
 TSplus** qui est présenté, et il ne couvre que les noms `syngo-via.*`.

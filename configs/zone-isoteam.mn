@@ -1,5 +1,5 @@
 $TTL 3600
-@	IN SOA dns102.ovh.net. tech.ovh.net. (2086618585 86400 3600 3600000 60)
+@	IN SOA dns102.ovh.net. tech.ovh.net. (2087727699 86400 3600 3600000 60)
         IN NS     dns102.ovh.net.
         IN NS     ns102.ovh.net.
         IN MX     0 isoteam-mn.mail.protection.outlook.com.
@@ -26,6 +26,7 @@ preprod-app        IN A     79.137.100.184
 preprod-facturation        IN A     46.105.64.17
 preprod-gestion        IN A     79.137.100.184
 sftp        IN A     37.61.243.246
+syngo     60 IN A     57.130.34.122
 syngo-via     60 IN A     37.61.243.246
 venus        IN A     77.158.128.112
 venus        IN A     37.61.243.245

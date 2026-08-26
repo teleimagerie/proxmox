@@ -105,7 +105,7 @@ recoupements de noms, pas des vérifications sur machine.
 |---|---|---|
 | `pve{1,2,3}.infra` | administration des nœuds | [README](README.md#les-3-serveurs), [04](04-securite.md#tls) |
 | `headscale` | plan de contrôle du tailnet | [11-headscale.md](11-headscale.md) |
-| `pacs-secours`, `syngo`, `syngo-via` | proxy — bascule DNS pas faite | [09-proxy-tim.md](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production) |
+| `pacs-secours`, `syngo`, `syngo-via` | proxy — bascule faite le 26/08/2026 (`syngo-via` en direct, volontairement) | [09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026) |
 
 ### `teleimagerie.net` — production imagerie
 
@@ -166,8 +166,8 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 
 | Nom | Cible(s) | Rôle |
 |---|---|---|
-| `syngo-via` | → état réel dans [09](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production) | portail + RemoteApp Syngo Via |
-| `syngo` | **aucun enregistrement** | incohérence connue — [09](09-proxy-tim.md#la-bascule-dns-nest-pas-faite--le-proxy-ne-reçoit-pas-la-production) |
+| `syngo-via` | → état réel dans [09](09-proxy-tim.md#bascule-dns-du-26082026) | portail + RemoteApp Syngo Via |
+| `syngo` | → état réel dans [09](09-proxy-tim.md#bascule-dns-du-26082026) | créé le 26/08/2026 (soldait l'anomalie n°2) |
 | `sftp`, `vpn-angers` | `37.61.243.246` | droit sur le WAN pfSense TELLIS 📋 → [13](13-tellis.md) |
 | `venus` | `77.158.128.112` + `37.61.243.245` | RIS VENUS du DC TELLIS 📋 → [13](13-tellis.md) |
 | `app`, `gestion` | `146.59.233.170` | gestion 📋 |
@@ -203,8 +203,8 @@ vérification Microsoft et Google. SPF :
    `dlmbox01.teleimagerie.net.teleimagerie.net` → `77.158.128.112`, et le nom
    voulu `dlmbox01.teleimagerie.net` ne résout pas.
 2. **`syngo.isoteam.mn` n'existe pas** alors que le proxy le sert et qu'un
-   certificat le couvre — connu, à créer le jour de la bascule
-   ([09](09-proxy-tim.md#checklist-pour-le-jour-de-la-bascule)).
+   certificat le couvre — **soldée le 26/08/2026** : enregistrement créé lors
+   de la bascule ([09](09-proxy-tim.md#bascule-dns-du-26082026)).
 3. **La redirection `.fr` ne mène nulle part** ✅ : l'apex redirige vers
    `www.teleimagerie.fr`, or `www` ne porte qu'un DNAME vers
    `teleimagerie.net` — qui ne s'applique qu'aux noms *en dessous* de `www`,
@@ -251,7 +251,7 @@ propriétaires ; ici, seulement la dépendance DNS de chacun.
 | `pve{1,2,3}.infra` | DNS-01 (plugin ovh) | écrit des TXT dans `teleimagerie.net` | [04](04-securite.md#tls) |
 | `syngo-teleimagerie` | DNS-01 (acme.sh sur pve1) | TXT dans `teleimagerie.net` | [09](09-proxy-tim.md#certificats) |
 | `syngo-isoteam` | DNS-01 (acme.sh sur pve1) | TXT dans **`isoteam.mn`** | [09](09-proxy-tim.md#certificats) |
-| `pacs-secours` (certbot CT 201) | HTTP-01 | l'A doit pointer sur le proxy — bloqué tant que la bascule n'est pas faite (avant le **17/10/2026**) | [09](09-proxy-tim.md#checklist-pour-le-jour-de-la-bascule) |
+| `pacs-secours` (certbot CT 201) | HTTP-01 | l'A pointe sur le proxy depuis le 26/08/2026 — renouvellement débloqué (prochain vers la mi-septembre) | [09](09-proxy-tim.md#bascule-dns-du-26082026) |
 | TSplus (Let's Encrypt intégré) | HTTP-01 | l'A de `syngo-via.*` + le relais ACME port 80 après bascule | [09](09-proxy-tim.md#certificats) |
 | headscale (certmagic) | TLS-ALPN-01 | l'A de `headscale` | [11](11-headscale.md) |
 
@@ -310,7 +310,7 @@ curl -s https://rdap.verisign.com/net/v1/domain/teleimagerie.net \
 | Cibles d'architecture des noms | [12-architecture-hds.md](12-architecture-hds.md) |
 | Pièges DNS n°2, 6, 10, 30 | [07-pieges.md](07-pieges.md) |
 | Le DC TELLIS (cibles `37.61.243.24x`, VENUS, nginx `.61`) | [13-tellis.md](13-tellis.md) |
-| Échéance de bascule (17/10/2026) | [06-reste-a-faire.md](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim) |
+| Nettoyage post-bascule (VPS, TTL) | [06-reste-a-faire.md](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage) |
 
 ## À vérifier / à documenter ⚠️
 

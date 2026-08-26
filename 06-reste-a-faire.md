@@ -33,19 +33,25 @@ Ce qui reste ouvert sur le sujet :
 
 ---
 
-## 2. Bascule DNS vers `proxy-tim`
+## 2. Bascule DNS vers `proxy-tim` — faite le 26/08/2026, reste le nettoyage
 
-La migration du 12/08 a préparé le proxy, mais **les enregistrements DNS n'ont
-jamais été basculés** (constat du 24/08/2026) : `pacs-secours` et
-`syngo.teleimagerie.net` pointent toujours sur l'ancien VPS `51.75.203.20`,
-`syngo-via.*` en direct sur TSplus. L'ancien VPS reste donc en production — et
-facturé.
+**Bascule faite le 26/08/2026** : `pacs-secours.teleimagerie.net`,
+`syngo.teleimagerie.net` et `syngo.isoteam.mn` (créé à cette occasion) pointent
+sur `57.130.34.122`, TTL 60. Vérifiée de bout en bout — détail dans
+[09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026).
 
-Les prérequis sont en place depuis le 24/08 : relais ACME du port 80 vers
-TSplus (son renouvellement de certificat survivra à la bascule) et
-renouvellement automatisé des certs syngo depuis pve1. La marche à suivre du
-jour J est dans
-[09-proxy-tim.md](09-proxy-tim.md#checklist-pour-le-jour-de-la-bascule).
+Reste à faire :
+
+- **Décommissionner l'ancien VPS** `51.75.203.20` après stabilisation
+  (quelques jours d'observation des logs) — il ne sert plus que les caches DNS
+  non expirés, mais reste facturé. Avant de le résilier, vérifier que plus
+  aucun trafic légitime n'y arrive.
+- **Remonter le TTL** des trois noms (60 → 3600) une fois la stabilité
+  confirmée.
+- **`syngo-via.*` restent en direct sur TSplus** (`37.61.243.246`) : les faire
+  passer par le relais TLS du proxy est une décision séparée, non prise —
+  le relais ACME du port 80 vers TSplus est prêt depuis le 24/08 si elle
+  se prend un jour.
 
 ---
 
