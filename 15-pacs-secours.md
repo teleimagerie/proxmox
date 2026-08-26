@@ -111,6 +111,12 @@ vRack/`wg2` est un chantier futur, consigné dans
 > identique octet pour octet entre l'ancien VPS de production et le nouveau
 > chemin. Un `404` sur `/` n'est donc **pas** un signe de panne ; pour tester le
 > service, viser `/xaconsolepacs/`.
+>
+> Constaté à la bascule DNS du 26/08/2026 : la console n'est pas le gros du
+> trafic — le volume vient de l'**alimentation en études sous
+> `/PACS_TIM_BCK/`** (`POST …/VAL9/studies`, ~300–650 Ko, toutes les ~30 s
+> depuis les sites). Deux chemins à contrôler, donc, pour juger le service
+> ([09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026)).
 
 ---
 

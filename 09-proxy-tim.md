@@ -60,7 +60,14 @@ Contrôles post-bascule (26/08/2026, ~07 h UTC) :
   fonctionnel, pas de `127.0.0.1`) ;
 - le certbot du conteneur peut de nouveau renouveler `pacs-secours` en HTTP-01
   (le port 80 répond au nom, l'A pointe sur le proxy — l'échéance du
-  17/10/2026 n'est plus une contrainte).
+  17/10/2026 n'est plus une contrainte) ;
+- **production confirmée en charge réelle à 07:10 UTC** (~13 min après la
+  bascule, le temps d'expiration des caches) : `POST /PACS_TIM_BCK/VAL9/studies`
+  authentifiés (`200`, 300–650 Ko) toutes les ~30 s depuis une IP de site, et
+  une session navigateur réelle sur `/xaconsolepacs/` — IP réelles des deux
+  côtés dans `access.log`. Le gros du volume de `pacs-secours` est ce flux
+  d'**alimentation sous `/PACS_TIM_BCK/`**, pas la console
+  ([15-pacs-secours.md](15-pacs-secours.md)).
 
 Retour arrière si besoin : `python3 /root/bascule-3noms.py revert` sur pve1
 (repointe les deux noms sur `51.75.203.20` et supprime `syngo.isoteam.mn`),
