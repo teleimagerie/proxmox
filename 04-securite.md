@@ -93,9 +93,14 @@ LoginGraceTime 30
 X11Forwarding no
 ```
 
-Clé autorisée : `~/.ssh/id_ed25519` du poste d'administration
-(`SHA256:3ovvl+5zDbc2695U3wxZppukZYnvQSPUZuRuHqDp/Ik`), plus les clés root
-croisées des 3 nœuds (nécessaires à `pvecm` et à la migration).
+Clés autorisées (dans `/etc/pve/priv/authorized_keys`, répliqué par pmxcfs —
+`/root/.ssh/authorized_keys` n'est qu'un lien symbolique, un ajout sur un nœud
+vaut pour les trois) :
+
+- `~/.ssh/id_ed25519` du poste d'administration
+  (`SHA256:3ovvl+5zDbc2695U3wxZppukZYnvQSPUZuRuHqDp/Ik`) ;
+- les clés root croisées des 3 nœuds (nécessaires à `pvecm` et à la migration) ;
+- `brtrnd@thinkpad` (ed25519, ajoutée le 2026-08-26).
 
 > **Cette clé est l'issue de secours ultime du cluster.** Sa perte, combinée à un
 > TOTP inaccessible, ne laisserait que la console KVM/IPMI OVH.
