@@ -246,6 +246,10 @@ entre chaque phase.
   d'origine. Après le test : OPNsense et proxy-tim sur **pve2**, headscale,
   keycloak et PBS sur **pve1**, **pve3 vide**. C'est le comportement
   documenté (« le service reste où la bascule l'a posé »).
+  **Rééquilibrage du même jour (11:43 UTC)** : OPNsense remigré à chaud sur
+  **pve3** — sonde à 1 s pendant l'opération, **zéro échantillon perdu**
+  (cohérent avec le test 1). Placement final : vm:100 sur pve3, ct:201 sur
+  pve2, ct:202/ct:203/vm:102 sur pve1 — chaque nœud porte quelque chose.
 - Mêmes queues d'instabilité brèves (~10-35 s) que le test 5 dans les minutes
   suivant chaque retour.
 - `10.40.0.2` de pve1 à nouveau perdue puis reposée ([06 §7](06-reste-a-faire.md#7-divers)).
