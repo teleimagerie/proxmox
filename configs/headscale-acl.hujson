@@ -1,3 +1,5 @@
+// source : CT202:/etc/headscale/acl.hujson
+// releve le : 27/08/2026 — copie documentaire, verifier avec scripts/check-drift.sh
 {
   // ACL du tailnet tim — headscale v0.29 (policy v2).
   // Defaut : tout est refuse. Notamment : AUCUN trafic gateway <-> gateway.

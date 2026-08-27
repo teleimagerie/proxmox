@@ -1,3 +1,5 @@
+# source : pve1:/etc/hosts
+# releve le : 27/08/2026 — copie documentaire, verifier avec scripts/check-drift.sh
 127.0.0.1	localhost
 ::1	localhost	ip6-localhost	ip6-loopback
 ff02::1	ip6-allnodes

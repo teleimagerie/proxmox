@@ -1,3 +1,5 @@
+# source : pve1:/etc/fail2ban/jail.d/proxmox.local
+# releve le : 27/08/2026 — copie documentaire, verifier avec scripts/check-drift.sh
 [DEFAULT]
 backend  = systemd
 bantime  = 3600
