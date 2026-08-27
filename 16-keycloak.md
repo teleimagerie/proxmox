@@ -94,7 +94,7 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 | Client | Redirect URIs |
 |---|---|
 | `proxmox` | `https://pve{1,2,3}.infra.teleimagerie.net:8006/*` |
-| `pbs` | `https://10.30.0.20:8007/*`, `https://10.40.0.20:8007/*` |
+| `pbs` | `https://10.30.0.20:8007/*`, `https://10.40.0.20:8007/*`, `https://localhost:8007/*` (l'interface s'ouvre par tunnel SSH — [10-sauvegardes.md](10-sauvegardes.md#accès-à-linterface-pbs)) |
 | `headscale` | `https://headscale.teleimagerie.net/oidc/callback` |
 
 > ⚠️ **headscale ne démarre pas si l'issuer est injoignable** : la section
