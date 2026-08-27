@@ -684,3 +684,48 @@ de vie des nœuds.
 une promesse d'architecture : la matrice ACL avait été testée le 15/08 avec des
 CT jetables, la révocation par user, jamais. Corrigé dans
 [11-headscale.md](11-headscale.md#organisation-du-tailnet).
+
+## 32. Joindre la VIP .122 depuis l'intérieur aboutit sur la GUI d'OPNsense
+
+**Symptôme** — Le 27/08/2026, headscale part en crash-loop dès l'ajout de sa
+section `oidc` : `tls: failed to verify certificate: x509: certificate is
+valid for OPNsense.internal, not auth.teleimagerie.net`. Depuis un CT du
+VLAN 400, `curl https://auth.teleimagerie.net` (VIP `57.130.34.122`) reçoit le
+certificat auto-signé de l'interface web d'OPNsense — pas le proxy.
+
+**Cause** — Les redirections de la VIP `.122` sont des règles NAT côté WAN
+**sans réflexion** (contrairement à celles de `.123`, posées en `purenat` —
+[piège n° 29](07-pieges.md#29-la-réflexion-nat-seule-ne-suffit-pas--il-faut-aussi-le-nat-sortant-du-retour)).
+Vu du LAN, `.122` est une simple adresse locale d'OPNsense : le paquet
+n'emprunte jamais la redirection, et c'est la GUI (lighttpd, qui écoute sur
+toutes les adresses) qui répond en 443.
+
+**Résolution** — Split-horizon plutôt qu'épingle NAT : un **override Unbound**
+sert `auth.teleimagerie.net → 10.40.0.10` aux clients internes — le trafic va
+droit au proxy, qui présente le bon certificat via son routeur SNI. Voir
+[08-opnsense.md](08-opnsense.md#résolution-interne--override-unbound).
+
+**Leçon** — Le correcteur global de réflexion (piège 29) ne joue que pour les
+règles qui portent elles-mêmes une réflexion. Tout nouveau nom publié doit être
+testé **depuis l'intérieur et depuis l'extérieur** — les deux chemins n'ont
+rien en commun.
+
+## 33. Un CT sans `nameserver` hérite du résolveur public du nœud
+
+**Symptôme** — Toujours le 27/08/2026, l'override Unbound en place : le CT 203
+voit bien `10.40.0.10`, mais le CT 202 (headscale) résout encore la VIP
+publique et reste en crash-loop.
+
+**Cause** — Sans option `nameserver` dans sa config LXC, `pct` recopie le
+`resolv.conf` du nœud hôte au démarrage — soit le cache DNS d'OVH
+(`213.186.33.99`), qui sert la vue **publique** et ignore l'override interne.
+Le CT 201 avait l'option, le CT 202 non : deux conteneurs voisins, deux vues
+DNS différentes.
+
+**Résolution** — `pct set 202 --nameserver 10.40.0.1` (et `/etc/resolv.conf`
+corrigé à chaud). Le CT 203 avait l'option dès sa création.
+
+**Leçon** — Sur ce cluster, tout CT du VLAN 400 doit porter explicitement
+`--nameserver 10.40.0.1`. À noter aussi : **headscale refuse de démarrer si
+l'issuer OIDC est injoignable** — une erreur de DNS dans ce CT ne dégrade pas
+le service, elle l'empêche de se lever ([16-keycloak.md](16-keycloak.md#ce-qui-est-raccordé)).

@@ -209,6 +209,31 @@ Un chevauchement ne se voit qu'une fois le tunnel monté.
 
 ---
 
+## Résolution interne — override Unbound
+
+Unbound (sur `10.40.0.1`) est le résolveur des machines du VLAN 400. Depuis le
+27/08/2026, il porte un **host override** :
+
+| Nom | Réponse interne | Raison |
+|---|---|---|
+| `auth.teleimagerie.net` | `10.40.0.10` (proxy-tim) | joindre la VIP `.122` depuis l'intérieur aboutit sur la GUI d'OPNsense — [piège n° 32](07-pieges.md#32-joindre-la-vip-122-depuis-lintérieur-aboutit-sur-la-gui-dopnsense) |
+
+L'override est inscrit dans `config.xml` (`unboundplus/hosts`) : il survit à
+une reconstruction depuis l'export hebdomadaire, et la GUI le montre dans
+*Services → Unbound DNS → Overrides*. Sauvegarde préalable à l'édition du
+27/08/2026 : `/conf/config.xml.bak-keycloak-20260827`.
+
+```bash
+# vérifier la réponse interne (sur OPNsense)
+drill @127.0.0.1 auth.teleimagerie.net A
+```
+
+> ⚠️ Cet override est une **dépendance de démarrage de headscale** (sa section
+> `oidc` valide l'issuer au boot) et les CT doivent utiliser `10.40.0.1` comme
+> résolveur pour le voir — [piège n° 33](07-pieges.md#33-un-ct-sans-nameserver-hérite-du-résolveur-public-du-nœud).
+
+---
+
 ## Accès d'administration
 
 **Interface web** : WireGuard, puis `https://10.40.0.1`.
@@ -237,8 +262,13 @@ qm terminal 100          # Ctrl+O pour quitter
 
 > **Accès temporaire en place** : pve1 dispose d'une adresse `10.40.0.2` sur le
 > VLAN 400 (`vmbr1.400`), posée à la main pour le déploiement. Elle est
-> **non persistante** et disparaîtra au prochain redémarrage de pve1. Elle
-> constitue une entorse à la segmentation — la rétablir seulement en cas de besoin :
+> **non persistante** et disparaît à chaque redémarrage de pve1 — constaté le
+> 27/08/2026 après le redémarrage du 26/08, et **rétablie le jour même**.
+> ⚠️ Le hook de déploiement des certificats syngo (`scp` de pve1 vers
+> `10.40.0.10`, [09-proxy-tim.md](09-proxy-tim.md#renouvellement-automatisé-depuis-pve1--mis-en-place-le-24082026))
+> **dépend de cette adresse** : tant qu'elle manque, le renouvellement casse
+> silencieusement — voir [06 §7](06-reste-a-faire.md#7-divers).
+> Elle constitue une entorse à la segmentation — la rétablir en cas de besoin :
 > ```bash
 > ip link add link vmbr1 name vmbr1.400 type vlan id 400
 > ip addr add 10.40.0.2/24 dev vmbr1.400
