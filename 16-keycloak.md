@@ -79,7 +79,7 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 
 | Service | Mécanisme | Compte créé | Repli si IdP indisponible |
 |---|---|---|---|
-| **Proxmox VE** | realm `keycloak` (openid, `username-claim username`, `autocreate 0`) | `matt@keycloak`, rôle Administrator sur `/` | `matt@pve`, `root@pam` + TOTP |
+| **Proxmox VE** | realm `keycloak` (openid, `username-claim username`, `autocreate 0`) | `matt@keycloak` et `brtrnd@keycloak` (27/08/2026), rôle Administrator sur `/` | `matt@pve`, `root@pam` + TOTP |
 | **PBS** | realm `keycloak` (openid, idem) | `matt@keycloak`, ACL Admin sur `/` | `root@pam` local à la VM |
 | **headscale** | section `oidc` de la config — voie d'**enrôlement supplémentaire** | users OIDC créés à la volée | users locaux + clés de pré-enrôlement inchangés |
 
@@ -89,9 +89,8 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 > 10:00 sans nouvelle saisie** — même session SSO Keycloak servant les deux
 > clients (vérifié par `kcadm get clients/<id>/user-sessions`). `brtrnd`
 > s'est aussi authentifié (session client `proxmox` de 09:45) ;
-> `brtrnd@keycloak` a été créé côté PVE **sans aucun rôle** — l'attribution
-> est une décision à prendre. Reste headscale à éprouver (au prochain
-> enrôlement de nœud).
+> `brtrnd@keycloak` a été créé côté PVE puis promu **Administrator sur `/`**
+> le jour même. Reste headscale à éprouver (au prochain enrôlement de nœud).
 >
 > Les connexions réussies ne laissent **aucune trace** dans les journaux PBS
 > ni Keycloak par défaut : pour vérifier, interroger les sessions actives
