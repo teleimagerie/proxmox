@@ -14,7 +14,7 @@ hébergés ici (PACS à venir), et être administrées depuis ici.
 | Ressources | 2 vCPU, 2 Go RAM, disque 10 Go sur Ceph (`vm-storage`) |
 | Accès | `ssh -t root@pve1.infra.teleimagerie.net pct enter 202` (sur le nœud qui héberge le CT — `ha-manager status`) · ou `ssh root@10.40.0.30` depuis un nœud du VLAN 400 (première fois : accepter la clé d'hôte du CT — jamais fait depuis pve1 au 25/08/2026, un accès non-interactif échoue) |
 | Haute dispo | **ressource HA** depuis le 15/08/2026 (`max_restart 3`, `max_relocate 3`) |
-| Nœud courant | **pve1** depuis le test de bascule du 15/08/2026 |
+| Nœud courant | **pve1** depuis le test 6 du 27/08/2026 (récupération après coupure de pve2 — [05-tests-ha.md](05-tests-ha.md#test-6--triple-coupure-matérielle-un-nœud-après-lautre-interface-ovh)) |
 | Plage tailnet | **`100.72.0.0/16`** (v4) · `fd7a:115c:a1e0::/48` (v6) |
 
 > Le serveur headscale est un **plan de contrôle pur** : il enrôle les machines,

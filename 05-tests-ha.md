@@ -186,6 +186,70 @@ Au passage, confirmation du comportement connu : l'adresse temporaire
 > chemin public ([piège n° 30](07-pieges.md#30-le-fichier-hosts-windows-fausse-tout-diagnostic-dns-sous-wsl2)
 > version réseau : les deux chemins n'ont rien en commun).
 
+## Test 6 — Triple coupure matérielle, un nœud après l'autre (interface OVH)
+
+Réalisé le **27 août 2026**, **en production**, coupures lancées par
+l'utilisateur depuis l'espace client OVH (reset matériel — pas d'arrêt
+propre, donc pas d'évacuation : c'est le **fencing** qui travaille, comme au
+test 3). Sondes : 6 services HTTPS toutes les 3 s + état du cluster toutes
+les 10 s, depuis le poste d'admin (sous VPN — détail qui compte, voir plus
+bas). Règle appliquée : jamais deux nœuds coupés à la fois, reprise de Ceph
+entre chaque phase.
+
+### Phase 1 — pve1 (portait proxy-tim et keycloak)
+
+| Heure UTC | Événement |
+|---|---|
+| 11:15:09 | pve1 tombe — quorum 2/3, Ceph `HEALTH_WARN` |
+| ≤11:17:37 | Fencing + récupération : **ct:201→pve3, ct:203→pve2** |
+| 11:17:52 | pve1 de retour (**absence 2 min 43 s**) ; `pacs-secours` répond à nouveau — **coupure 2 min 43 s** |
+| 11:18:51 | `auth` répond (JVM Keycloak) — **coupure 3 min 23 s** |
+
+### Phase 2 — pve2 (portait PBS, headscale, et keycloak récupéré en phase 1)
+
+| Heure UTC | Événement |
+|---|---|
+| 11:23:11 | pve2 tombe ; au passage `pacs-secours` bafouille **31 s** (pause de peering Ceph probable — le CT du proxy, sur pve3, a son disque sur Ceph) |
+| ≤11:25:49 | Fencing + récupération : **ct:202→pve1, ct:203→pve1, vm:102→pve1** |
+| 11:25:52 | pve2 de retour (**absence 2 min 41 s**) |
+| 11:26:57 | `auth` répond — **coupure 3 min 46 s** (keycloak a déménagé deux fois en deux phases) |
+| 11:27:01 | headscale répond — **coupure 3 min 50 s** |
+
+### Phase 3 — pve3 (portait OPNsense — le pare-feu de tout)
+
+| Heure UTC | Événement |
+|---|---|
+| 11:30:17 | pve3 tombe. **Depuis le poste sous VPN, TOUT devient invisible** — y compris pve1 et pve2 pourtant vivants |
+| ≤11:34:20 | Fencing + récupération : **vm:100→pve2, ct:201→pve2** |
+| 11:34:23 | pve3 de retour, VPN/DNS revenus, headscale répond — **coupure ~4 min 06 s** |
+| 11:35:08 | `auth` et `pacs-secours` répondent — **coupure 4 min 51 s** |
+
+> ⚠️ **Le piège de diagnostic de la phase 3** : le poste d'admin utilise le
+> DNS du VPN (`10.40.0.1` = OPNsense). OPNsense mort, **plus aucun nom ne se
+> résout** : les sondes ont vu pve1 et pve2 « morts » alors qu'ils étaient
+> parfaitement vivants (l'enregistreur d'état, qui joint les nœuds par leur
+> nom, a été aveugle 3 min 20 s pour la même raison). En cas de panne réelle,
+> **diagnostiquer par IP publiques directes**, jamais par les noms depuis le
+> VPN — sous peine de conclure à une panne totale qui n'existe pas.
+
+### Ce que le test prouve
+
+- **Chaque nœud peut mourir brutalement** : les cinq machines ont toutes été
+  récupérées automatiquement, quorum et Ceph revenus sains après chaque
+  phase, **zéro perte de données** et flux PACS reparti seul à chaque fois.
+- **Ordre de grandeur à retenir : 3 à 5 min d'indisponibilité** par service
+  porté par le nœud coupé (fencing ~2 min + redémarrage du service — la JVM
+  Keycloak ajoute ~40 s ; OPNsense est le pire cas car il ajoute sa propre
+  coupure à celle des autres).
+- **Une récupération est définitive** : contrairement au test 5 (politique
+  `migrate` sur arrêt propre), les services ne reviennent pas sur leur nœud
+  d'origine. Après le test : OPNsense et proxy-tim sur **pve2**, headscale,
+  keycloak et PBS sur **pve1**, **pve3 vide**. C'est le comportement
+  documenté (« le service reste où la bascule l'a posé »).
+- Mêmes queues d'instabilité brèves (~10-35 s) que le test 5 dans les minutes
+  suivant chaque retour.
+- `10.40.0.2` de pve1 à nouveau perdue puis reposée ([06 §7](06-reste-a-faire.md#7-divers)).
+
 ## Synthèse
 
 | Scénario | Indisponibilité | Perte de données |
@@ -194,6 +258,7 @@ Au passage, confirmation du comportement connu : l'adresse temporaire
 | Migration planifiée d'un CT | ~14 s | aucune |
 | Reboot planifié d'un nœud portant 2 CT | ~32 s (évacuation) **puis** ~22 s (retour auto) | aucune |
 | Panne d'un nœud | ~2 min 15 s | **aucune** (RPO = 0) |
+| Coupure matérielle d'un nœud, services réels (test 6) | **2 min 43 s à 4 min 51 s** selon le service porté (pire cas : OPNsense) | aucune |
 | Panne d'un disque | 0 s | aucune |
 | Panne de deux nœuds | **totale** | aucune, mais quorum perdu |
 

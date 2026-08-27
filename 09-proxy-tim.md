@@ -10,7 +10,7 @@ Conteneur LXC **201**, Debian 13, nginx 1.26.3. Migré depuis le VPS
 | Ressources | 2 vCPU, 2 Go RAM, disque 40 Go sur Ceph |
 | Accès | `ssh root@10.40.0.10` depuis un nœud ayant accès au VLAN 400 |
 | Haute dispo | **ressource HA** depuis le 15/08/2026 (`max_restart 3`, `max_relocate 3`) |
-| Nœud courant | **pve1** depuis le test 5 du 27/08/2026 (retour automatique après reboot — [05-tests-ha.md](05-tests-ha.md#test-5--redémarrage-planifié-dun-nœud-entier-politique-migrate)) |
+| Nœud courant | **pve2** depuis le test 6 du 27/08/2026 (récupération après coupure de pve3 — [05-tests-ha.md](05-tests-ha.md#test-6--triple-coupure-matérielle-un-nœud-après-lautre-interface-ovh)) |
 
 > ✅ **`proxy-tim` est une ressource HA depuis le 15/08/2026** :
 > `ha-manager add ct:201 --state started --max_restart 3 --max_relocate 3`,
