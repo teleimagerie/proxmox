@@ -109,8 +109,14 @@ Clés autorisées (dans `/etc/pve/priv/authorized_keys`, répliqué par pmxcfs �
 `/root/.ssh/authorized_keys` n'est qu'un lien symbolique, un ajout sur un nœud
 vaut pour les trois) :
 
-- `~/.ssh/id_ed25519` du poste d'administration
+- `~/.ssh/id_ed25519` du poste d'administration, **côté WSL**
   (`SHA256:3ovvl+5zDbc2695U3wxZppukZYnvQSPUZuRuHqDp/Ik`) ;
+- `matt@LENOVO-MCA2-windows` (ed25519, ajoutée le 2026-08-27,
+  `SHA256:zQ/KVcnLegd0tmIEG2aHLkPaqP/2AoigMqROx2MwS1g`) — **le même poste,
+  côté Windows natif** (`C:\Users\Matt\.ssh\`) : PowerShell et WSL ont chacun
+  leur trousseau, une clé WSL ne sert pas à `ssh.exe`. Le commentaire
+  d'origine (`matt@LENOVO-MCA2`) a été suffixé `-windows` pour pouvoir
+  distinguer — et révoquer — chaque clé indépendamment ;
 - les clés root croisées des 3 nœuds (nécessaires à `pvecm` et à la migration) ;
 - `brtrnd@thinkpad` (ed25519, ajoutée le 2026-08-26).
 
