@@ -123,12 +123,60 @@ racine n'est pas servie, l'application vit sous `/xaconsolepacs/` qui doit
 répondre `200` — vérifié identique avant la bascule ;
 [15-pacs-secours.md](15-pacs-secours.md#mesures-du-25082026)).
 
+## Test 5 — Redémarrage planifié d'un nœud entier (politique `migrate`)
+
+Réalisé le **27 août 2026**, **en production**, à la demande : pve1 rebooté
+avec les CT 201 (proxy-tim) et 203 (keycloak) placés dessus au préalable —
+pve1 ne portait rien ce jour-là, il fallait des témoins réels. Mesure : sonde
+HTTPS toutes les 2 s sur `auth.teleimagerie.net` (well-known OIDC) et toutes
+les 10 s sur `pacs-secours.teleimagerie.net`, depuis le poste d'admin.
+
+```bash
+ssh root@pve1... reboot     # datacenter.cfg : ha: shutdown_policy=migrate
+```
+
+| Heure UTC | Δ | Événement |
+|---|---|---|
+| 10:54:09 | 0 s | `reboot` envoyé à pve1 |
+| 10:54:25 | +16 s | **Les deux CT sont déjà réaffectés** (201→pve3, 203→pve2), avant même la chute du nœud |
+| 10:54:43 | +34 s | pve1 tombe — quorum 2/3, Ceph `HEALTH_WARN` (dégradé, normal) |
+| 10:57:28 | +3 min 19 s | pve1 répond au ping — **absence totale : 2 min 45 s** |
+| 10:57:33 | +3 min 24 s | Quorum 3/3 |
+| 10:57:36→58 | +3 min 27 s | La politique `migrate` **ramène automatiquement les deux CT sur pve1** |
+| 10:58:10 | +4 min 01 s | Ceph `HEALTH_OK` (37 s après le retour du quorum) |
+
+| Mesure | Valeur |
+|---|---|
+| Coupure `auth` à l'évacuation (les 2 CT bougent ensemble) | **~32 s** |
+| Coupure `pacs-secours` à l'évacuation | ≤ ~26 s |
+| Coupure `auth` au **retour automatique** | **~22 s** |
+| Coupure `pacs-secours` au retour | ≤ ~20 s |
+| Production pendant l'absence du nœud (2 min 45 s) | **aucune coupure** hors fenêtres de migration |
+
+Trois choses apprises :
+
+1. **L'évacuation planifiée fonctionne et elle est rapide** : 16 s entre
+   l'ordre de reboot et la réaffectation des services — le nœud attend que
+   ses ressources soient parties pour s'éteindre.
+2. **La politique `migrate` ramène les services à leur nœud d'origine dès
+   son retour** — donc une maintenance planifiée provoque **deux** fenêtres
+   de coupure par CT (aller et retour), pas une. À intégrer dans toute
+   annonce de maintenance.
+3. Les coupures se **cumulent en cascade** : proxy-tim porte le chemin réseau
+   de keycloak, donc quand les deux bougent, `auth` cumule les deux restarts
+   (~32 s contre ~14 s pour un CT seul, test 4).
+
+Au passage, confirmation du comportement connu : l'adresse temporaire
+`10.40.0.2` de pve1 (VLAN 400) a disparu au reboot et a été reposée à la main
+([06 §7](06-reste-a-faire.md#7-divers)).
+
 ## Synthèse
 
 | Scénario | Indisponibilité | Perte de données |
 |---|---|---|
 | Migration planifiée | 1 s | aucune |
 | Migration planifiée d'un CT | ~14 s | aucune |
+| Reboot planifié d'un nœud portant 2 CT | ~32 s (évacuation) **puis** ~22 s (retour auto) | aucune |
 | Panne d'un nœud | ~2 min 15 s | **aucune** (RPO = 0) |
 | Panne d'un disque | 0 s | aucune |
 | Panne de deux nœuds | **totale** | aucune, mais quorum perdu |
