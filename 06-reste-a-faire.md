@@ -42,10 +42,14 @@ sur `57.130.34.122`, TTL 60. Vérifiée de bout en bout — détail dans
 
 Reste à faire :
 
-- **Décommissionner l'ancien VPS** `51.75.203.20` après stabilisation
-  (quelques jours d'observation des logs) — il ne sert plus que les caches DNS
-  non expirés, mais reste facturé. Avant de le résilier, vérifier que plus
-  aucun trafic légitime n'y arrive.
+- **Décommissionner l'ancien VPS** `51.75.203.20` — **drainage vérifié le
+  27/08/2026** (accès `ssh ubuntu@51.75.203.20`, sudo) : sur les ~23 h suivant
+  la bascule, ~1 200 requêtes reçues, **zéro** sur les chemins légitimes
+  (`/xaconsolepacs`, `/PACS_TIM_BCK`), zéro connexion TLS sur le relais 443 —
+  uniquement des scanners (dont du bruit RDP :3389 en `502`). Plus aucun nom
+  des six zones ne pointe sur cette IP. **Prêt à résilier** (espace client
+  OVH) ; par prudence, prendre un snapshot avant. Rien à récupérer dessus :
+  config nginx et certificats déjà migrés sur le CT 201 le 12/08.
 - **Remonter le TTL** des trois noms (60 → 3600) une fois la stabilité
   confirmée.
 - **`syngo-via.*` restent en direct sur TSplus** (`37.61.243.246`) : les faire
