@@ -276,11 +276,11 @@ ici. Les trois points saillants :
 Keycloak est en production ([16-keycloak.md](16-keycloak.md)) : realm `tim`,
 Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
 
-- **Distribuer le mot de passe temporaire** de `brtrnd`
-  (`/etc/pve/priv/keycloak/credentials`), première connexion = changement de
-  mot de passe + enrôlement TOTP — celui de `matt` a servi le 27/08/2026
-  (premier login OIDC vérifié sur PVE) ; recopier tous les secrets du fichier
-  dans le gestionnaire de secrets.
+- ~~**Distribuer les mots de passe temporaires et ranger les secrets**~~ —
+  soldé le 27/08/2026 : `matt` et `brtrnd` connectés (mots de passe changés,
+  TOTP enrôlés), secrets recopiés dans le gestionnaire et
+  `/etc/pve/priv/keycloak/credentials` **détruit des serveurs**
+  ([04-securite.md](04-securite.md#secrets--où-ils-vivent)).
 - **Éprouver headscale par une connexion OIDC réelle** (PVE et PBS le sont
   depuis le 27/08/2026, en SSO sur une même session) : un
   `tailscale up --login-server https://headscale.teleimagerie.net` de test.

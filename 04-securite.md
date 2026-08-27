@@ -223,7 +223,8 @@ Forcer un renouvellement : `pvenode acme cert order --force`
 | Clé API OVH NAS-HA | `/root/.secrets/ovh-nasha.ini` sur **pve1** | mode 600, **non répliqué** |
 | Clé API OVH ACME (certbot) | `/root/.secrets/ovh.ini` sur **pve1** | mode 600, **non répliqué** |
 | Jeton PBS `backup@pbs!pve` | `/etc/pve/priv/storage/pbs.pw` | répliqué |
-| Secrets Keycloak (base, admin, clients OIDC, mdp temporaires) | `/etc/pve/priv/keycloak/credentials` | répliqué — voir [16-keycloak.md](16-keycloak.md) |
+| Mot de passe admin Keycloak (console, realm `master`) | **gestionnaire de secrets uniquement** | recopié puis **détruit des serveurs le 27/08/2026** (`rm /etc/pve/priv/keycloak/credentials`), comme le root OPNsense. Récupération possible sans lui : `kc.sh bootstrap-admin user` sur le CT 203 |
+| Secrets opérationnels Keycloak (base, clients OIDC) | chacun à son poste de travail | mdp base : `keycloak.conf` du CT 203 · client `proxmox` : `/etc/pve/domains.cfg` · client `pbs` : `domains.cfg` de PBS · client `headscale` : `/etc/headscale/oidc_secret` — voir [16-keycloak.md](16-keycloak.md) |
 | Config OPNsense sauvegardée | `/mnt/pve/nas-vm/opnsense-config/` | **contient les clés privées WireGuard**, répertoire 700 |
 
 `/etc/pve/priv/` est accessible à root seulement et répliqué par pmxcfs.

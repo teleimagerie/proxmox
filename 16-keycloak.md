@@ -125,10 +125,16 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
   `admin` du realm `master`. Elle est exposée publiquement comme le reste ;
   la restreindre aux IP d'administration dans le vhost est une option de
   durcissement notée dans [06-reste-a-faire.md](06-reste-a-faire.md).
-- **Tous les secrets** (mot de passe base, admin, mots de passe temporaires,
-  secrets des trois clients) : `/etc/pve/priv/keycloak/credentials` sur le
-  cluster — voir [04-securite.md](04-securite.md#secrets--où-ils-vivent).
-  À recopier dans le gestionnaire de secrets.
+- **Secrets** : le fichier de déploiement `/etc/pve/priv/keycloak/credentials`
+  a été recopié dans le **gestionnaire de secrets puis détruit des serveurs
+  le 27/08/2026**. Ne subsistent que les copies opérationnelles, chacune à
+  son poste : mot de passe base dans `keycloak.conf` (CT 203), secrets
+  clients dans `/etc/pve/domains.cfg`, le `domains.cfg` de PBS et
+  `/etc/headscale/oidc_secret` — tableau dans
+  [04-securite.md](04-securite.md#secrets--où-ils-vivent). Mot de passe admin
+  perdu = re-bootstrap : `kc.sh bootstrap-admin user` sur le CT 203, puis
+  `kcadm set-password` sur le compte `admin` et suppression de l'admin
+  temporaire.
 
 ---
 
@@ -217,7 +223,7 @@ leurs comptes locaux + TOTP Keycloak.
    les comptes Google hors domaine).
 3. Décider du rapprochement e-mail → utilisateur existant (« First Broker
    Login » : lier au compte du même e-mail, ou créer à la volée).
-4. Archiver le secret dans `/etc/pve/priv/keycloak/credentials`.
+4. Ranger le secret du client Google dans le gestionnaire de secrets.
 
 ---
 
