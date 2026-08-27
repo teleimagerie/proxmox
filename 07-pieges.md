@@ -757,3 +757,30 @@ au realm, pas par voie d'entrée — pour différencier, c'est dans les **flux
 d'authentification** que ça se joue ; et le sous-flux s'appelle « Conditional
 **2FA** » depuis Keycloak 26.x (plus « Conditional OTP » comme dans toute la
 littérature) — un script qui cherche l'ancien nom échoue en silence.
+
+## 35. Un `kcadm update` partiel sur une exécution de flux remet sa priorité à zéro
+
+**Symptôme** — Dans la foulée du piège 34, toute connexion par mot de passe
+du realm `tim` échoue instantanément : « Invalid username or password »
+**avant même l'affichage du formulaire**. Les logins Google et les sessions
+déjà ouvertes fonctionnent — seuls les logins par formulaire sont morts.
+
+**Cause** — Le passage du sous-flux 2FA en *Required* avait été fait par
+`kcadm update authentication/flows/<flux>/executions -b '{"id":…,
+"requirement":"REQUIRED"}'`. Ce `PUT` est un remplacement, pas un patch : les
+champs absents du corps sont réinitialisés, dont **`priority`, retombée à
+0** — le sous-flux 2FA est passé *devant* le formulaire mot de passe
+(priorité 10). Keycloak évaluait donc l'OTP sans utilisateur authentifié →
+échec immédiat.
+
+**Résolution** — `POST authentication/executions/<id>/lower-priority`
+(répété jusqu'à ce que l'index du sous-flux dépasse celui du formulaire),
+vérifié dans la sortie `level/index/priority` puis sur la vraie page de
+login (formulaire + bouton Google rendus).
+
+**Leçon** — Après **toute** modification d'un flux d'authentification,
+relire l'ordre (`level`/`index`) *et* recharger la page de login réelle
+avant de rendre la main : le test structurel du piège 34 (« le sous-flux est
+bien Required ») était passé, l'ordre d'exécution, lui, avait silencieusement
+changé. Et préférer les endpoints `raise/lower-priority` à un `PUT` pour
+tout ce qui touche à l'ordre.
