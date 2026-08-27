@@ -19,7 +19,7 @@ nouveau hors des interconnexions entre les deux sites.
 | Opérateur | nous (serveurs dédiés OVHcloud) | prestataire — ⚠️ identité et contrat à documenter |
 | Rôle | infrastructure transverse : pare-feu, reverse proxy, VPN, sauvegardes, futur PACS | production imagerie : PACS Philips, Syngo Via, RIS VENUS, passerelles IA, téléradiologie IMADIS |
 | IP publiques | bloc `57.130.34.120/29` + les 3 nœuds | `37.61.243.246` (WAN pfSense) |
-| Documentation | fichiers [01](01-architecture.md) à [11](11-headscale.md) | [13-tellis.md](13-tellis.md) |
+| Documentation | fichiers [01](01-architecture.md) à [11](11-headscale.md) + [15](15-pacs-secours.md), [16](16-keycloak.md) | [13-tellis.md](13-tellis.md) |
 
 > **Périmètre HDS** : l'hébergement de données de santé impose des hébergeurs
 > certifiés. OVHcloud est certifié HDS ; le statut du prestataire TELLIS et le

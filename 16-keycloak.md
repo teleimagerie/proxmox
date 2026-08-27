@@ -125,9 +125,9 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
   en *Required*, conditions retirées) : un compte local sans TOTP se le voit
   imposer à l'enrôlement. Les connexions **via Google n'y passent pas** —
   leur MFA est porté par Google ([piège n° 34](07-pieges.md#34-laction-requise-par-défaut-simpose-aussi-aux-arrivants-google)).
-- Utilisateurs initiaux : `matt` (mcapon@teleimagerie.net) et `brtrnd` — mots de
-  passe **temporaires** (changement forcé + enrôlement TOTP à la première
-  connexion).
+- Utilisateurs initiaux : `matt` (mcapon@teleimagerie.net) et `brtrnd`
+  (bleroux@teleimagerie.net) — tous deux connectés le 27/08/2026, mots de
+  passe temporaires remplacés et TOTP enrôlés.
 - Console d'administration : `https://auth.teleimagerie.net/admin/`, compte
   `admin` du realm `master`. Elle est exposée publiquement comme le reste ;
   la restreindre aux IP d'administration dans le vhost est une option de
@@ -213,7 +213,7 @@ connecté ; seuls les nouveaux logins attendent.
 | Application | Protocole possible | État |
 |---|---|---|
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
-| **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim`) |
+| **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim` — compte de test supprimé après validation) |
 | **MyTIM** (appli interne de gestion) | OIDC à intégrer dans l'appli | ⚠️ hébergement/techno à documenter — vérifier si c'est `app`/`gestion` → `51.210.24.59` ; **meilleur candidat** après l'infra si développée en interne |
 | Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | ⚠️ accès à collecter |
 | Odoo (`odoo.teleimagerie.net`) | OAuth/LDAP natifs | ⚠️ accès à collecter |
