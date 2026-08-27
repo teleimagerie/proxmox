@@ -162,11 +162,20 @@ ssh -L 8007:10.30.0.20:8007 root@pve1.infra.teleimagerie.net
 # puis https://localhost:8007  —  compte root@pam de la VM PBS
 ```
 
-**Depuis le VPN nomades** (`wg0`, qui route `10.40.0.0/24`), la patte VLAN 400
-de la VM répond directement, sans tunnel : `https://10.40.0.20:8007`.
-Depuis le 27/08/2026, la connexion peut aussi se faire en OIDC (realm
-`keycloak` dans la liste déroulante) — les deux URL sont déclarées comme URI
+**La patte VLAN 400 (`10.40.0.20`) n'est pas un accès web** — vérifié le
+27/08/2026 : le firewall PVE de la VM (`/etc/pve/firewall/102.fw`,
+`policy_in: DROP`) n'accepte que l'IPSET `+cluster` (les trois hyperviseurs)
+et le ping. D'où un symptôme piégeux : depuis le VPN nomades, `ping
+10.40.0.20` répond, mais `https://10.40.0.20:8007` expire. Même sous VPN,
+l'interface web passe donc par le tunnel SSH ci-dessus (la connexion sort de
+pve1, membre de `+cluster`).
+
+Depuis le 27/08/2026, la connexion peut se faire en OIDC (realm `keycloak`
+dans la liste déroulante) — `https://localhost:8007/*` est déclarée comme URI
 de redirection, [16-keycloak.md](16-keycloak.md#ce-qui-est-raccordé).
+Ouvrir le 8007 à la plage VPN `10.90.0.0/24` serait possible d'une règle dans
+`102.fw`, mais c'est une **décision de sécurité** : le confinement actuel est
+voulu — à consigner ici si elle se prend.
 
 Le certificat de PBS est **auto-signé** : l'avertissement du navigateur est ici
 normal, contrairement au cluster qui porte un Let's Encrypt valide.
