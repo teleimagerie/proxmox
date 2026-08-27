@@ -276,10 +276,14 @@ ici. Les trois points saillants :
 Keycloak est en production ([16-keycloak.md](16-keycloak.md)) : realm `tim`,
 Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
 
-- **Distribuer les mots de passe temporaires** de `matt` et `brtrnd`
+- **Distribuer le mot de passe temporaire** de `brtrnd`
   (`/etc/pve/priv/keycloak/credentials`), première connexion = changement de
-  mot de passe + enrôlement TOTP ; recopier tous les secrets du fichier dans
-  le gestionnaire de secrets.
+  mot de passe + enrôlement TOTP — celui de `matt` a servi le 27/08/2026
+  (premier login OIDC vérifié sur PVE) ; recopier tous les secrets du fichier
+  dans le gestionnaire de secrets.
+- **Éprouver PBS et headscale par une connexion OIDC réelle** (PVE l'est
+  depuis le 27/08/2026) : bouton *OpenID* sur l'interface PBS, et un
+  `tailscale up --login-server https://headscale.teleimagerie.net` de test.
 - **Brokering Google Workspace** : créer le client OAuth dans la console
   Google (action manuelle, procédure dans
   [16-keycloak.md](16-keycloak.md#brokering-google-workspace-à-faire--action-côté-console-google)),

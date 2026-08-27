@@ -83,6 +83,12 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 | **PBS** | realm `keycloak` (openid, idem) | `matt@keycloak`, ACL Admin sur `/` | `root@pam` local à la VM |
 | **headscale** | section `oidc` de la config — voie d'**enrôlement supplémentaire** | users OIDC créés à la volée | users locaux + clés de pré-enrôlement inchangés |
 
+> ✅ **Connexion réelle vérifiée le 27/08/2026 à 09:29 UTC** : premier login de
+> `matt@keycloak` sur l'interface Proxmox (`successful openid auth` dans le
+> journal `pvedaemon` de pve1) — changement du mot de passe temporaire et
+> enrôlement TOTP compris. PBS et headscale restent à éprouver par une
+> connexion réelle.
+
 Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 
 | Client | Redirect URIs |
