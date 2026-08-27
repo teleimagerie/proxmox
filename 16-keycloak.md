@@ -92,6 +92,10 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 > `brtrnd@keycloak` a été créé côté PVE puis promu **Administrator sur `/`**
 > le jour même. Reste headscale à éprouver (au prochain enrôlement de nœud).
 >
+> Validation finale du 27/08/2026, après les pièges 34-35 : les trois chemins
+> re-testés par l'utilisateur — page de login `tim` sur la racine, login
+> `matt` + TOTP (flux `browser-totp`), login Google sans enrôlement TOTP.
+>
 > Les connexions réussies ne laissent **aucune trace** dans les journaux PBS
 > ni Keycloak par défaut : pour vérifier, interroger les sessions actives
 > (`kcadm get clients/<id>/user-sessions -r tim`) ou activer la conservation
