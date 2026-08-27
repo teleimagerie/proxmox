@@ -358,8 +358,8 @@ pas un remplacement.
 
 Cela ajoute une seconde dépendance au CT 203 : après headscale, **le VPN des
 passerelles DICOM dépend lui aussi de Keycloak** au démarrage. Voir
-[15-keycloak.md](15-keycloak.md) et le §2 de
-[14-code-review.md](14-code-review.md).
+[17-keycloak.md](17-keycloak.md) et le §2 de
+[16-code-review.md](16-code-review.md).
 
 Le secret client vit dans `/etc/headscale/oidc_secret`, hors du dépôt.
 
