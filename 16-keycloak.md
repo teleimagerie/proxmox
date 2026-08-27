@@ -125,6 +125,13 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
   `admin` du realm `master`. Elle est exposée publiquement comme le reste ;
   la restreindre aux IP d'administration dans le vhost est une option de
   durcissement notée dans [06-reste-a-faire.md](06-reste-a-faire.md).
+- **Les URL qui comptent** : la racine `https://auth.teleimagerie.net/`
+  redirige (302 posée dans le vhost le 27/08/2026) vers la **console de
+  compte du realm `tim`** — `/realms/tim/account/` — où chaque utilisateur
+  gère profil, TOTP, sessions et comptes liés. Sans cette redirection,
+  Keycloak envoie la racine vers la console d'admin du realm `master`, ce qui
+  déroute les utilisateurs normaux. La page de login `tim` (avec le bouton
+  Google) n'apparaît que via une application ou cette console de compte.
 - **Secrets** : le fichier de déploiement `/etc/pve/priv/keycloak/credentials`
   a été recopié dans le **gestionnaire de secrets puis détruit des serveurs
   le 27/08/2026**. Ne subsistent que les copies opérationnelles, chacune à
