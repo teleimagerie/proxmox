@@ -131,7 +131,7 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 | `app`, `gestion`, `d69eeb3e` | `51.210.24.59` | application de gestion 📋 (`d69eeb3e` ⚠️) |
 | `gestion2` | `46.105.57.169` | ⚠️ |
 | `crm`, `www.crm`, `testwp` | `51.83.79.119` | CRM (les tickets `support` y redirigent) 📋 |
-| `auth` | `146.59.233.102` | ⚠️ |
+| `auth` | → [16-keycloak.md](16-keycloak.md) | serveur d'authentification Keycloak ✅ — pointait vers un ancien VPS **résilié**, anomalie soldée le 27/08/2026 (A repointé, AAAA orphelin supprimé) |
 | `api`, `api1`, `www1`, `test01` | `162.19.25.107` (+ AAAA) | API 📋 |
 | `e-learning`, `elearning` | `51.210.149.58` | e-learning 📋 |
 | `odoo` | `91.134.75.199` | ERP Odoo 📋 |
@@ -278,6 +278,11 @@ propriétaires ; ici, seulement la dépendance DNS de chacun.
   [11-headscale.md](11-headscale.md#architecture).
 - **Postes de test Windows/WSL2** : le fichier hosts Windows fausse même
   `dig` — [piège n°30](07-pieges.md#30-le-fichier-hosts-windows-fausse-tout-diagnostic-dns-sous-wsl2).
+- **VLAN 400 (Unbound sur `10.40.0.1`)** : vue **split-horizon** depuis le
+  27/08/2026 — `auth.teleimagerie.net` y répond en interne, voir
+  [08-opnsense.md](08-opnsense.md#résolution-interne--override-unbound) et les
+  [pièges n°32/33](07-pieges.md#32-joindre-la-vip-122-depuis-lintérieur-aboutit-sur-la-gui-dopnsense).
+  Les CT du VLAN 400 doivent utiliser ce résolveur (`--nameserver 10.40.0.1`).
 
 ## Diagnostic
 
@@ -322,9 +327,11 @@ curl -s https://rdap.verisign.com/net/v1/domain/teleimagerie.net \
 - [ ] Titulaire du compte OVH et contacts admin/tech des domaines
 - [ ] Corriger `dlmbox01` (recréer avec le bon sous-domaine) ; décider du sort
       de la redirection `.fr`
-- [ ] Rôle réel des noms marqués ⚠️ (`d69eeb3e`, `auth`, `gestion2`,
+- [ ] Rôle réel des noms marqués ⚠️ (`d69eeb3e`, `gestion2`,
       `secours-tellis`, `pacs04`, `hds-1-tim`, `rappro-cmsi`, `timfact`,
-      `test-01`…`09`, `mariage`, `hamidou.at.protocoles`, `_4e7786b6…`)
+      `test-01`…`09`, `mariage`, `hamidou.at.protocoles`, `_4e7786b6…`) —
+      ~~`auth`~~ soldé le 27/08/2026 : ancien VPS résilié, nom repris par
+      Keycloak ([16-keycloak.md](16-keycloak.md))
 - [ ] Décisions DMARC et CAA (aucune zone n'en a) ; étendre DNSSEC au-delà de
       `teleimagerie.com` ?
 - [ ] SPF de `teleimage.net` vs MX Google ; SRV OVH résiduels d'`isoteam.mn`

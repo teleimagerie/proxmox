@@ -1,0 +1,18 @@
+[Unit]
+Description=Keycloak (serveur d'authentification)
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+User=keycloak
+Group=keycloak
+Environment=JAVA_OPTS_KC_HEAP=-Xms512m -Xmx2g
+ExecStart=/opt/keycloak/bin/kc.sh start --optimized
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=102400
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target

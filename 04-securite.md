@@ -18,6 +18,18 @@ La configuration TFA est répliquée par pmxcfs : elle vaut pour les 3 nœuds.
 Le mot de passe de `root@pam` est **local à chaque nœud** et n'est pas répliqué
 par le cluster : le changer impose de le faire sur les trois.
 
+### Realm `keycloak` (OIDC) — depuis le 27/08/2026
+
+L'authentification est centralisée sur Keycloak ([16-keycloak.md](16-keycloak.md)) :
+realm `keycloak` de type OpenID Connect sur le cluster **et** sur PBS, compte
+`matt@keycloak` Administrator sur `/`.
+
+> ⚠️ **Décision de sécurité** : pour les connexions via ce realm, le second
+> facteur est porté par Keycloak (TOTP obligatoire du realm `tim`), plus par
+> Proxmox. `matt@pve` et `root@pam` restent la **voie de secours locale** —
+> ne jamais les supprimer ni retirer leur TOTP : ils doivent fonctionner
+> l'IdP éteint (bascule HA = ~19 s sans authentification fédérée).
+
 ### Se connecter
 
 Dans le formulaire, le realm est dans la liste déroulante — **ne pas le retaper**
@@ -205,6 +217,7 @@ Forcer un renouvellement : `pvenode acme cert order --force`
 | Clé API OVH NAS-HA | `/root/.secrets/ovh-nasha.ini` sur **pve1** | mode 600, **non répliqué** |
 | Clé API OVH ACME (certbot) | `/root/.secrets/ovh.ini` sur **pve1** | mode 600, **non répliqué** |
 | Jeton PBS `backup@pbs!pve` | `/etc/pve/priv/storage/pbs.pw` | répliqué |
+| Secrets Keycloak (base, admin, clients OIDC, mdp temporaires) | `/etc/pve/priv/keycloak/credentials` | répliqué — voir [16-keycloak.md](16-keycloak.md) |
 | Config OPNsense sauvegardée | `/mnt/pve/nas-vm/opnsense-config/` | **contient les clés privées WireGuard**, répertoire 700 |
 
 `/etc/pve/priv/` est accessible à root seulement et répliqué par pmxcfs.

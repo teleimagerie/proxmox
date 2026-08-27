@@ -1,5 +1,5 @@
 $TTL 3600
-@	IN SOA dns17.ovh.net. tech.ovh.net. (2087727699 86400 3600 3600000 300)
+@	IN SOA dns17.ovh.net. tech.ovh.net. (2087813772 86400 3600 3600000 300)
         IN NS     dns17.ovh.net.
         IN NS     ns17.ovh.net.
         IN MX     5 alt1.aspmx.l.google.com.
@@ -18,8 +18,7 @@ api1        IN A     162.19.25.107
 api1        IN AAAA     2001:41d0:304:200::2c84
 app        IN A     51.210.24.59
 app-staging        IN A     79.137.100.185
-auth        IN A     146.59.233.102
-auth        IN AAAA     2001:41d0:305:2100::a89a
+auth     60 IN A     57.130.34.122
 bastion        IN A     51.38.189.223
 bureau     60 IN A     82.127.36.38
 bureau        IN AAAA     2a01:cb05:949e:7400:211:32ff:fef7:972c

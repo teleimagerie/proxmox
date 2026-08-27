@@ -94,6 +94,7 @@ Ce que le proxy est **configuré** pour servir. Depuis la bascule du
 | Nom | Traitement | Destination |
 |---|---|---|
 | `pacs-secours.teleimagerie.net` | terminaison TLS | `http://10.40.0.40` — pacs03 par le vRack |
+| `auth.teleimagerie.net` | terminaison TLS | `http://10.40.0.50:8080` — Keycloak (CT 203), depuis le 27/08/2026 — [16-keycloak.md](16-keycloak.md) |
 | `syngo.teleimagerie.net` | redirection 301 | → `syngo-via.teleimagerie.net` |
 | `syngo.isoteam.mn` | redirection 301 | → `syngo-via.isoteam.mn` |
 | `syngo-via.teleimagerie.net` | **relais TLS brut** | `37.61.243.246:443` (TSplus, DC TELLIS) |
@@ -263,6 +264,7 @@ Relevé du 24/08/2026 :
 |---|---|---|---|---|
 | TSplus | sur le serveur TSplus | `syngo-via.teleimagerie.net`, `syngo-via.isoteam.mn` | **03/11/2026** | TSplus lui-même (Let's Encrypt intégré, HTTP-01) |
 | `pacs-secours` | `/etc/letsencrypt/live/pacs-secours.teleimagerie.net/` | `pacs-secours.teleimagerie.net` | **17/10/2026** | certbot du conteneur (`certbot.timer`) |
+| `auth` | `/etc/letsencrypt/live/auth.teleimagerie.net/` | `auth.teleimagerie.net` | **25/11/2026** | certbot du conteneur (webroot — le port 80 du vhost doit continuer de servir `/.well-known/acme-challenge/` en local) |
 | `syngo-teleimagerie` | `/etc/nginx/certs/syngo-teleimagerie/` | `syngo.teleimagerie.net`, `syngo-via.teleimagerie.net` | **22/11/2026** | acme.sh sur pve1, déployé automatiquement |
 | `syngo-isoteam` | `/etc/nginx/certs/syngo-isoteam/` | `syngo.isoteam.mn`, `syngo-via.isoteam.mn` | **10/11/2026** | idem |
 
@@ -295,6 +297,12 @@ API OVH donne un droit d'écriture sur toute la zone et n'a pas à séjourner su
 une machine exposée à Internet. Passer en HTTP-01 local au conteneur après la
 bascule DNS resterait possible, mais n'a plus d'intérêt : l'automate est en
 place et la clé ne quitte pas pve1.
+
+> ⚠️ **Le hook dépend de l'adresse temporaire `10.40.0.2` de pve1** (sa seule
+> patte VLAN 400), qui **ne survit pas à un redémarrage** : celui du 26/08/2026
+> l'a effacée, constaté et rétabli le 27/08. Tant qu'elle manque, le `scp` vers
+> `10.40.0.10` échoue et le renouvellement casse silencieusement — pérenniser
+> ou surveiller, point ouvert dans [06 §7](06-reste-a-faire.md#7-divers).
 
 > Le résidu `/etc/letsencrypt/live/syngo.teleimagerie.net/` signalé ici a été
 > **supprimé le 24/08/2026** (`certbot delete`). Ne restent sous certbot que

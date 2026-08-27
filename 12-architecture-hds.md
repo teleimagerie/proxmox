@@ -24,7 +24,10 @@ nouveau hors des interconnexions entre les deux sites.
 > **Périmètre HDS** : l'hébergement de données de santé impose des hébergeurs
 > certifiés. OVHcloud est certifié HDS ; le statut du prestataire TELLIS et le
 > périmètre exact couvert par chaque contrat restent **⚠️ à formaliser** — ne
-> rien affirmer avant vérification contractuelle.
+> rien affirmer avant vérification contractuelle. Depuis le 27/08/2026, le
+> serveur d'authentification ([16-keycloak.md](16-keycloak.md)) porte
+> l'authentification d'accès : sa place dans le périmètre HDS est à trancher
+> dans la même revue.
 
 Un troisième lieu intervient, sans être un datacenter opéré : le **NAS-HA
 OVH de Roubaix**, qui reçoit les sauvegardes du cluster
@@ -119,5 +122,6 @@ les zones, registrars et serveurs autoritaires dans
 | Le DC TELLIS : inventaire, pfSense, flux internes, checklist de collecte | [13-tellis.md](13-tellis.md) |
 | Le relais TLS `syngo-via.*` et la bascule DNS | [09-proxy-tim.md](09-proxy-tim.md) |
 | Le tailnet headscale (passerelles DICOM, ACL) | [11-headscale.md](11-headscale.md) |
+| L'authentification centralisée (Keycloak, SSO, raccordements) | [16-keycloak.md](16-keycloak.md) |
 | Points ouverts du lien inter-sites (tests manquants, clés exposées) | [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts) |
 | Sauvegardes et NAS-HA de Roubaix | [10-sauvegardes.md](10-sauvegardes.md) |

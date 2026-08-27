@@ -3,10 +3,11 @@
 Cluster de virtualisation haute disponibilité à 3 nœuds, stockage Ceph répliqué
 synchrone, hébergé chez OVHcloud (datacenter GRA4).
 
-**Déployé le 11 août 2026.** État : **en production**. Quatre machines y tournent :
+**Déployé le 11 août 2026.** État : **en production**. Cinq machines y tournent :
 le pare-feu OPNsense (VM 100), le reverse proxy `proxy-tim` (CT 201), le
-serveur de sauvegarde PBS (VM 102) et le plan de contrôle VPN `headscale`
-(CT 202, pour les passerelles DICOM des sites distants).
+serveur de sauvegarde PBS (VM 102), le plan de contrôle VPN `headscale`
+(CT 202, pour les passerelles DICOM des sites distants) et le serveur
+d'authentification centralisée `keycloak` (CT 203, SSO OpenID Connect).
 
 Ce cluster est l'un des **deux datacenters** de l'architecture HDS ; l'autre,
 le **DC TELLIS** (production imagerie), est opéré par un prestataire — vue
@@ -40,6 +41,7 @@ Détail complet (NIC, OSD, ID Corosync) dans
 | Compte | `matt` / realm *Proxmox VE authentication server* (**pas** `matt@pve` dans le champ nom) |
 | Second facteur | TOTP obligatoire sur `matt@pve` et `root@pam`, 10 clés de secours chacun |
 | SSH | `ssh root@pve1.infra.teleimagerie.net` (clé `~/.ssh/id_ed25519` uniquement) |
+| SSO | realm *keycloak* dans la liste déroulante (`auth.teleimagerie.net`, TOTP porté par l'IdP) — le realm PVE reste la voie de secours ([16-keycloak.md](16-keycloak.md)) |
 
 Le certificat est un Let's Encrypt valide : aucun avertissement navigateur attendu.
 Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers.
@@ -65,6 +67,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [13-tellis.md](13-tellis.md) | **DC TELLIS (site distant)** : inventaire, pfSense, tunnels WireGuard, checklist de collecte |
 | [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
 | [15-pacs-secours.md](15-pacs-secours.md) | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
+| [16-keycloak.md](16-keycloak.md) | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale), split-horizon `auth.*`, candidats SSO |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale) |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 
@@ -86,7 +89,7 @@ Ceph Tentacle 20.2.2     HEALTH_OK · 6 OSD · 4,3 Tio bruts → 1,4 Tio utilisa
 Réseau                   vRack 25 Gb/s · bridge VLAN-aware · jumbo MTU 9000 validé
                          VLAN 100 Corosync · 200 Ceph · 300 infra · 400 LAN VM
                          non tagué = bloc public 57.130.34.120/29
-HA                       4 ressources : vm:100 · vm:102 · ct:201 · ct:202
+HA                       5 ressources : vm:100 · vm:102 · ct:201 · ct:202 · ct:203
                          watchdog softdog · fencing testé en conditions réelles
 Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
 Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
@@ -100,6 +103,8 @@ VPN DICOM                headscale 0.29.3 (CT 202) · tailnet 100.72.0.0/16
 Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix
                          quotidien 02:00 sauf VM 102 · rétention 7j/4s/6m
                          restauration testée et mesurée
+Authentification         Keycloak 26.7.2 (CT 203) · auth.teleimagerie.net
+                         realm tim · TOTP obligatoire · OIDC : PVE, PBS, headscale
 ```
 
 **Capacité réellement exploitable** : ~1,36 Tio de disque Ceph (seuil `nearfull` à
