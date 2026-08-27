@@ -52,7 +52,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 ## Sommaire
 
 | Fichier                                          | Contenu |
-|--------------------------------------------------|---|
+|---|---|
 | [01-architecture.md](01-architecture.md)         | Matériel, réseau, disques, plan d'adressage |
 | [02-deploiement.md](02-deploiement.md)           | Journal de ce qui a été fait, et pourquoi |
 | [03-exploitation.md](03-exploitation.md)         | Diagnostic, pannes disque et nœud, procédures courantes |
@@ -81,8 +81,11 @@ Si vous reprenez ce dossier après une longue interruption, lisez
 [07-pieges.md](07-pieges.md) en premier : il contient ce qui a réellement coûté
 du temps.
 
-Aucun secret ne figure dans ces fichiers — ils vivent tous dans `/etc/pve/priv/`
-sur le cluster. Voir [04-securite.md](04-securite.md#secrets--où-ils-vivent).
+**Le dépôt ne contient aucun secret**, et ne doit jamais en contenir. Attention :
+tous les secrets du cluster ne sont pas pour autant dans `/etc/pve/priv/` —
+`/etc/pve/domains.cfg` porte le `client-key` OIDC **en clair** et ne doit jamais
+être copié dans `configs/`. Voir
+[04-securite.md](04-securite.md#secrets--où-ils-vivent).
 
 ---
 
