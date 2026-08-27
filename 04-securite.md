@@ -134,6 +134,7 @@ Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.
 | 3128 | tout Internet | proxy SPICE |
 | 5900-5999 | tout Internet | consoles noVNC |
 | tout | ipset `cluster` | Corosync, Ceph, migration, pmxcfs |
+| **tout — DROP prioritaire** | `10.40.0.0/24` (LAN VM) | la patte `10.40.0.2` de pve1 est **sortante uniquement** (27/08/2026) : une VM compromise ne joint pas un hyperviseur — [08-opnsense.md](08-opnsense.md#accès-dadministration) |
 | ICMP echo | tout Internet | diagnostic |
 
 L'ipset `cluster` contient les 3 IP publiques et les trois sous-réseaux vRack.

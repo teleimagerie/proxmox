@@ -170,13 +170,13 @@ Deux corrections possibles si l'on veut le supprimer :
   fonction : ne pas les confondre.
 - **Rejouer les tests HA** après toute mise à jour majeure
   ([05-tests-ha.md](05-tests-ha.md#rejouer-les-tests)).
-- ⚠️ **L'adresse `10.40.0.2` de pve1 ne survit pas aux redémarrages** — et le
-  hook de déploiement des certificats syngo en dépend : le redémarrage de pve1
-  du 26/08/2026 l'avait effacée (rétablie le 27/08,
-  [08-opnsense.md](08-opnsense.md#accès-dadministration),
-  [09-proxy-tim.md](09-proxy-tim.md#renouvellement-automatisé-depuis-pve1--mis-en-place-le-24082026)).
-  À trancher : la pérenniser (entorse assumée à la segmentation) ou déplacer
-  le déploiement des certificats hors de cette dépendance.
+- ~~**L'adresse `10.40.0.2` de pve1 ne survit pas aux redémarrages**~~ —
+  **tranché et fait le 27/08/2026** (après trois pertes le même jour, tests
+  5-6) : **pérennisée** (stanza `vmbr1.400` dans les interfaces de pve1) et
+  **durcie** (règle `cluster.fw` : `DROP` de tout `10.40.0.0/24` vers les
+  hyperviseurs — patte sortante uniquement, vérifié dans les deux sens).
+  Hook des certificats rejoué de bout en bout après coup.
+  [08-opnsense.md](08-opnsense.md#accès-dadministration).
 - ~~**`proxy-tim` (CT 201) n'est pas une ressource HA**~~ — **réglé le
   15/08/2026** : `ha-manager add ct:201` exécuté, bascule testée vers pve3
   (~14 s d'interruption). Voir [09-proxy-tim.md](09-proxy-tim.md) et

@@ -298,11 +298,14 @@ une machine exposée à Internet. Passer en HTTP-01 local au conteneur après la
 bascule DNS resterait possible, mais n'a plus d'intérêt : l'automate est en
 place et la clé ne quitte pas pve1.
 
-> ⚠️ **Le hook dépend de l'adresse temporaire `10.40.0.2` de pve1** (sa seule
-> patte VLAN 400), qui **ne survit pas à un redémarrage** : celui du 26/08/2026
-> l'a effacée, constaté et rétabli le 27/08. Tant qu'elle manque, le `scp` vers
-> `10.40.0.10` échoue et le renouvellement casse silencieusement — pérenniser
-> ou surveiller, point ouvert dans [06 §7](06-reste-a-faire.md#7-divers).
+> Le hook passe par la patte VLAN 400 de pve1 (`10.40.0.2`) — longtemps
+> posée à la main et perdue à chaque redémarrage (trois fois le 27/08/2026,
+> cassant silencieusement le renouvellement). **Pérennisée et durcie le
+> 27/08/2026** (stanza réseau + patte sortante uniquement,
+> [08-opnsense.md](08-opnsense.md#accès-dadministration)), hook rejoué de
+> bout en bout le jour même. Si un jour elle manquait quand même, le repli
+> existe : rebond par PBS (`-o ProxyJump=root@10.30.0.20`), comme le fait
+> déjà `backup-opnsense.sh`.
 
 > Le résidu `/etc/letsencrypt/live/syngo.teleimagerie.net/` signalé ici a été
 > **supprimé le 24/08/2026** (`certbot delete`). Ne restent sous certbot que

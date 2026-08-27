@@ -18,6 +18,10 @@ policy_out: ACCEPT
 # --- Trafic inter-noeuds : Corosync, Ceph, migration, pmxcfs ---
 IN ACCEPT -source +cluster -log nolog
 
+# --- La patte VLAN 400 de pve1 (10.40.0.2) est sortante uniquement :
+# --- rien du LAN VM ne doit joindre un hyperviseur (perennisee le 27/08/2026)
+IN DROP -source 10.40.0.0/24 -log nolog
+
 # --- Acces administrateur (choix retenu : ouvert + 2FA obligatoire) ---
 IN ACCEPT -p tcp -dport 8006 -log nolog       # interface web Proxmox
 IN ACCEPT -p tcp -dport 22 -log nolog         # SSH (par cle uniquement)

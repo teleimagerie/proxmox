@@ -57,4 +57,12 @@ auto vmbr1.300
 iface vmbr1.300 inet static
 	address 10.30.0.11/24
 	mtu 1500
+auto vmbr1.400
+iface vmbr1.400 inet static
+	address 10.40.0.2/24
+	mtu 1500
+# ^ patte d administration VLAN 400, perennisee le 27/08/2026 (06 §7) :
+#   deploy-syngo.sh (scp -> 10.40.0.10) et backup-opnsense.sh en dependent.
+#   Entree depuis le VLAN 400 bloquee par cluster.fw (sortante uniquement).
+
 # <<< VRACK

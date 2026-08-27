@@ -260,21 +260,18 @@ Elle ne dépend d'aucune configuration réseau et fonctionne même firewall cass
 qm terminal 100          # Ctrl+O pour quitter
 ```
 
-> **Accès temporaire en place** : pve1 dispose d'une adresse `10.40.0.2` sur le
-> VLAN 400 (`vmbr1.400`), posée à la main pour le déploiement. Elle est
-> **non persistante** et disparaît à chaque redémarrage de pve1 — constaté le
-> 27/08/2026 après le redémarrage du 26/08, et **rétablie le jour même**.
-> ⚠️ Le hook de déploiement des certificats syngo (`scp` de pve1 vers
-> `10.40.0.10`, [09-proxy-tim.md](09-proxy-tim.md#renouvellement-automatisé-depuis-pve1--mis-en-place-le-24082026))
-> **dépend de cette adresse** : tant qu'elle manque, le renouvellement casse
-> silencieusement — voir [06 §7](06-reste-a-faire.md#7-divers).
-> Elle constitue une entorse à la segmentation — la rétablir en cas de besoin :
-> ```bash
-> ip link add link vmbr1 name vmbr1.400 type vlan id 400
-> ip addr add 10.40.0.2/24 dev vmbr1.400
-> ip link set vmbr1.400 up
-> bridge vlan add vid 400 dev vmbr1 self     # indispensable, voir 07-pieges.md
-> ```
+> **Patte d'administration pérenne depuis le 27/08/2026** : pve1 porte
+> `10.40.0.2` sur le VLAN 400 via une stanza `vmbr1.400` dans
+> `/etc/network/interfaces` ([configs/interfaces-pve1](configs/interfaces-pve1)).
+> Elle était posée à la main et mourait à chaque redémarrage — trois fois le
+> 27/08/2026, cassant silencieusement le hook des certificats syngo
+> ([09-proxy-tim.md](09-proxy-tim.md#renouvellement-automatisé-depuis-pve1--mis-en-place-le-24082026)).
+> L'entorse à la segmentation est **assumée et neutralisée** : une règle
+> prioritaire de `cluster.fw` jette tout ce qui vient de `10.40.0.0/24` vers
+> les hyperviseurs — la patte est **sortante uniquement** (vérifié : port 22
+> de `10.40.0.2` injoignable depuis un CT du VLAN 400, hook rejoué de bout en
+> bout — [04-securite.md](04-securite.md#firewall)). `backup-opnsense.sh`
+> garde en plus son repli par rebond PBS si la patte manquait.
 
 Le mot de passe root d'OPNsense et la configuration du premier pair WireGuard ont
 été transmis puis **détruits des serveurs** le 11/08/2026. Ils n'existent plus que
