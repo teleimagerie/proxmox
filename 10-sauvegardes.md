@@ -162,6 +162,12 @@ ssh -L 8007:10.30.0.20:8007 root@pve1.infra.teleimagerie.net
 # puis https://localhost:8007  —  compte root@pam de la VM PBS
 ```
 
+**Depuis le VPN nomades** (`wg0`, qui route `10.40.0.0/24`), la patte VLAN 400
+de la VM répond directement, sans tunnel : `https://10.40.0.20:8007`.
+Depuis le 27/08/2026, la connexion peut aussi se faire en OIDC (realm
+`keycloak` dans la liste déroulante) — les deux URL sont déclarées comme URI
+de redirection, [16-keycloak.md](16-keycloak.md#ce-qui-est-raccordé).
+
 Le certificat de PBS est **auto-signé** : l'avertissement du navigateur est ici
 normal, contrairement au cluster qui porte un Let's Encrypt valide.
 
