@@ -170,6 +170,22 @@ Au passage, confirmation du comportement connu : l'adresse temporaire
 `10.40.0.2` de pve1 (VLAN 400) a disparu au reboot et a été reposée à la main
 ([06 §7](06-reste-a-faire.md#7-divers)).
 
+> ⚠️ **Queue d'instabilité observée après le retour** : pendant ~4 min
+> (10:58 → 11:02 UTC), des timeouts **intermittents** sur le chemin public
+> vers la VIP `.122` (4 échecs isolés relevés, dont 1 sur 20 sur une sonde à
+> 3 s) — les requêtes en échec ne figurent dans **aucun** journal nginx :
+> elles mouraient avant le conteneur. Le chemin VPN, lui, n'a jamais bronché,
+> et le flux d'alimentation PACS des sites a été servi en `200` en pleine
+> fenêtre. Résorbé seul, re-testé propre sur trois chemins pendant 90 s.
+> Cause non prouvée ; hypothèse : amortissement des déplacements de MAC côté
+> vRack après **trois migrations du proxy en cinq minutes** (aller, évacuation,
+> retour) — un enchaînement qu'aucun test précédent ne produisait.
+> **Leçon** : après déplacement d'un CT porté par une VIP publique, prévoir
+> quelques minutes de flottement possible du chemin public et re-sonder
+> avant de conclure — une sonde « verte » via le VPN ne prouve rien pour le
+> chemin public ([piège n° 30](07-pieges.md#30-le-fichier-hosts-windows-fausse-tout-diagnostic-dns-sous-wsl2)
+> version réseau : les deux chemins n'ont rien en commun).
+
 ## Synthèse
 
 | Scénario | Indisponibilité | Perte de données |
