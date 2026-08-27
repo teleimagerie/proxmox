@@ -106,6 +106,14 @@ aussi ses métriques Prometheus sur `127.0.0.1:9090` du CT 202
 ([11-headscale.md](11-headscale.md)) — nœuds en ligne et santé du plan de
 contrôle des passerelles DICOM.
 
+Depuis le 27/08/2026, **Keycloak (CT 203) est le premier candidat** : une
+panne d'IdP ne se voit qu'à la première connexion ratée, et personne ne
+surveille ni le service, ni l'échéance de son certificat, ni le timer
+`kc-pgdump` ([16-keycloak.md](16-keycloak.md#risques-et-limites)). À noter que
+`zabbix.teleimagerie.net` existe déjà dans le DNS de l'entreprise
+([14-noms-de-domaine.md](14-noms-de-domaine.md)) — mutualiser plutôt que
+construire un deuxième monitoring ?
+
 Les notifications mail fonctionnent déjà (fencing, tâches en échec) vers
 `mcapon@teleimagerie.net`.
 
@@ -162,6 +170,13 @@ Deux corrections possibles si l'on veut le supprimer :
   fonction : ne pas les confondre.
 - **Rejouer les tests HA** après toute mise à jour majeure
   ([05-tests-ha.md](05-tests-ha.md#rejouer-les-tests)).
+- ⚠️ **L'adresse `10.40.0.2` de pve1 ne survit pas aux redémarrages** — et le
+  hook de déploiement des certificats syngo en dépend : le redémarrage de pve1
+  du 26/08/2026 l'avait effacée (rétablie le 27/08,
+  [08-opnsense.md](08-opnsense.md#accès-dadministration),
+  [09-proxy-tim.md](09-proxy-tim.md#renouvellement-automatisé-depuis-pve1--mis-en-place-le-24082026)).
+  À trancher : la pérenniser (entorse assumée à la segmentation) ou déplacer
+  le déploiement des certificats hors de cette dépendance.
 - ~~**`proxy-tim` (CT 201) n'est pas une ressource HA**~~ — **réglé le
   15/08/2026** : `ha-manager add ct:201` exécuté, bascule testée vers pve3
   (~14 s d'interruption). Voir [09-proxy-tim.md](09-proxy-tim.md) et
@@ -253,3 +268,34 @@ ici. Les trois points saillants :
   précisément ce qui y tourne ;
 - **informer le prestataire de l'exposition de la clé `tun_wg0`** et suivre sa
   rotation (voir le § 8 ci-dessus).
+
+---
+
+## 10. Authentification centralisée — suites du déploiement du 27/08/2026
+
+Keycloak est en production ([16-keycloak.md](16-keycloak.md)) : realm `tim`,
+Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
+
+- **Distribuer les mots de passe temporaires** de `matt` et `brtrnd`
+  (`/etc/pve/priv/keycloak/credentials`), première connexion = changement de
+  mot de passe + enrôlement TOTP ; recopier tous les secrets du fichier dans
+  le gestionnaire de secrets.
+- **Brokering Google Workspace** : créer le client OAuth dans la console
+  Google (action manuelle, procédure dans
+  [16-keycloak.md](16-keycloak.md#brokering-google-workspace-à-faire--action-côté-console-google)),
+  puis déclarer l'Identity Provider dans le realm `tim`. Microsoft 365
+  (`isoteam.mn`) pourra suivre par la même mécanique.
+- **MyTIM** (application interne de gestion) : documenter hébergement et
+  technologie (est-ce `app`/`gestion` → `51.210.24.59` ?), puis intégrer OIDC —
+  meilleur candidat après l'infra.
+- **Applications d'entreprise** (Zabbix en SAML/LDAP, Odoo en OAuth/LDAP,
+  CRM, e-learning, bastion) : collecter les accès, tableau des candidats dans
+  [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026).
+- **Applications médicales** (Syngo Via, Vue PACS, RIS VENUS, TSplus) : cible
+  à terme, à instruire éditeur par éditeur via la
+  [checklist TELLIS](13-tellis.md#checklist-de-collecte).
+- **Durcissement optionnel** : restreindre `/admin/` du vhost aux IP
+  d'administration ; tester une restauration de la base depuis un dump
+  `kc-pgdump` (le vzdump du CT, lui, suit la procédure standard de
+  [10-sauvegardes.md](10-sauvegardes.md)).
+- **Supervision de l'IdP** : voir [§ 4](#4-supervision).

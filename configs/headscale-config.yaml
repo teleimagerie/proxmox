@@ -102,3 +102,14 @@ taildrop:
 
 auto_update:
   enabled: false
+
+# Authentification centralisee Keycloak (CT 203) — ajoutee le 27/08/2026.
+# Les users locaux (admin, infra, site-*) et les cles de pre-enrolement
+# continuent de fonctionner : l OIDC est une voie d enrolement supplementaire.
+# Depend de l override Unbound auth -> 10.40.0.10 (OPNsense) : sans lui,
+# headscale ne demarre pas (issuer injoignable depuis le VLAN 400).
+oidc:
+  issuer: "https://auth.teleimagerie.net/realms/tim"
+  client_id: "headscale"
+  client_secret_path: "/etc/headscale/oidc_secret"
+  scope: ["openid", "profile", "email"]

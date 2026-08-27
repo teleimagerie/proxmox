@@ -255,6 +255,31 @@ deny par défaut) donne à chaque type de client :
 
 ---
 
+## Authentification OIDC — Keycloak (depuis le 27/08/2026)
+
+La config porte une section `oidc` pointant sur
+`https://auth.teleimagerie.net/realms/tim` (client `headscale`, secret dans
+`/etc/headscale/oidc_secret`, mode 600) — copie à jour dans
+[configs/headscale-config.yaml](configs/headscale-config.yaml), détail côté
+IdP dans [16-keycloak.md](16-keycloak.md).
+
+C'est une **voie d'enrôlement supplémentaire**, pas un remplacement : les
+users locaux (`admin`, `infra`, `site-<code>`) et les clés de pré-enrôlement
+des passerelles continuent de fonctionner à l'identique. Un login OIDC crée
+son propre user headscale à la volée.
+
+Deux dépendances à connaître :
+
+- **headscale ne démarre pas si l'issuer est injoignable** (validé au boot —
+  constaté en crash-loop le 27/08/2026). Secours si Keycloak est durablement
+  mort : commenter la section `oidc` de `/etc/headscale/config.yaml` et
+  redémarrer — les nœuds déjà enrôlés n'en ont pas besoin ;
+- le CT doit résoudre `auth` par la **vue interne** (`nameserver 10.40.0.1`,
+  posé par `pct set 202 --nameserver` le 27/08/2026) —
+  [pièges n° 32 et 33](07-pieges.md#32-joindre-la-vip-122-depuis-lintérieur-aboutit-sur-la-gui-dopnsense).
+
+---
+
 ## Mesures — bascule HA du CT 202 (15/08/2026)
 
 Deux bascules chronométrées (méthode du test 4, [05-tests-ha.md](05-tests-ha.md)) :
