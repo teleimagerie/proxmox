@@ -334,6 +334,35 @@ tailscale ping <ip-100.72.x>        # affiche le chemin réellement emprunté
 
 ---
 
+## Authentification OIDC par Keycloak — ajoutée le 27/08/2026
+
+Relevé par [`scripts/check-drift.sh`](scripts/check-drift.sh) : le bloc suivant a
+été ajouté à `/etc/headscale/config.yaml` en production, sans passer par le dépôt.
+
+```yaml
+oidc:
+  issuer: "https://auth.teleimagerie.net/realms/tim"
+  client_id: "headscale"
+  client_secret_path: "/etc/headscale/oidc_secret"
+  scope: ["openid", "profile", "email"]
+```
+
+Les utilisateurs locaux (`admin`, `infra`, `site-*`) et les clés de pré-enrôlement
+continuent de fonctionner : l'OIDC est une **voie d'enrôlement supplémentaire**,
+pas un remplacement.
+
+> **Dépendance critique, à connaître avant tout redémarrage** : headscale ne
+> démarre pas si l'*issuer* est injoignable. Depuis le VLAN 400, cela repose sur
+> l'**override Unbound** `auth.teleimagerie.net → 10.40.0.10` (OPNsense). Si cet
+> enregistrement disparaît, le CT 202 refuse de démarrer — et le VPN DICOM tombe.
+
+Cela ajoute une seconde dépendance au CT 203 : après headscale, **le VPN des
+passerelles DICOM dépend lui aussi de Keycloak** au démarrage. Voir
+[15-keycloak.md](15-keycloak.md) et le §2 de
+[14-code-review.md](14-code-review.md).
+
+Le secret client vit dans `/etc/headscale/oidc_secret`, hors du dépôt.
+
 ## Risques et limites
 
 - **OPNsense (VM 100) est devant tout** : sa bascule HA (~2 min) coupe contrôle

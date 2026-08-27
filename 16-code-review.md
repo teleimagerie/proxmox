@@ -31,10 +31,10 @@ dans le dépôt.
 | 1 | CT 203 `keycloak` non documenté, sauvegarde à confirmer | **Important** | Oui — §1 |
 | 2 | `matt@keycloak` Administrator sans 2FA | **Bloquant** | Oui — §2 |
 | 3 | README : « aucun secret » est faux | **Bloquant** | Non — correction directe |
-| 4 | `ha-resources.cfg` et comptages obsolètes | Important | Non |
+| 4 | ~~`ha-resources.cfg` et comptages obsolètes~~ **traité** | — | Non |
 | 5 | Automatismes présents sur pve1 seul (SPOF) | Important | Oui — §5 |
 | 6 | `backup-opnsense` : échecs silencieux | Important | Non |
-| 7 | `configs/` sans détection de dérive | Moyen | Oui — §7 |
+| 7 | ~~`configs/` sans détection de dérive~~ **traité** | — | Non |
 | 8 | `ovh-dns.py` : sentinelle `"ERROR"` en ligne | Moyen | Non |
 | 9 | `ovh-nasha.py` : `/auth/time` à chaque appel | Moyen | Non |
 | 10 | `deploy-syngo.sh` : `$SSH_OPTS` non quoté | Mineur | Non |
@@ -192,15 +192,18 @@ Deux corrections, sans arbitrage :
 
 ## 4. `configs/ha-resources.cfg` et les comptages sont périmés
 
+> **Traité le 27/08** : `configs/` resynchronisé, README corrigé (cinq machines,
+> cinq ressources HA).
+
 `configs/ha-resources.cfg` déclare 4 ressources, la production en a 5 (`ct: 203`
 manque). Le même écart se propage :
 
 - `README.md:6` — « **Quatre machines** y tournent »
 - `README.md:87` — « HA  4 ressources : vm:100 · vm:102 · ct:201 · ct:202 »
-- `03-exploitation.md:26` — « Si **les quatre** sont verts, le cluster va bien »
-
-Cette dernière ligne est la plus gênante : c'est une consigne de diagnostic. Elle
-apprend à valider un cluster où le 203 serait tombé.
+> **Correction** : j'avais aussi cité `03-exploitation.md:26` (« Si les quatre
+> sont verts »). Relecture faite, « les quatre » y désigne les **commandes du bloc
+> de diagnostic**, pas les machines — mon rapprochement était faux. Le bloc en
+> compte cinq : la formulation a été clarifiée, mais ce n'était pas le même défaut.
 
 Le reste de l'inventaire est en revanche **exact** — vérifié pièce par pièce :
 CT 201 40 Go / 2 Go RAM, CT 202 10 Go / 2 Go RAM, VM 100 8 Go, VM 102 8 Go,
@@ -272,6 +275,17 @@ fichier suspect avant sortie en erreur, rotation à 12 copies. La copie du dép�
 est **identique** à celle déployée (diff vérifié).
 
 ## 7. `configs/` ne détecte pas sa propre dérive
+
+> **Traité le 27/08** : [`scripts/check-drift.sh`](scripts/check-drift.sh) compare
+> `configs/` à la production (liste blanche explicite, lecture seule), et chaque
+> fichier porte désormais sa provenance en en-tête. Le README dit maintenant que
+> `configs/` est **documentaire**, pas un plan de restauration.
+>
+> **Le script a immédiatement trouvé une seconde dérive** que la revue manuelle
+> avait manquée : `headscale-config.yaml` ne contenait pas le bloc `oidc:` ajouté
+> en production le 27/08, qui branche headscale sur Keycloak — avec une dépendance
+> critique en commentaire (« sans l'override Unbound auth → 10.40.0.10, headscale
+> ne démarre pas »). C'est la justification de l'outil.
 
 J'ai comparé les copies du dépôt aux fichiers en production : `cluster.fw`,
 `storage.cfg`, `jobs.cfg`, `backup-opnsense.sh`, `deploy-syngo.sh` sont
@@ -435,7 +449,7 @@ pveversion       pve-manager/9.2.10 · noyau 7.0.14-11-pve
 | **Sauvegarde CT 203** | Vérifier demain matin que l'instantané apparaît. Et faut-il un `pg_dump` périodique vers le NAS en complément ? | §1 |
 | **2FA sur `matt@keycloak`** | MFA imposé dans le realm Keycloak, ACL restreinte, ou ACL retirée ? Et où documente-t-on la porte de secours si le SSO tombe ? | §2 |
 | **SPOF pve1** | Documenter la procédure de reprise, déployer sur les 3 nœuds avec verrou, ou porter par une ressource de cluster ? Arbitrage distinct pour ACME et pour `backup-opnsense`. | §5 |
-| **Dérive de `configs/`** | Script de vérification automatique, ou revue manuelle ? | §7 |
+| ~~**Dérive de `configs/`**~~ | **Traité** — `scripts/check-drift.sh`, à lancer avant tout commit touchant `configs/` | §7 |
 
 Les autres points (§3, §4, §6, §8 à §13) sont des corrections sans arbitrage :
 elles peuvent être appliquées telles quelles.
