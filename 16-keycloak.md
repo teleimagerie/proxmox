@@ -116,8 +116,11 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 ## Comptes, realm, secrets
 
 - Realm **`tim`** : protection force brute active, auto-inscription fermée,
-  **TOTP exigé à la première connexion** (action requise `CONFIGURE_TOTP` par
-  défaut — reprend la posture Proxmox).
+  **TOTP exigé à chaque connexion par mot de passe** — flux navigateur dédié
+  `browser-totp` (copie du flux `browser`, sous-flux *Conditional 2FA* passé
+  en *Required*, conditions retirées) : un compte local sans TOTP se le voit
+  imposer à l'enrôlement. Les connexions **via Google n'y passent pas** —
+  leur MFA est porté par Google ([piège n° 34](07-pieges.md#34-laction-requise-par-défaut-simpose-aussi-aux-arrivants-google)).
 - Utilisateurs initiaux : `matt` (mcapon@teleimagerie.net) et `brtrnd` — mots de
   passe **temporaires** (changement forcé + enrôlement TOTP à la première
   connexion).
@@ -206,7 +209,7 @@ connecté ; seuls les nouveaux logins attendent.
 | Application | Protocole possible | État |
 |---|---|---|
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
-| **Google Workspace** (brokering amont) | OIDC | ✅ en place le 27/08/2026 (reste un test de connexion réelle par un compte Workspace) |
+| **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim`) |
 | **MyTIM** (appli interne de gestion) | OIDC à intégrer dans l'appli | ⚠️ hébergement/techno à documenter — vérifier si c'est `app`/`gestion` → `51.210.24.59` ; **meilleur candidat** après l'infra si développée en interne |
 | Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | ⚠️ accès à collecter |
 | Odoo (`odoo.teleimagerie.net`) | OAuth/LDAP natifs | ⚠️ accès à collecter |
@@ -232,6 +235,7 @@ Configuration retenue (« le plus sécurisé », décision du 27/08/2026) :
 | `trustEmail` | `true` | e-mails du domaine vérifiés par Google, pas de re-vérification |
 | Première connexion | flux `first broker login` par défaut | e-mail inconnu → création à la volée ; e-mail d'un compte existant → **liaison avec confirmation** (mot de passe local exigé) |
 | Comptes admin (`matt`, `brtrnd`) | **ne pas lier à Google** | décision organisationnelle : l'accès infra reste sur les comptes locaux + TOTP Keycloak ; le flux de confirmation empêche de toute façon une liaison sans le mot de passe local |
+| TOTP Keycloak des arrivants Google | **non demandé** | leur MFA est celui de Google — corrigé le 27/08/2026, [piège n° 34](07-pieges.md#34-laction-requise-par-défaut-simpose-aussi-aux-arrivants-google) |
 
 Client OAuth : projet Google Cloud du Workspace, ID
 `990230308603-…apps.googleusercontent.com`, URI de retour

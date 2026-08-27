@@ -729,3 +729,31 @@ corrigé à chaud). Le CT 203 avait l'option dès sa création.
 `--nameserver 10.40.0.1`. À noter aussi : **headscale refuse de démarrer si
 l'issuer OIDC est injoignable** — une erreur de DNS dans ce CT ne dégrade pas
 le service, elle l'empêche de se lever ([16-keycloak.md](16-keycloak.md#ce-qui-est-raccordé)).
+
+## 34. L'action requise « par défaut » s'impose aussi aux arrivants Google
+
+**Symptôme** — Le 27/08/2026, premier test réel du brokering Google : le
+compte Workspace passe l'écran Google… et tombe sur « Mobile Authenticator
+Setup » — Keycloak lui réclame un TOTP local, alors que son MFA est déjà
+porté par Google. Double MFA, friction sans gain.
+
+**Cause** — Le TOTP obligatoire avait été posé comme *action requise par
+défaut du realm* (`CONFIGURE_TOTP`, `defaultAction=true`). Une action par
+défaut s'applique à **tout utilisateur nouvellement créé, fédérés compris** :
+elle ne distingue pas un compte local d'un arrivant Google.
+
+**Résolution** — L'obligation a été déplacée **dans le flux de connexion**,
+là où la distinction existe : copie du flux `browser` → `browser-totp`,
+sous-flux *Browser - Conditional 2FA* passé de *Conditional* à **Required**,
+les deux conditions (`user configured`, `credential`) retirées de la copie.
+Résultat : tout login **par mot de passe** exige l'OTP (enrôlement forcé au
+premier passage — plus fort que l'action par défaut), tandis que les logins
+Google, qui n'empruntent pas le sous-flux forms, n'en voient jamais.
+`defaultAction` remis à `false`, action en attente retirée de l'utilisateur
+fédéré déjà créé.
+
+**Leçon** — Deux pièges en un : les *default required actions* sont globales
+au realm, pas par voie d'entrée — pour différencier, c'est dans les **flux
+d'authentification** que ça se joue ; et le sous-flux s'appelle « Conditional
+**2FA** » depuis Keycloak 26.x (plus « Conditional OTP » comme dans toute la
+littérature) — un script qui cherche l'ancien nom échoue en silence.
