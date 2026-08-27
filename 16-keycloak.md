@@ -80,7 +80,7 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 | Service | Mécanisme | Compte créé | Repli si IdP indisponible |
 |---|---|---|---|
 | **Proxmox VE** | realm `keycloak` (openid, `username-claim username`, `autocreate 0`) | `matt@keycloak` et `brtrnd@keycloak` (27/08/2026), rôle Administrator sur `/` | `matt@pve`, `root@pam` + TOTP |
-| **PBS** | realm `keycloak` (openid, idem) | `matt@keycloak`, ACL Admin sur `/` | `root@pam` local à la VM |
+| **PBS** | realm `keycloak` (openid, idem) | `matt@keycloak` et `brtrnd@keycloak` (27/08/2026), ACL Admin sur `/` | `root@pam` local à la VM |
 | **headscale** | section `oidc` de la config — voie d'**enrôlement supplémentaire** | users OIDC créés à la volée | users locaux + clés de pré-enrôlement inchangés |
 
 > ✅ **Connexions réelles vérifiées le 27/08/2026** : login `matt@keycloak`

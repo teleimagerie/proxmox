@@ -285,10 +285,8 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   depuis le 27/08/2026, en SSO sur une même session) : un
   `tailscale up --login-server https://headscale.teleimagerie.net` de test.
 - ~~**Décider du rôle de `brtrnd@keycloak`**~~ — tranché le 27/08/2026 :
-  **Administrator sur `/`**, comme `matt@keycloak` (`pveum acl modify /
-  --users brtrnd@keycloak --roles Administrator`, vérifié). Reste à le créer
-  aussi sur **PBS** si besoin (`proxmox-backup-manager user create
-  brtrnd@keycloak` + ACL).
+  **Administrator sur `/`** côté PVE et **Admin sur `/`** côté PBS, comme
+  `matt@keycloak` (vérifié dans les deux ACL le jour même).
 - **Brokering Google Workspace** : créer le client OAuth dans la console
   Google (action manuelle, procédure dans
   [16-keycloak.md](16-keycloak.md#brokering-google-workspace-à-faire--action-côté-console-google)),
