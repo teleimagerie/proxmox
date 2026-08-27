@@ -287,11 +287,11 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
 - ~~**Décider du rôle de `brtrnd@keycloak`**~~ — tranché le 27/08/2026 :
   **Administrator sur `/`** côté PVE et **Admin sur `/`** côté PBS, comme
   `matt@keycloak` (vérifié dans les deux ACL le jour même).
-- **Brokering Google Workspace** : créer le client OAuth dans la console
-  Google (action manuelle, procédure dans
-  [16-keycloak.md](16-keycloak.md#brokering-google-workspace-à-faire--action-côté-console-google)),
-  puis déclarer l'Identity Provider dans le realm `tim`. Microsoft 365
-  (`isoteam.mn`) pourra suivre par la même mécanique.
+- ~~**Brokering Google Workspace**~~ — **en place le 27/08/2026** (client
+  OAuth interne au Workspace, `hd` vérifié, PKCE, liaison avec confirmation —
+  [16-keycloak.md](16-keycloak.md#brokering-google-workspace--en-place-depuis-le-27082026)).
+  Reste un **test de connexion réelle** par un compte Workspace non admin.
+  Microsoft 365 (`isoteam.mn`) pourra suivre par la même mécanique.
 - **MyTIM** (application interne de gestion) : documenter hébergement et
   technologie (est-ce `app`/`gestion` → `51.210.24.59` ?), puis intégrer OIDC —
   meilleur candidat après l'infra.

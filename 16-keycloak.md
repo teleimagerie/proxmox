@@ -199,7 +199,7 @@ connecté ; seuls les nouveaux logins attendent.
 | Application | Protocole possible | État |
 |---|---|---|
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
-| **Google Workspace** (brokering amont) | OIDC | 📋 procédure ci-dessous, client OAuth à créer |
+| **Google Workspace** (brokering amont) | OIDC | ✅ en place le 27/08/2026 (reste un test de connexion réelle par un compte Workspace) |
 | **MyTIM** (appli interne de gestion) | OIDC à intégrer dans l'appli | ⚠️ hébergement/techno à documenter — vérifier si c'est `app`/`gestion` → `51.210.24.59` ; **meilleur candidat** après l'infra si développée en interne |
 | Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | ⚠️ accès à collecter |
 | Odoo (`odoo.teleimagerie.net`) | OAuth/LDAP natifs | ⚠️ accès à collecter |
@@ -207,23 +207,35 @@ connecté ; seuls les nouveaux logins attendent.
 | Syngo Via (Siemens) · Vue PACS (Philips) · RIS VENUS (Softway) · TSplus | selon capacités éditeur (souvent SAML/OIDC dans les versions récentes) | 📋 cible à terme — à instruire éditeur par éditeur via la [checklist TELLIS](13-tellis.md#checklist-de-collecte) |
 | Microsoft 365 / Entra ID (brokering amont) | OIDC | 📋 possible plus tard, même mécanique que Google |
 
-### Brokering Google Workspace (à faire — action côté console Google)
+### Brokering Google Workspace — en place depuis le 27/08/2026
 
 Concept : Keycloak reste l'IdP que voient les applications ; Google n'est
 qu'une **source d'identité en amont**. Les utilisateurs bureautiques cliquent
-« Se connecter avec Google » (MFA porté par Google), les admins infra gardent
-leurs comptes locaux + TOTP Keycloak.
+« Google Workspace » sur la page de login (MFA porté par Google), les admins
+infra gardent leurs comptes locaux + TOTP Keycloak.
 
-1. Console Google Cloud (compte Workspace) : créer un projet, écran de
-   consentement **interne au domaine**, puis un identifiant OAuth 2.0 de type
-   « application Web » avec l'URI de redirection
-   `https://auth.teleimagerie.net/realms/tim/broker/google/endpoint`.
-2. Console Keycloak, realm `tim` → *Identity Providers* → *Google* : coller
-   client ID/secret, renseigner **Hosted Domain = `teleimagerie.net`** (refuse
-   les comptes Google hors domaine).
-3. Décider du rapprochement e-mail → utilisateur existant (« First Broker
-   Login » : lier au compte du même e-mail, ou créer à la volée).
-4. Ranger le secret du client Google dans le gestionnaire de secrets.
+Configuration retenue (« le plus sécurisé », décision du 27/08/2026) :
+
+| Réglage | Valeur | Effet |
+|---|---|---|
+| Application Google Auth Platform | audience **Interne** | seuls les comptes du Workspace passent l'écran Google |
+| `hostedDomain` | `teleimagerie.net` | `hd` imposé à l'aller **et vérifié au retour** par Keycloak |
+| PKCE | activé, `S256` | vérifié sur le fil (`code_challenge_method=S256`) |
+| `storeToken` | `false` | Keycloak ne conserve aucun jeton Google |
+| `trustEmail` | `true` | e-mails du domaine vérifiés par Google, pas de re-vérification |
+| Première connexion | flux `first broker login` par défaut | e-mail inconnu → création à la volée ; e-mail d'un compte existant → **liaison avec confirmation** (mot de passe local exigé) |
+| Comptes admin (`matt`, `brtrnd`) | **ne pas lier à Google** | décision organisationnelle : l'accès infra reste sur les comptes locaux + TOTP Keycloak ; le flux de confirmation empêche de toute façon une liaison sans le mot de passe local |
+
+Client OAuth : projet Google Cloud du Workspace, ID
+`990230308603-…apps.googleusercontent.com`, URI de retour
+`https://auth.teleimagerie.net/realms/tim/broker/google/endpoint`. Le secret
+client vit dans le **gestionnaire de secrets** (copie opérationnelle dans la
+base Keycloak, config de l'IdP `google`) — la copie de transit sur pve1 a été
+détruite après usage.
+
+> La configuration a été posée via un **admin temporaire de bootstrap**
+> (`kc.sh bootstrap-admin user`, supprimé aussitôt) : le mot de passe admin
+> n'a pas eu à quitter le gestionnaire.
 
 ---
 
