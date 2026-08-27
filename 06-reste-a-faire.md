@@ -281,9 +281,13 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   mot de passe + enrôlement TOTP — celui de `matt` a servi le 27/08/2026
   (premier login OIDC vérifié sur PVE) ; recopier tous les secrets du fichier
   dans le gestionnaire de secrets.
-- **Éprouver PBS et headscale par une connexion OIDC réelle** (PVE l'est
-  depuis le 27/08/2026) : bouton *OpenID* sur l'interface PBS, et un
+- **Éprouver headscale par une connexion OIDC réelle** (PVE et PBS le sont
+  depuis le 27/08/2026, en SSO sur une même session) : un
   `tailscale up --login-server https://headscale.teleimagerie.net` de test.
+- **Décider du rôle de `brtrnd@keycloak`** : le compte PVE existe **sans
+  aucun droit** (créé le 27/08/2026 après sa première connexion OIDC) —
+  Administrator comme son homologue realm pve, ou un rôle plus restreint
+  (PVEAuditor…) ; et le créer aussi sur PBS le cas échéant.
 - **Brokering Google Workspace** : créer le client OAuth dans la console
   Google (action manuelle, procédure dans
   [16-keycloak.md](16-keycloak.md#brokering-google-workspace-à-faire--action-côté-console-google)),

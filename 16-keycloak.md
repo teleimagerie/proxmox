@@ -83,11 +83,20 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 | **PBS** | realm `keycloak` (openid, idem) | `matt@keycloak`, ACL Admin sur `/` | `root@pam` local à la VM |
 | **headscale** | section `oidc` de la config — voie d'**enrôlement supplémentaire** | users OIDC créés à la volée | users locaux + clés de pré-enrôlement inchangés |
 
-> ✅ **Connexion réelle vérifiée le 27/08/2026 à 09:29 UTC** : premier login de
-> `matt@keycloak` sur l'interface Proxmox (`successful openid auth` dans le
-> journal `pvedaemon` de pve1) — changement du mot de passe temporaire et
-> enrôlement TOTP compris. PBS et headscale restent à éprouver par une
-> connexion réelle.
+> ✅ **Connexions réelles vérifiées le 27/08/2026** : login `matt@keycloak`
+> sur Proxmox à 09:29 UTC (`successful openid auth`, journal `pvedaemon` de
+> pve1, mot de passe temporaire changé et TOTP enrôlé), puis **PBS vers
+> 10:00 sans nouvelle saisie** — même session SSO Keycloak servant les deux
+> clients (vérifié par `kcadm get clients/<id>/user-sessions`). `brtrnd`
+> s'est aussi authentifié (session client `proxmox` de 09:45) ;
+> `brtrnd@keycloak` a été créé côté PVE **sans aucun rôle** — l'attribution
+> est une décision à prendre. Reste headscale à éprouver (au prochain
+> enrôlement de nœud).
+>
+> Les connexions réussies ne laissent **aucune trace** dans les journaux PBS
+> ni Keycloak par défaut : pour vérifier, interroger les sessions actives
+> (`kcadm get clients/<id>/user-sessions -r tim`) ou activer la conservation
+> des événements de connexion dans le realm (*Realm settings → Sessions*).
 
 Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 
