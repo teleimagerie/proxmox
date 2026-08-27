@@ -256,7 +256,58 @@ cluster lisible par `www-data`. Le `client-key` OIDC y figure en clair.
 **Ce fichier ne doit jamais être copié dans `configs/`**, contrairement aux autres
 fichiers de `/etc/pve/`. C'est le piège naturel de la convention du dossier.
 
-### 4. Durcissement du conteneur : à faire
+### 4. L'administration repose sur le compte de bootstrap `tmpadmin`
+
+Relevé le 27/08/2026, en cherchant à vérifier le MFA du realm (§1).
+
+Le compte d'administration de Keycloak est **`tmpadmin`** — l'admin *temporaire*
+que le serveur crée à son premier démarrage :
+
+```
+journalctl -u keycloak
+KC-SERVICES0077: Created temporary admin user with username tmpadmin
+```
+
+Il n'a jamais été remplacé. Trois conséquences, qui se cumulent :
+
+| Constat | Portée |
+|---|---|
+| Compte **temporaire de bootstrap**, toujours en place | Non nominatif : aucune traçabilité de qui administre |
+| Mot de passe en clair dans **`/root/.kc-secrets`** | Dans le conteneur qu'il est censé protéger |
+| `/root/kc-setup.sh` le lit à chaque exécution | Le script d'installation est resté sur la machine |
+
+Le script d'installation le montre :
+
+```bash
+source /root/.kc-secrets                       # DB_PASSWORD, ADMIN_PASSWORD
+...
+Environment=KC_BOOTSTRAP_ADMIN_USERNAME=tmpadmin
+Environment=KC_BOOTSTRAP_ADMIN_PASSWORD=${ADMIN_PASSWORD}
+```
+
+Un serveur d'identité en production administré par le compte jetable du premier
+démarrage, dont le secret dort en clair à côté. **Cela pèse plus lourd que le
+durcissement SSH du §5.**
+
+> **Protection anti-force-brute** : le journal comptait déjà 3 `LOGIN_ERROR` le
+> 27/08. Ne pas tâtonner sur ce mot de passe — récupérer la valeur exacte dans
+> `/root/.kc-secrets` plutôt que d'essayer, sous peine de verrouiller le seul
+> compte d'administration.
+
+**Les trois corrections à mener**, dans cet ordre :
+
+1. **Créer un compte administrateur nominatif**, avec OTP, dans le realm `master`.
+   Puis **supprimer `tmpadmin`** — c'est sa raison d'être que de disparaître.
+2. **Déplacer le secret hors du conteneur** vers `/etc/pve/priv/` sur le cluster,
+   là où vivent les autres secrets. `/root/.kc-secrets` et `/root/kc-setup.sh`
+   n'ont pas à rester sur la machine qu'ils déverrouillent.
+3. **Documenter l'emplacement retenu** dans
+   [04-securite.md](04-securite.md#secrets--où-ils-vivent), au même titre que les
+   autres secrets du cluster.
+
+Ces trois points restent **à faire** : rien n'a été modifié.
+
+### 5. Durcissement du conteneur : à faire
 
 Relevé sur la machine :
 
@@ -408,8 +459,9 @@ Ce que la machine ne peut pas dire, et qui reste à documenter :
       volontairement pas interrogé la base d'identités.
 - [ ] **Politique de mot de passe** du realm (longueur, expiration, verrouillage
       après échecs répétés).
-- [ ] **Où est stocké le mot de passe de l'administrateur Keycloak initial**, et
-      s'il a été changé après installation.
+- [x] ~~**Où est stocké le mot de passe de l'administrateur Keycloak initial**~~ —
+      répondu le 27/08 : `/root/.kc-secrets` dans le CT, en clair, et le compte
+      est toujours le `tmpadmin` de bootstrap. Voir §4.
 - [ ] **Le certificat `auth.teleimagerie.net` est-il renouvelé automatiquement** ?
       Le vhost sert bien `/.well-known/acme-challenge/`, mais le renouvellement
       côté CT 201 n'a pas été vérifié — et le timer ACME ne tourne que sur pve1

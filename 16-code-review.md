@@ -154,6 +154,22 @@ tout seul, ce qui limite la portée. Mais `matt@keycloak`, lui, existe déjà.
 >   `root@pam` qui portent déjà le TOTP.
 > - **Option C — retirer l'ACL** en attendant l'arbitrage.
 >
+> **Complément du 27/08 — l'administration de Keycloak elle-même.** En cherchant
+> à vérifier le MFA du realm, trois constats se sont ajoutés : le compte
+> d'administration est **`tmpadmin`**, l'admin *temporaire* créé au premier
+> démarrage et jamais remplacé ; son mot de passe vit **en clair** dans
+> `/root/.kc-secrets`, à l'intérieur du conteneur qu'il protège ; et le script
+> d'installation `/root/kc-setup.sh` qui le lit est resté sur la machine.
+>
+> Trois corrections à mener : créer un compte nominatif avec OTP puis supprimer
+> `tmpadmin` ; déplacer le secret vers `/etc/pve/priv/` ; documenter l'emplacement
+> retenu dans `04-securite.md`. Détail en
+> [§4 de 17-keycloak.md](17-keycloak.md#4-ladministration-repose-sur-le-compte-de-bootstrap-tmpadmin).
+>
+> La vérification du MFA reste **ouverte** : elle demande de s'authentifier avec
+> ce mot de passe, que personne n'avait sous la main. Les commandes `kcadm.sh`
+> sont prêtes (lecture seule) — voir la même section.
+
 > À trancher aussi : ce SSO introduit une **dépendance circulaire**. Si le CT 203
 > est indisponible, la connexion par Keycloak ne fonctionne plus. `matt@pve` et
 > `root@pam` restent la porte de secours — cela mérite une ligne explicite dans
@@ -448,6 +464,7 @@ pveversion       pve-manager/9.2.10 · noyau 7.0.14-11-pve
 |---|---|---|
 | **Sauvegarde CT 203** | Vérifier demain matin que l'instantané apparaît. Et faut-il un `pg_dump` périodique vers le NAS en complément ? | §1 |
 | **2FA sur `matt@keycloak`** | MFA imposé dans le realm Keycloak, ACL restreinte, ou ACL retirée ? Et où documente-t-on la porte de secours si le SSO tombe ? | §2 |
+| **Administration de Keycloak** | Créer un compte nominatif avec OTP puis supprimer `tmpadmin` ; déplacer `/root/.kc-secrets` hors du conteneur vers `/etc/pve/priv/` ; documenter l'emplacement retenu. **La vérification du MFA reste à faire** — elle demande ce mot de passe. | §2 |
 | **SPOF pve1** | Documenter la procédure de reprise, déployer sur les 3 nœuds avec verrou, ou porter par une ressource de cluster ? Arbitrage distinct pour ACME et pour `backup-opnsense`. | §5 |
 | ~~**Dérive de `configs/`**~~ | **Traité** — `scripts/check-drift.sh`, à lancer avant tout commit touchant `configs/` | §7 |
 

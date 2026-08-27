@@ -211,7 +211,7 @@ Adresses : `10.40.0.10` (201), `10.40.0.30` (202), `10.40.0.50` (203).
 - `unattended-upgrades` est **absent**. Keycloak est une application Java qui
   reçoit réellement des requêtes d'Internet via le proxy — des correctifs non
   appliqués y pèsent plus lourd que six essais d'authentification au lieu de
-  trois. Voir [17-keycloak.md](17-keycloak.md#4-durcissement-du-conteneur--à-faire).
+  trois. Voir [17-keycloak.md](17-keycloak.md#5-durcissement-du-conteneur--à-faire).
 - le port **57800** (cache Infinispan) écoute sur `*` sans usage : une seule
   instance de Keycloak tourne.
 
