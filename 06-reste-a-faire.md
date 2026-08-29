@@ -112,11 +112,14 @@ panne d'IdP ne se voit qu'à la première connexion ratée, et personne ne
 surveille ni le service, ni l'échéance de son certificat, ni le timer
 `kc-pgdump` ([16-keycloak.md](16-keycloak.md#risques-et-limites)).
 
-**La question « mutualiser ? » est tranchée le 29/08/2026 : le Zabbix
-d'entreprise migre dans le cluster** (CT 204, plomberie en place, bascule DNS
-restante — [17-zabbix.md](17-zabbix.md)). Restent ouverts, dans l'ordre :
+**La question « mutualiser ? » est tranchée, et la migration est faite : le
+Zabbix d'entreprise tourne dans le cluster depuis le 29/08/2026 15:51 UTC**
+(CT 204, bascule mesurée, 6 hôtes re-collectés en moins de 4 minutes —
+[17-zabbix.md](17-zabbix.md)). Restent ouverts, dans l'ordre :
 
-1. **Basculer le DNS** et résilier le VPS ([17-zabbix.md §Bascule restante](17-zabbix.md#bascule-restante--jour-j)) ;
+1. la **fin de vie du VPS** : fenêtre d'observation puis résiliation, TTL à
+   remonter — checklist dans
+   [17-zabbix.md §Reste à faire](17-zabbix.md#reste-à-faire-fenêtre-dobservation) ;
 2. **une sonde externe** sur `https://zabbix.teleimagerie.net/` — l'incident du
    28/08 (32 h de supervision morte sans alerte) montre que le monitoring ne
    peut pas être son propre témoin ;
@@ -339,21 +342,25 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
 
 ---
 
-## 11. Migration Odoo (VPS → VM 101) — en cours depuis le 29/08/2026
+## 11. Migration Odoo (VPS → VM 101) — ✅ bascule faite le 29/08/2026
 
-Préparation et répétition générale **terminées et validées** le 29/08 :
-VM 101 opérationnelle avec une copie de la prod, chaîne proxy testée,
-outillage de bascule en place — le détail et le runbook du jour J sont dans
-[18-odoo.md](18-odoo.md). Reste à faire :
+**En production sur le cluster depuis le 29/08/2026 16:18 UTC** — préparation,
+répétition générale et bascule le même jour, coupure ~4 min + ~2 min de
+fenêtre TLS, vérifiée de bout en bout (récit chiffré dans
+[18-odoo.md](18-odoo.md#bascule-du-29082026--récit-chiffré)). HA `vm:101`
+déclarée. Nettoyage restant :
 
-- **Bascule DNS** (fenêtre ~15-20 min en heures creuses) : runbook
-  [18-odoo.md](18-odoo.md#runbook-jour-j-bascule-fenêtre-15-20-min-en-heures-creuses) —
-  `ttl60` à H-1, gel du VPS, sync finale, `switch`, certbot, override Unbound.
-- **Deploy key GitHub de la VM** à déclarer sur `teleimagerie/odoo`
-  (clé `/home/ubuntu/.ssh/id_ed25519.pub` de la VM, commentaire `odoo-vm101`) ;
-  révoquer celle du VPS (déjà morte : `Permission denied` constaté le 29/08).
-- **Post-bascule** : HA `vm:101`, vérification du vzdump du premier matin,
-  test de restauration ID 299, inventaire Ansible → `10.40.0.70`, fusion de
-  la branche `proxmox` dans `main`, drainage 3 jours puis poweroff et
-  **résiliation du VPS** `vps-f18bcfe7` (décision actée : les données MySQL
-  Dolibarr partent avec lui, sans archive), `ttl3600`, mise à jour de la doc.
+- **vzdump du premier matin** à vérifier le 30/08 (`pvesm list pbs | grep vm/101`),
+  puis test de restauration sous l'ID 299 ;
+- **migration à chaud de validation** de la VM 101 vers un autre nœud (~1 s) ;
+- **deploy key GitHub de la VM** à déclarer sur `teleimagerie/odoo`
+  (clé `/home/ubuntu/.ssh/id_ed25519.pub`, commentaire `odoo-vm101`) ;
+  révoquer celle du VPS (déjà morte) ; inventaire Ansible → `10.40.0.70` ;
+  fusion de la branche `proxmox` dans `main` ;
+- **drainage du VPS** (gelé, accès par IP `91.134.75.199` — le nom résout
+  vers le cluster) : 3 jours d'observation, poweroff, **résiliation**
+  `vps-f18bcfe7` (décision actée : les données MySQL Dolibarr partent avec
+  lui, sans archive), puis `bascule-odoo.py ttl3600` et rafraîchissement de
+  l'export de zone ;
+- **relève du mail entrant** : déjà à l'état `draft` sur le VPS (constat
+  post-bascule, pas une régression) — à réactiver un jour depuis l'interface.

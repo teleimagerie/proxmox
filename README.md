@@ -3,11 +3,12 @@
 Cluster de virtualisation haute disponibilité à 3 nœuds, stockage Ceph répliqué
 synchrone, hébergé chez OVHcloud (datacenter GRA4).
 
-**Déployé le 11 août 2026.** État : **en production**. Cinq machines y tournent :
+**Déployé le 11 août 2026.** État : **en production**. Sept machines y tournent :
 le pare-feu OPNsense (VM 100), le reverse proxy `proxy-tim` (CT 201), le
 serveur de sauvegarde PBS (VM 102), le plan de contrôle VPN `headscale`
-(CT 202, pour les passerelles DICOM des sites distants) et le serveur
-d'authentification centralisée `keycloak` (CT 203, SSO OpenID Connect).
+(CT 202, pour les passerelles DICOM des sites distants), le serveur
+d'authentification centralisée `keycloak` (CT 203, SSO OpenID Connect),
+la supervision `zabbix` (CT 204) et l'ERP `odoo` (VM 101).
 
 Ce cluster est l'un des **deux datacenters** de l'architecture HDS ; l'autre,
 le **DC TELLIS** (production imagerie), est opéré par un prestataire — vue
@@ -91,7 +92,7 @@ Ceph Tentacle 20.2.2     HEALTH_OK · 6 OSD · 4,3 Tio bruts → 1,4 Tio utilisa
 Réseau                   vRack 25 Gb/s · bridge VLAN-aware · jumbo MTU 9000 validé
                          VLAN 100 Corosync · 200 Ceph · 300 infra · 400 LAN VM
                          non tagué = bloc public 57.130.34.120/29
-HA                       5 ressources : vm:100 · vm:102 · ct:201 · ct:202 · ct:203
+HA                       7 ressources : vm:100 à vm:102 · ct:201 à ct:204
                          watchdog softdog · fencing testé en conditions réelles
 Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
 Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
@@ -107,10 +108,10 @@ Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix
                          restauration testée et mesurée
 Authentification         Keycloak 26.7.2 (CT 203) · auth.teleimagerie.net
                          realm tim · TOTP obligatoire · OIDC : PVE, PBS, headscale
-Supervision              Zabbix 7.0 (CT 204, hors HA) · zabbix.teleimagerie.net
-                         ⚠️ bascule DNS restante — le VPS OVH reste la production
+Supervision              Zabbix 7.0 (CT 204) · zabbix.teleimagerie.net
+                         migré du VPS le 29/08 · 6 hôtes re-collectés < 4 min
 ERP                      Odoo 17 (VM 101, Ubuntu 24.04 + Docker) · odoo.teleimagerie.net
-                         ⚠️ bascule DNS restante — le VPS OVH reste la production
+                         en production depuis le 29/08 16:18 UTC · VPS gelé, à résilier
 ```
 
 **Capacité réellement exploitable** : ~1,36 Tio de disque Ceph (seuil `nearfull` à

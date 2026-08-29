@@ -134,8 +134,8 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 | `auth` | → [16-keycloak.md](16-keycloak.md) | serveur d'authentification Keycloak ✅ — pointait vers un ancien VPS **résilié**, anomalie soldée le 27/08/2026 (A repointé, AAAA orphelin supprimé) |
 | `api`, `api1`, `www1`, `test01` | `162.19.25.107` (+ AAAA) | API 📋 |
 | `e-learning`, `elearning` | `51.210.149.58` | e-learning 📋 |
-| `odoo` | `91.134.75.199` | ERP Odoo 📋 |
-| `zabbix` | `51.178.36.192` | supervision ✅ audité le 29/08/2026 — **migration vers le CT 204 préparée, bascule DNS à venir** (`scripts/bascule-zabbix.py`) — [17-zabbix.md](17-zabbix.md) |
+| `odoo` | `57.130.34.122` | ERP Odoo — **sur le cluster depuis le 29/08/2026** (VM 101 via proxy-tim, AAAA supprimé — [18-odoo.md](18-odoo.md)) |
+| `zabbix` | `57.130.34.122` | supervision ✅ **basculé sur le CT 204 le 29/08/2026** (TTL 60 le temps de la fenêtre d'observation, `revert` possible tant que le VPS vit) — [17-zabbix.md](17-zabbix.md) |
 | `voip` | `51.38.33.236` | téléphonie 📋 |
 | `bastion` | `51.38.189.223` | bastion d'accès 📋 |
 | `sms` / `smsnotifier` | `51.75.30.101` / CNAME `vps589173.ovh.net` | envoi de SMS 📋 |

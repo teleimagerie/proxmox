@@ -1,9 +1,11 @@
 # ERP Odoo — migration VPS → VM 101
 
-> **État au 29/08/2026 : préproduction validée, bascule DNS à planifier.**
-> La VM 101 héberge une copie complète de la prod (données du 29/08,
-> crons/mail neutralisés) et la chaîne d'accès par le proxy est testée.
-> La prod réelle reste le VPS OVH jusqu'à la bascule (runbook plus bas).
+> **✅ EN PRODUCTION sur le cluster depuis le 29/08/2026, 16:18 UTC.**
+> Bascule DNS faite et vérifiée de bout en bout (récit chiffré plus bas),
+> coupure effective ~4 min + ~2 min de fenêtre TLS. Le VPS est gelé
+> (conteneur `web` arrêté, données intactes) : le retour arrière
+> `bascule-odoo.py revert` reste possible jusqu'à sa résiliation, mais
+> toute écriture postérieure à la bascule serait alors perdue.
 
 ## Identité
 
@@ -12,11 +14,11 @@
 | Invité | **VM 101** `odoo`, QEMU, Ubuntu 24.04 (cloud-init noble) |
 | Ressources | 4 vCPU `host`, 4 Go RAM, 40 Go sur `vm-storage` (Ceph) |
 | Réseau | vmbr1 `tag=400`, `10.40.0.70/24`, gw `10.40.0.1`, DNS `10.40.0.1` |
-| Nom public | `odoo.teleimagerie.net` — **pointe encore sur le VPS** `91.134.75.199` |
+| Nom public | `odoo.teleimagerie.net` → `57.130.34.122` (TTL 60 jusqu'à résiliation du VPS), AAAA supprimé ; vue interne : override Unbound → `10.40.0.10` |
 | Application | Odoo 17 (Docker Compose), PostgreSQL 16, base `odoo` ~175 Mo, filestore ~586 Mo |
 | Dépôt | `github.com:teleimagerie/odoo.git`, **branche `proxmox`** déployée dans `/srv/odoo` |
-| Source à remplacer | VPS OVH `vps-f18bcfe7.vps.ovh.net` (2 vCPU / 2 Go / 40 Go), accès `ssh ubuntu@` |
-| HA | pas encore déclarée (à faire à la bascule : `ha-manager add vm:101`) |
+| Source remplacée | VPS OVH `vps-f18bcfe7.vps.ovh.net` — gelé le 29/08, accès **par IP** `ssh ubuntu@91.134.75.199` (le nom résout désormais vers le cluster) |
+| HA | **ressource HA depuis le 29/08/2026** (`max_restart 3`, `max_relocate 3`), démarrée sur pve1 |
 
 Choix structurants : **VM plutôt que CT** (Docker en LXC non privilégié =
 fragile, et une VM migre à chaud en ~1 s), **Ubuntu plutôt que Debian**
@@ -94,7 +96,44 @@ Internet ── 57.130.34.122:443 ── routeur SNI (CT 201) ── 127.0.0.1:8
    inattendue. `status` vérifié : A → `91.134.75.199`, AAAA présent, TTL 3600
    (défaut de zone).
 
-## Runbook jour J (bascule, fenêtre ~15-20 min en heures creuses)
+## Bascule du 29/08/2026 — récit chiffré
+
+Déroulé réel (heures UTC), sur le runbook ci-dessous exécuté tel quel :
+
+- **16:11** — `ttl60` : TTL de l'A **et** de l'AAAA abaissés à 60, vérifiés
+  sur `ns17` et `dns17.ovh.net`. Choix assumé de ne pas attendre l'heure de
+  propagation (samedi après-midi, aucune activité dans les logs) : les
+  clients à cache chaud risquaient jusqu'à 1 h de `502`, aucun constaté.
+- **16:14:48** — gel : `docker compose stop web` sur le VPS. Début de la coupure.
+- **16:15 → 16:17** — sync finale sur la VM : dump 22 Mo tiré du VPS, rsync
+  delta du filestore (quelques secondes), drop/create + `pg_restore`,
+  `-u base` (152 modules, ~50 s — seule trace : un avertissement docutils
+  `(ERROR/3) Unexpected indentation` dans le rendu de la description du
+  module `mail`, cosmétique), redémarrage complet **sans neutralisation**.
+- **16:18:08** — `switch` : A → `57.130.34.122`, AAAA supprimé, vérifié sur
+  les deux autoritaires + `1.1.1.1` + `8.8.8.8`. **Fin de coupure effective
+  ~16:19** (TTL 60). Coupure totale : **~4 min**.
+- **~16:20** — certbot webroot dans le CT 201 : certificat émis (échéance
+  **27/11/2026**), chemins remplacés dans le vhost, reload. Fenêtre d'erreur
+  TLS entre bascule et émission : **~2 min**, assumée (décision du 29/08).
+- Override Unbound `odoo.teleimagerie.net → 10.40.0.10` ajouté dans
+  `config.xml` d'OPNsense (sauvegarde `/conf/config.xml.bak-odoo-20260829`,
+  entrée clonée sur celles d'`auth`/`zabbix`, `configctl unbound restart` —
+  `unbound reconfigure` n'existe pas sur cette version). Entrée `/etc/hosts`
+  de test retirée de la VM.
+- **Vérifications** : `200` par les deux chemins (externe DNS réel avec
+  certificat valide en 0,27 s ; interne VLAN 400 via l'override), **IP
+  réelles** des clients dans l'access.log du CT 201 (preuve proxy_protocol),
+  **mail sortant réel `sent`** via Mailjet:25 (odoo shell → mcapon@),
+  logo `/web/image` 200, handshake websocket iso-prod. HA déclarée dans la
+  foulée (`vm:101` started sur pve1).
+- Constat sans régression : le serveur de mail **entrant** était déjà à
+  l'état `draft` sur le VPS (vérifié sur sa base après bascule) — la relève
+  IMAP était donc déjà inopérante avant la migration. À réactiver un jour
+  depuis l'interface (Paramètres → Techniques → Serveurs entrants,
+  bouton *Confirmer*), chantier indépendant.
+
+## Runbook utilisé (archivé)
 
 **H-1 ou plus** (TTL de zone 3600) — sur pve1 :
 ```bash
@@ -151,27 +190,25 @@ l'override Unbound + `docker compose stop` sur la VM. Les écritures faites
 sur la VM entre bascule et revert sont perdues. Le point de non-retour est la
 **résiliation du VPS**, pas la bascule.
 
-## Post-bascule (à dérouler après validation)
+## Post-bascule — reste à faire
 
-1. `ha-manager add vm:101 --state started --max_restart 3 --max_relocate 3`
-   + migration à chaud de validation (~1 s de coupure attendue).
+1. ✅ HA déclarée le 29/08 ; **migration à chaud de validation** vers un
+   autre nœud encore à faire (~1 s de coupure attendue, à caler hors usage).
 2. Sauvegardes : la VM entre seule dans le vzdump quotidien de 02:00 (job
-   `all`) — vérifier au premier matin (`pvesm list pbs | grep vm/101` + mail) ;
-   test de restauration sous l'ID 299 (retirer `net0` avant boot,
-   [10-sauvegardes.md](10-sauvegardes.md)). Le cron applicatif `auto_backup`
-   d'Odoo continue en 3e niveau.
+   `all`) — **vérifier au matin du 30/08** (`pvesm list pbs | grep vm/101` +
+   mail) ; test de restauration sous l'ID 299 (retirer `net0` avant boot,
+   [10-sauvegardes.md](10-sauvegardes.md)). Timer `odoo-pgdump` déjà armé et
+   validé ; le cron applicatif `auto_backup` d'Odoo continue en 3e niveau.
 3. Ansible : inventaire → `10.40.0.70` (ProxyJump pve1 ou WireGuard),
-   fusionner `proxmox` dans `main`, révoquer la deploy key du VPS,
-   déclarer celle de la VM.
-4. Drainage (patron [06 §2](06-reste-a-faire.md)) : `web` arrêté sur le VPS,
-   3 jours d'observation des access-logs Traefik, `poweroff`, résiliation
-   OVH, `bascule-odoo.py ttl3600`, rafraîchir
+   fusionner `proxmox` dans `main`, **déclarer la deploy key de la VM sur
+   GitHub** (`odoo-vm101`), révoquer celle du VPS (déjà morte).
+4. Drainage (patron [06 §2](06-reste-a-faire.md)) : `web` arrêté sur le VPS
+   depuis le gel ; 3 jours d'observation des logs Traefik (accès **par IP**
+   `91.134.75.199`), `poweroff`, résiliation OVH (⚠️ emporte les données
+   MySQL Dolibarr, décision actée), `bascule-odoo.py ttl3600`, re-rafraîchir
    [configs/zone-teleimagerie.net](configs/zone-teleimagerie.net).
-5. Doc : basculer l'état de cette fiche, mettre à jour
-   [09-proxy-tim.md](09-proxy-tim.md) (cert Let's Encrypt),
-   [14-noms-de-domaine.md](14-noms-de-domaine.md) (ligne `odoo`),
-   [README.md](README.md) (état, ressources HA),
-   [16-keycloak.md](16-keycloak.md) (candidat SSO désormais sur le cluster).
+5. Réactiver un jour la relève du mail entrant (état `draft` hérité du VPS,
+   voir récit) ; raccordement Keycloak : chantier séparé.
 
 ## Restauration
 

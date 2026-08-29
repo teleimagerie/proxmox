@@ -1,5 +1,5 @@
 $TTL 3600
-@	IN SOA dns17.ovh.net. tech.ovh.net. (2088010304 86400 3600 3600000 300)
+@	IN SOA dns17.ovh.net. tech.ovh.net. (2088018709 86400 3600 3600000 300)
         IN NS     dns17.ovh.net.
         IN NS     ns17.ovh.net.
         IN MX     5 alt1.aspmx.l.google.com.
@@ -49,8 +49,7 @@ mailjet._6d687b5a        IN TXT     "6d687b5af6d7f1e2a961f1c06a68a388"
 mailjet._domainkey        IN TXT     "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCxMfpfjaByXfuSqGHuCRGaNQQwW+Fg6LFJmH5zWzmvWFNbf569WY2XXPz6IpwkIBBeAyp5BHn70fApYMjzj87FKZJNK4QgNRupj0IbhSXFw7BWt/1Rjoi3FZevAvdPqsflxg+L4NaKyYp7fDIEYdxla0gada12QzJpxNuJH7wCswIDAQAB"
 mariage        IN A     46.105.57.169
 mariage        IN AAAA     2001:41d0:301::20
-odoo        IN A     91.134.75.199
-odoo        IN AAAA     2001:41d0:304:200::675a
+odoo  60      IN A     57.130.34.122
 ovhmo3202129-selector1._domainkey        IN CNAME     ovhmo3202129-selector1._domainkey.3302249.ot.dkim.mail.ovh.net.
 ovhmo3202129-selector2._domainkey        IN CNAME     ovhmo3202129-selector2._domainkey.3302248.ot.dkim.mail.ovh.net.
 pacs-secours   3600 IN A     57.130.34.122
@@ -113,4 +112,4 @@ www.support     60 IN TXT     "4|https://crm.teleimagerie.net/public/ticket/inde
 www1        IN A     162.19.25.107
 www1        IN AAAA     2001:41d0:304:200::2c84
 www3        IN A     77.158.128.112
-zabbix        IN A     51.178.36.192
+zabbix     60 IN A     57.130.34.122
