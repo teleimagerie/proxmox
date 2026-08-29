@@ -214,7 +214,7 @@ connecté ; seuls les nouveaux logins attendent.
 |---|---|---|
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
 | **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim` — compte de test supprimé après validation) |
-| **MyTIM** (appli interne de gestion) | OIDC à intégrer dans l'appli | ⚠️ hébergement/techno à documenter — vérifier si c'est `app`/`gestion` → `51.210.24.59` ; **meilleur candidat** après l'infra si développée en interne |
+| **MyTIM** (appli interne de gestion) | OIDC à intégrer dans l'appli | ⚠️ hébergement/techno à documenter — vérifier si c'est `app`/`gestion` → `51.210.24.59` ; **meilleur candidat** après l'infra si développée en interne. Identifiants utilisateurs = e-mail → voir [Identités par application](#identités-par-application) |
 | Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | ⚠️ accès à collecter |
 | Odoo (`odoo.teleimagerie.net`) | OAuth/LDAP natifs | ⚠️ accès à collecter |
 | CRM, e-learning, bastion, app/gestion | à déterminer | ⚠️ hors périmètre du dépôt |
@@ -251,6 +251,54 @@ détruite après usage.
 > La configuration a été posée via un **admin temporaire de bootstrap**
 > (`kc.sh bootstrap-admin user`, supprimé aussitôt) : le mot de passe admin
 > n'a pas eu à quitter le gestionnaire.
+
+---
+
+## Identités par application
+
+Le même humain porte des identifiants différents selon les applications.
+Principe Keycloak : **un seul compte, plusieurs présentations** — le compte
+porte les identités en **attributs**, et chaque client reçoit la sienne dans
+son jeton via un *protocol mapper* posé au raccordement. On ne renomme
+jamais personne, ni dans Keycloak ni dans l'application.
+
+Attributs déclarés dans le profil du realm `tim` le 29/08/2026 (édition
+**admin uniquement** — un utilisateur ne modifie pas sa propre identité
+RIS ; visibles en lecture seule dans sa console de compte) :
+
+| Application | Identifiant (ex. matt) | Source dans le jeton |
+|---|---|---|
+| MyTIM, MyIsoteam | `mcapon@teleimagerie.net` | revendication standard `email` — **aucun attribut ni mapper à créer** |
+| Xplore RIS + Xplore PACS central | `matthieu` | attribut `login_xplore` |
+| Vue PACS Philips | `mcapon` | attribut `login_pacs_philips` |
+| VoIP 3CX | `1001` | attribut `extension_3cx` |
+
+Renseignés sur `matt` le 29/08/2026 ; `brtrnd` : à compléter quand ses
+identifiants seront connus.
+
+**Le jour d'un raccordement**, après création du client, poser le mapper qui
+place l'attribut dans la revendication que l'application lit :
+
+```bash
+# OIDC : l'application lit preferred_username -> on le remplace par l'attribut
+kcadm.sh create clients/<id-client>/protocol-mappers/models -r tim \
+  -s name=identite-metier -s protocol=openid-connect \
+  -s protocolMapper=oidc-usermodel-attribute-mapper \
+  -s 'config."user.attribute"=login_xplore' \
+  -s 'config."claim.name"=preferred_username' \
+  -s 'config."id.token.claim"=true' -s 'config."access.token.claim"=true'
+# SAML : meme logique avec le NameID (mapper "User Attribute Mapper For NameID")
+```
+
+Deux notes pour éviter des heures perdues :
+
+- **Se connecter** à Keycloak accepte le nom d'utilisateur **ou** l'e-mail —
+  pas d'autres alias nativement. Sans importance en SSO : on ne tape son
+  identifiant qu'une fois, chez Keycloak, plus jamais dans les applications.
+- **Vérifier des attributs avec l'API brute**, pas avec
+  `kcadm get users/<id> --fields attributes` : ce filtre affiche `{}` même
+  quand les attributs existent (constaté le 29/08/2026 —
+  `GET /admin/realms/tim/users/<id>` sans filtre montre la réalité).
 
 ---
 
