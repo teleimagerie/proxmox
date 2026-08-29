@@ -1,0 +1,193 @@
+# ERP Odoo — migration VPS → VM 101
+
+> **État au 29/08/2026 : préproduction validée, bascule DNS à planifier.**
+> La VM 101 héberge une copie complète de la prod (données du 29/08,
+> crons/mail neutralisés) et la chaîne d'accès par le proxy est testée.
+> La prod réelle reste le VPS OVH jusqu'à la bascule (runbook plus bas).
+
+## Identité
+
+| | |
+|---|---|
+| Invité | **VM 101** `odoo`, QEMU, Ubuntu 24.04 (cloud-init noble) |
+| Ressources | 4 vCPU `host`, 4 Go RAM, 40 Go sur `vm-storage` (Ceph) |
+| Réseau | vmbr1 `tag=400`, `10.40.0.70/24`, gw `10.40.0.1`, DNS `10.40.0.1` |
+| Nom public | `odoo.teleimagerie.net` — **pointe encore sur le VPS** `91.134.75.199` |
+| Application | Odoo 17 (Docker Compose), PostgreSQL 16, base `odoo` ~175 Mo, filestore ~586 Mo |
+| Dépôt | `github.com:teleimagerie/odoo.git`, **branche `proxmox`** déployée dans `/srv/odoo` |
+| Source à remplacer | VPS OVH `vps-f18bcfe7.vps.ovh.net` (2 vCPU / 2 Go / 40 Go), accès `ssh ubuntu@` |
+| HA | pas encore déclarée (à faire à la bascule : `ha-manager add vm:101`) |
+
+Choix structurants : **VM plutôt que CT** (Docker en LXC non privilégié =
+fragile, et une VM migre à chaud en ~1 s), **Ubuntu plutôt que Debian**
+(iso-fonctionnel avec le VPS, le provisioning Ansible du dépôt se rejoue tel
+quel), **Ubuntu 24.04 identique à la source**. Ubuntu devient le seul invité
+non-Debian du cluster — assumé.
+
+## Architecture
+
+```
+Internet ── 57.130.34.122:443 ── routeur SNI (CT 201) ── 127.0.0.1:8443 ssl proxy_protocol
+                                                              │ vhost odoo.teleimagerie.net
+                                                              ▼
+                                                    http://10.40.0.70:8069 (VM 101)
+                                                    docker: web (odoo) ── db (postgres:16)
+```
+
+- **Traefik abandonné** : sur le VPS, Traefik terminait le TLS et posait les
+  en-têtes ; tout est transposé dans le vhost nginx du CT 201
+  ([configs/odoo.teleimagerie.net.conf](configs/odoo.teleimagerie.net.conf)) —
+  en-têtes sécurité (HSTS, nosniff, X-Frame-Options, X-Robots-Tag), CORS,
+  routeur « images » (`/web/image|/web/content|/web/assets|/meips`, CORS
+  permissif pour les intégrations), `client_max_body_size 1G`, bloc
+  `location /websocket` avec en-têtes `Upgrade` (mode threadé : tout sur 8069).
+  **Aucun basic auth** : le middleware Traefik était commenté sur le VPS,
+  la cible reproduit ce comportement (le `BASIC_AUTH` du `.env` est inutilisé).
+- Le service `mysql-dolibarr` (legacy de l'import Dolibarr→Odoo, arrêté depuis
+  des semaines) **disparaît** — décision du 29/08 : suppression sans archive,
+  les données partent avec la résiliation du VPS.
+- `config/odoo.conf` et `.env` ne sont pas dans git (secrets) : copiés du VPS,
+  inchangés (`proxy_mode=True`, `web.base.url` figée — le nom ne change pas).
+- Image : le Dockerfile part du tag glissant `odoo:17` ; la reconstruction du
+  29/08 a produit le build `17.0-20260817` (le VPS tournait `17.0-20250618`).
+  Le `-u base --stop-after-init` (procédure standard du deploy.yml du dépôt)
+  a mis les 152 modules à niveau **sans une erreur**. À rejouer après la
+  restauration finale du jour J.
+
+## Ce qui a été fait le 29/08/2026 (préparation + répétition générale)
+
+1. Image cloud `noble-server-cloudimg-amd64.img` téléchargée sur
+   `nas-vm/template/iso/` (SHA256 vérifié), VM 101 créée depuis pve1
+   (cloud-init : IP, DNS `10.40.0.1` — piège 33 —, clés admin + root@pve1),
+   qemu-guest-agent opérationnel.
+2. Provisioning Ansible du dépôt rejoué depuis le poste d'admin (ProxyJump
+   pve1) : Docker CE, fail2ban, ufw (ssh/80/443 — sans objet pour 8069 : les
+   ports publiés par Docker contournent ufw ; pas de firewall PVE non plus,
+   comme les autres invités du VLAN 400).
+3. Branche `proxmox` créée et poussée : compose sans Traefik ni
+   mysql-dolibarr, `ports: 8069`. Clone dans `/srv/odoo` de la VM.
+   ⚠️ Le clone initial a utilisé le forwarding d'agent SSH du poste d'admin :
+   **déclarer la clé de la VM en deploy key GitHub** pour l'autonomie des pulls
+   (clé : `/home/ubuntu/.ssh/id_ed25519.pub`, commentaire `odoo-vm101`).
+4. Le VPS avait un écart git (module `tim_hr_leave_hierarchy` présent mais
+   non commité chez lui, et sa deploy key GitHub morte) : vérifié fichier par
+   fichier identique au commit `4b7b061` de `main` → la branche `proxmox`
+   part de `main`, aucun rattrapage à prévoir.
+5. Copie des données (dump 22 Mo + rsync filestore 586 Mo), restauration,
+   **neutralisation des effets de bord sur la copie**
+   (`ir_mail_server`/`fetchmail_server`/`ir_cron` désactivés — sinon double
+   relève IMAP et doubles envois Mailjet), `-u base`, démarrage.
+6. Vhost posé sur le CT 201 avec **certificat auto-signé provisoire**
+   (`/etc/nginx/certs/odoo-selfsigned/`, 30 jours) — remplacé par Let's
+   Encrypt au jour J. Entrée `/etc/hosts` de la VM : `10.40.0.10
+   odoo.teleimagerie.net` (à remplacer par l'override Unbound à la bascule).
+7. Tests chaîne complète (VIP → SNI → vhost → VM) : login 200, en-têtes
+   sécurité et CORS conformes, redirection port 80, route images OK,
+   handshake websocket synthétique → 400 **identique à la prod Traefik**
+   (comportement Odoo, pas un défaut du vhost). Flux sortants depuis la VM :
+   Mailjet **25 et 587 OK**, imap.gmail.com 993 OK.
+8. Timer `odoo-pgdump.{service,timer}` armé (01:15, 7 dumps glissants dans
+   `/var/backups/odoo/`, repris par le vzdump de 02:00) — premier dump validé.
+9. `/root/bascule-odoo.py` déployé sur pve1
+   ([scripts/bascule-odoo.py](scripts/bascule-odoo.py)) :
+   `status|ttl60|switch|revert|ttl3600`, garde-fous doublons et cible
+   inattendue. `status` vérifié : A → `91.134.75.199`, AAAA présent, TTL 3600
+   (défaut de zone).
+
+## Runbook jour J (bascule, fenêtre ~15-20 min en heures creuses)
+
+**H-1 ou plus** (TTL de zone 3600) — sur pve1 :
+```bash
+python3 /root/bascule-odoo.py ttl60      # A ET AAAA (piège : l'AAAA aussi)
+dig @ns17.ovh.net +noall +answer odoo.teleimagerie.net A odoo.teleimagerie.net AAAA
+```
+
+**H** :
+```bash
+# 1. Gel de la source (le VPS) — Traefik rendra 502, coupure franche
+ssh ubuntu@91.134.75.199 'cd /srv/odoo && sudo docker compose stop web'
+
+# 2. Sync finale (sur la VM, ssh ubuntu@10.40.0.70 depuis pve1)
+cd /srv/odoo && sudo docker compose stop
+ssh ubuntu@91.134.75.199 'sudo docker exec odoo-db-1 pg_dump -U odoo -Fc odoo' > /srv/transfert/odoo-final.dump
+sudo rsync -aH --numeric-ids --delete -e "ssh -i /home/ubuntu/.ssh/id_ed25519" \
+  --rsync-path="sudo rsync" \
+  ubuntu@91.134.75.199:/var/lib/docker/volumes/odoo_odoo-web-data/_data/ \
+  /var/lib/docker/volumes/odoo_odoo-web-data/_data/
+sudo docker compose up -d db   # puis attendre pg_isready
+sudo docker compose exec -T db psql -U odoo -d postgres -c 'DROP DATABASE odoo;' -c 'CREATE DATABASE odoo OWNER odoo;'
+sudo docker compose exec -T db pg_restore -U odoo -d odoo --no-owner < /srv/transfert/odoo-final.dump
+sudo docker compose run --rm web odoo -d odoo -u base --stop-after-init   # ~1 min
+sudo docker compose up -d      # SANS neutralisation cette fois
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8069/web/login   # 200
+
+# 3. Bascule DNS (pve1)
+python3 /root/bascule-odoo.py switch
+dig @ns17.ovh.net +short odoo.teleimagerie.net ; dig @dns17.ovh.net +short odoo.teleimagerie.net
+dig @1.1.1.1 +short odoo.teleimagerie.net ; dig @8.8.8.8 +short odoo.teleimagerie.net
+
+# 4. Certificat (CT 201, dès que l'A répond) — fenêtre TLS ~1-2 min assumée
+certbot certonly --webroot -w /var/www/html -d odoo.teleimagerie.net
+sed -i 's|/etc/nginx/certs/odoo-selfsigned/fullchain.pem|/etc/letsencrypt/live/odoo.teleimagerie.net/fullchain.pem|;
+        s|/etc/nginx/certs/odoo-selfsigned/privkey.pem|/etc/letsencrypt/live/odoo.teleimagerie.net/privkey.pem|' \
+  /etc/nginx/sites-available/odoo.teleimagerie.net.conf
+nginx -t && systemctl reload nginx
+
+# 5. Split-horizon : override Unbound OPNsense odoo.teleimagerie.net -> 10.40.0.10
+#    (GUI Services > Unbound > Overrides ; sauvegarder config.xml avant)
+#    puis retirer l'entrée /etc/hosts de la VM :
+sudo sed -i '/odoo.teleimagerie.net/d' /etc/hosts && getent hosts odoo.teleimagerie.net  # -> 10.40.0.10
+```
+
+**Vérifications avant d'annoncer la réouverture** : login réel depuis
+l'extérieur (4G), chat/présence (websocket 101 dans l'onglet réseau), upload
+volumineux, IP clients réelles dans l'access.log du CT 201, chemin interne
+VLAN 400, mail de test **sortant** (en-têtes Mailjet, SPF pass) et
+**entrant** (boîte ticket@), synchro Google Calendar manuelle.
+
+**Retour arrière** (~3 min, tant que le VPS existe) :
+`bascule-odoo.py revert` + `docker compose start web` sur le VPS + retrait de
+l'override Unbound + `docker compose stop` sur la VM. Les écritures faites
+sur la VM entre bascule et revert sont perdues. Le point de non-retour est la
+**résiliation du VPS**, pas la bascule.
+
+## Post-bascule (à dérouler après validation)
+
+1. `ha-manager add vm:101 --state started --max_restart 3 --max_relocate 3`
+   + migration à chaud de validation (~1 s de coupure attendue).
+2. Sauvegardes : la VM entre seule dans le vzdump quotidien de 02:00 (job
+   `all`) — vérifier au premier matin (`pvesm list pbs | grep vm/101` + mail) ;
+   test de restauration sous l'ID 299 (retirer `net0` avant boot,
+   [10-sauvegardes.md](10-sauvegardes.md)). Le cron applicatif `auto_backup`
+   d'Odoo continue en 3e niveau.
+3. Ansible : inventaire → `10.40.0.70` (ProxyJump pve1 ou WireGuard),
+   fusionner `proxmox` dans `main`, révoquer la deploy key du VPS,
+   déclarer celle de la VM.
+4. Drainage (patron [06 §2](06-reste-a-faire.md)) : `web` arrêté sur le VPS,
+   3 jours d'observation des access-logs Traefik, `poweroff`, résiliation
+   OVH, `bascule-odoo.py ttl3600`, rafraîchir
+   [configs/zone-teleimagerie.net](configs/zone-teleimagerie.net).
+5. Doc : basculer l'état de cette fiche, mettre à jour
+   [09-proxy-tim.md](09-proxy-tim.md) (cert Let's Encrypt),
+   [14-noms-de-domaine.md](14-noms-de-domaine.md) (ligne `odoo`),
+   [README.md](README.md) (état, ressources HA),
+   [16-keycloak.md](16-keycloak.md) (candidat SSO désormais sur le cluster).
+
+## Restauration
+
+- **VM entière** : vzdump PBS (quotidien 02:00).
+- **Base seule** : 7 dumps glissants `pg_dump -Fc` dans `/var/backups/odoo/`
+  (timer `odoo-pgdump`, 01:15) —
+  `sudo docker compose exec -T db pg_restore -U odoo -d odoo --no-owner < odoo-N.dump`
+  sur une base recréée.
+- **Applicatif** : sauvegardes du module `auto_backup` dans
+  `/srv/odoo/backups` (cron Odoo quotidien).
+
+## Mail et intégrations
+
+| Flux | Détail |
+|---|---|
+| Sortant | Mailjet `in-v3.mailjet.com:25` STARTTLS (SPF de la zone déjà conforme) ; le 587 fonctionne aussi depuis le VLAN 400 si le 25 devait fermer |
+| Entrant | `imap.gmail.com` OAuth, boîte `ticket@teleimagerie.net` |
+| Agenda | synchro Google Calendar (12 h) |
+| SSO | candidat Keycloak (OAuth) — **chantier séparé**, après migration ([16-keycloak.md](16-keycloak.md)) ; `auth_oauth` et `auth_totp` déjà installés |

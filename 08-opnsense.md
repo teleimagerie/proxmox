@@ -66,6 +66,7 @@ Règles dans l'ordre d'évaluation (la première qui correspond gagne) :
 | `wan` | pass | UDP **51820** vers l'IP WAN (WireGuard nomades) |
 | `wan` | pass | UDP **51822** vers l'IP WAN (WireGuard site-à-site) |
 | `wan` | rdr+pass | TCP **80/443** vers `.122` → `10.40.0.10` (proxy-tim) |
+| `wan` | rdr+pass | TCP **10051** vers `.122` → `10.40.0.60` (trapper Zabbix, agents actifs — [17-zabbix.md](17-zabbix.md), 29/08/2026) |
 | `wan` | rdr+pass | TCP **443** et UDP **3478** vers `.123` → `10.40.0.30` (headscale) |
 | `opt1` | **block** ×3 | Nomades → les trois réseaux d'infrastructure |
 | `opt1` | pass | Nomades → tout |
@@ -211,17 +212,21 @@ Un chevauchement ne se voit qu'une fois le tunnel monté.
 
 ## Résolution interne — override Unbound
 
-Unbound (sur `10.40.0.1`) est le résolveur des machines du VLAN 400. Depuis le
-27/08/2026, il porte un **host override** :
+Unbound (sur `10.40.0.1`) est le résolveur des machines du VLAN 400. Il porte
+des **host overrides** :
 
 | Nom | Réponse interne | Raison |
 |---|---|---|
-| `auth.teleimagerie.net` | `10.40.0.10` (proxy-tim) | joindre la VIP `.122` depuis l'intérieur aboutit sur la GUI d'OPNsense — [piège n° 32](07-pieges.md#32-joindre-la-vip-122-depuis-lintérieur-aboutit-sur-la-gui-dopnsense) |
+| `auth.teleimagerie.net` (27/08/2026) | `10.40.0.10` (proxy-tim) | joindre la VIP `.122` depuis l'intérieur aboutit sur la GUI d'OPNsense — [piège n° 32](07-pieges.md#32-joindre-la-vip-122-depuis-lintérieur-aboutit-sur-la-gui-dopnsense) |
+| `zabbix.teleimagerie.net` (29/08/2026) | `10.40.0.10` (proxy-tim) | même raison — ne couvre que le web : un client interne du trapper 10051 viserait `10.40.0.60` en direct ([17-zabbix.md](17-zabbix.md)) |
 
-L'override est inscrit dans `config.xml` (`unboundplus/hosts`) : il survit à
-une reconstruction depuis l'export hebdomadaire, et la GUI le montre dans
-*Services → Unbound DNS → Overrides*. Sauvegarde préalable à l'édition du
-27/08/2026 : `/conf/config.xml.bak-keycloak-20260827`.
+Les overrides sont inscrits dans `config.xml` (`unboundplus/hosts`) : ils
+survivent à une reconstruction depuis l'export hebdomadaire, et la GUI les
+montre dans *Services → Unbound DNS → Overrides*. Sauvegardes préalables aux
+éditions : `/conf/config.xml.bak-keycloak-20260827` et
+`/conf/config.xml.bak-zabbix-20260829` (celle-ci posée en éditant
+`config.xml` en direct puis `configctl unbound restart` + `configctl filter
+reload` — même effet que la GUI).
 
 ```bash
 # vérifier la réponse interne (sur OPNsense)

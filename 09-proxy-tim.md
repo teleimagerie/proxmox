@@ -99,6 +99,8 @@ Ce que le proxy est **configuré** pour servir. Depuis la bascule du
 |---|---|---|
 | `pacs-secours.teleimagerie.net` | terminaison TLS | `http://10.40.0.40` — pacs03 par le vRack |
 | `auth.teleimagerie.net` | terminaison TLS | `http://10.40.0.50:8080` — Keycloak (CT 203), depuis le 27/08/2026 — [16-keycloak.md](16-keycloak.md) |
+| `zabbix.teleimagerie.net` | terminaison TLS | `http://10.40.0.60:8080` — Zabbix (CT 204), vhost posé le 29/08/2026 (`/zabbix/*` → 301 `/*`) — **le DNS public pointe encore sur le VPS**, [17-zabbix.md](17-zabbix.md) |
+| `odoo.teleimagerie.net` | terminaison TLS | `http://10.40.0.70:8069` — Odoo (VM 101), vhost posé le 29/08/2026 (websocket, CORS images, corps 1G) — **le DNS public pointe encore sur le VPS**, [18-odoo.md](18-odoo.md) |
 | `syngo.teleimagerie.net` | redirection 301 | → `syngo-via.teleimagerie.net` |
 | `syngo.isoteam.mn` | redirection 301 | → `syngo-via.isoteam.mn` |
 | `syngo-via.teleimagerie.net` | **relais TLS brut** | `37.61.243.246:443` (TSplus, DC TELLIS) |
@@ -271,6 +273,8 @@ Relevé du 24/08/2026 :
 | `auth` | `/etc/letsencrypt/live/auth.teleimagerie.net/` | `auth.teleimagerie.net` | **25/11/2026** | certbot du conteneur (webroot — le port 80 du vhost doit continuer de servir `/.well-known/acme-challenge/` en local) |
 | `syngo-teleimagerie` | `/etc/nginx/certs/syngo-teleimagerie/` | `syngo.teleimagerie.net`, `syngo-via.teleimagerie.net` | **22/11/2026** | acme.sh sur pve1, déployé automatiquement |
 | `syngo-isoteam` | `/etc/nginx/certs/syngo-isoteam/` | `syngo.isoteam.mn`, `syngo-via.isoteam.mn` | **10/11/2026** | idem |
+| `zabbix-teleimagerie` | `/etc/nginx/certs/zabbix-teleimagerie/` | `zabbix.teleimagerie.net` | **~27/11/2026** (émis le 29/08, fenêtre ARI) | acme.sh sur pve1 (DNS-01), hook [scripts/deploy-zabbix.sh](scripts/deploy-zabbix.sh) — même mécanique que syngo |
+| `odoo` (provisoire) | `/etc/nginx/certs/odoo-selfsigned/` | `odoo.teleimagerie.net` | ~28/09/2026, **auto-signé** | personne — sera remplacé par certbot webroot à la bascule DNS ([18-odoo.md](18-odoo.md)) |
 
 **Le proxy ne gère aucun certificat pour `syngo-via.*`** : ces noms sont en
 relais TLS brut, c'est TSplus qui présente et renouvelle le sien. Les SAN

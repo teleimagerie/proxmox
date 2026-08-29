@@ -68,6 +68,8 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
 | [15-pacs-secours.md](15-pacs-secours.md) | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
 | [16-keycloak.md](16-keycloak.md) | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale), split-horizon `auth.*`, candidats SSO |
+| [17-zabbix.md](17-zabbix.md) | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie, jour J restant) |
+| [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 (préproduction validée le 29/08, runbook de bascule DNS) |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche) |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 
@@ -105,6 +107,10 @@ Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix
                          restauration testée et mesurée
 Authentification         Keycloak 26.7.2 (CT 203) · auth.teleimagerie.net
                          realm tim · TOTP obligatoire · OIDC : PVE, PBS, headscale
+Supervision              Zabbix 7.0 (CT 204, hors HA) · zabbix.teleimagerie.net
+                         ⚠️ bascule DNS restante — le VPS OVH reste la production
+ERP                      Odoo 17 (VM 101, Ubuntu 24.04 + Docker) · odoo.teleimagerie.net
+                         ⚠️ bascule DNS restante — le VPS OVH reste la production
 ```
 
 **Capacité réellement exploitable** : ~1,36 Tio de disque Ceph (seuil `nearfull` à

@@ -214,8 +214,8 @@ connecté ; seuls les nouveaux logins attendent.
 |---|---|---|
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
 | **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim` — compte de test supprimé après validation) |
-| **MyTIM** (appli interne de gestion) | OIDC à intégrer dans l'appli | ⚠️ hébergement/techno à documenter — vérifier si c'est `app`/`gestion` → `51.210.24.59` ; **meilleur candidat** après l'infra si développée en interne. Identifiants utilisateurs = e-mail → voir [Identités par application](#identités-par-application) |
-| Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | ⚠️ accès à collecter |
+| **MyTIM** (appli interne de gestion) | OIDC | 📋 **intégration développée le 29/08/2026** côté appli (question hébergement soldée : oui, `app`/`gestion` → `51.210.24.59`, Symfony 7.4/FrankenPHP chez OVH, deux tenants `app.teleimagerie.net` + `app.isoteam.mn`). Code applicatif prêt (drenso/symfony-oidc-bundle, rapprochement par e-mail, aucun provisioning, formulaire local en repli). Reste côté Keycloak : créer le **realm `isoteam`** (copie de `tim` : force brute, `browser-totp`, broker Google avec redirect URI `…/realms/isoteam/broker/google/endpoint` à ajouter au client OAuth Google) et **4 clients** confidentiels PKCE S256 (`mytim` + `mytim-staging` dans chaque realm). Détail applicatif, script kcadm et phasage : `docs/technique/sso-keycloak.md` du dépôt gestion |
+| Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | 📋 accès SSH collecté le 29/08/2026 (clé, compte `ubuntu` sur le VPS `vps-41b1229b`) — raccordement à instruire après la migration vers le cluster (17-zabbix.md à venir) |
 | Odoo (`odoo.teleimagerie.net`) | OAuth/LDAP natifs | ⚠️ accès à collecter |
 | CRM, e-learning, bastion, app/gestion | à déterminer | ⚠️ hors périmètre du dépôt |
 | Syngo Via (Siemens) · Vue PACS (Philips) · RIS VENUS (Softway) · TSplus | selon capacités éditeur (souvent SAML/OIDC dans les versions récentes) | 📋 cible à terme — à instruire éditeur par éditeur via la [checklist TELLIS](13-tellis.md#checklist-de-collecte) |

@@ -135,7 +135,7 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 | `api`, `api1`, `www1`, `test01` | `162.19.25.107` (+ AAAA) | API 📋 |
 | `e-learning`, `elearning` | `51.210.149.58` | e-learning 📋 |
 | `odoo` | `91.134.75.199` | ERP Odoo 📋 |
-| `zabbix` | `51.178.36.192` | supervision 📋 — jamais citée dans [06 §4](06-reste-a-faire.md#4-supervision) ⚠️ |
+| `zabbix` | `51.178.36.192` | supervision ✅ audité le 29/08/2026 — **migration vers le CT 204 préparée, bascule DNS à venir** (`scripts/bascule-zabbix.py`) — [17-zabbix.md](17-zabbix.md) |
 | `voip` | `51.38.33.236` | téléphonie 📋 |
 | `bastion` | `51.38.189.223` | bastion d'accès 📋 |
 | `sms` / `smsnotifier` | `51.75.30.101` / CNAME `vps589173.ovh.net` | envoi de SMS 📋 |

@@ -31,14 +31,18 @@ le tunnel à ce jour. Chaque information porte donc son statut :
 
 | Sous-réseau | Hôtes | Logique | Passerelle par défaut |
 |---|---|---|---|
-| `192.168.101.48/28` | `.49` → `.62` | bloc imagerie et production (PACS, IA, passerelles, équipements réseau) | ⚠️ `.59` probable, à confirmer |
+| `192.168.101.48/28` | `.49` → `.62` | bloc imagerie et production (PACS, IA, passerelles, équipements réseau) | ✅ **`.62`** (second pfSense) — constaté sur prod01 (25/08) et TIMWFMCORE (29/08), distribué par DHCP ; le `.59` ne sert que les routes vers nos réseaux |
 | `192.168.101.96/28` | `.97` → `.110` | bloc Syngo Via (serveurs, TSplus, ProxyVia) | ⚠️ `.110` probable, à confirmer |
 | `192.168.111.0/24` | `.1` → `.254` | RIS VENUS | ⚠️ `.254` (patte pfSense) probable, à confirmer |
+| `192.168.171.0/24` | `.1` = TIMWFMCORE (2ᵉ patte) | ⚠️ **découvert le 29/08/2026** dans l'inventaire du PACS — réseau sans passerelle, rôle inconnu (réseau d'imagerie/stockage ? lié au volume `Images02` ?) | — |
 
-> Ces trois réseaux sont exactement ceux annoncés dans les `AllowedIPs` du
-> tunnel `wg2`, et le contrôle de non-recouvrement avec nos plages a déjà été
-> fait ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)). Attention
+> Les trois réseaux `192.168.101.x`/`111.x` sont exactement ceux annoncés dans
+> les `AllowedIPs` du tunnel `wg2`, et le contrôle de non-recouvrement avec nos
+> plages a déjà été fait
+> ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)). Attention
 > aux `/28` : `.63` et `.111` sont des adresses de broadcast, pas des hôtes.
+> `192.168.171.0/24` est hors AllowedIPs : invisible depuis chez nous, mais à
+> garder dans le contrôle de recouvrement si un jour il devait être annoncé.
 
 ---
 
@@ -64,12 +68,41 @@ lecture.
 
 | IP | Machine | Rôle | Éditeur | Statut |
 |---|---|---|---|---|
-| `192.168.101.52` | Vue PACS | PACS de production — archivage et distribution des examens | Philips | ✅ seule adresse dont la joignabilité par `wg2` a été testée (14/08/2026) |
+| `192.168.101.52` | Vue PACS — **`TIMWFMCORE`** | **PACS principal de TIM** : archivage et distribution des examens, tout l'applicatif + base Oracle 19 locale ; alias pfSense `SRV_TIM_WFMCORE` | Philips | ✅ joignabilité `wg2` testée (14/08) ; ✅ **inventorié le 29/08/2026** (voir ci-dessous) |
 | `192.168.101.53` | Vue Motion | visualiseur web « zéro empreinte » de la gamme Vue : consultation des images depuis un simple navigateur, sans client lourd | Philips | 📋 |
 | `192.168.101.57` | Passerelle firewall SRSA | boîtier pare-feu de la télémaintenance Philips : canal d'accès distant de l'éditeur vers ses équipements | Philips | 📋 ; signification exacte du sigle et flux ⚠️ |
 
 Le routeur `192.168.101.60` (bloc réseau ci-dessus) fait partie de cet
 environnement.
+
+#### `TIMWFMCORE` — le PACS principal, inventorié le 29/08/2026
+
+Relevé complet (sans droits admin) :
+[`configs/inventaire-timwfmcore-2026-08-29.md`](configs/inventaire-timwfmcore-2026-08-29.md),
+premier produit du script `scripts/inventaire-windows.ps1`. L'essentiel :
+
+| | |
+|---|---|
+| Machine | **VM QEMU/KVM** (i440FX, VirtIO partout, guest agent actif) — 12 vCPU « Common KVM processor », 64 Go |
+| OS | Windows Server 2019 **Datacenter** 1809, installé le 27/02/2023, workgroup |
+| Réseau | `192.168.101.52/28` (gw `.62`, DNS `.62` + `8.8.8.8`) **+ 2ᵉ patte `192.168.171.1/24`** sans passerelle (rôle ⚠️) |
+| Stockage | C: 300 Go système · D: 50 Go Service · **F: 2 To Database** (Oracle) · G: 1 To BACKUP · I: 4 To « `Images02_TO_NOT_USED` » quasi vide |
+| Base de données | **Oracle 19 locale**, SID `mst1`, listener 1521 lié à `127.0.0.1` + `.52` |
+| Applicatif | pile Vue PACS complète (Carestream/Algotec « Imaginet », `System5`) : MVSMAIN (2104, sécurisé 22104), **Loader DICOM** (2001/2105), AutoRouter, Medilink HL7, **Mirth Connect 3.5.2** (moteur d'interfaces), DataGrid Kafka/Zookeeper/Ignite, Tomcat 7 (8080), IIS (80/443), licences FLEXlm (7789) ; services applicatifs sous le compte local `philipsadm` |
+| Supervision | exporters Philips MEMO Prometheus (9090, 9182), NXLog serveur syslog (514/tcp) ; **Zabbix Agent 2 (7.4.1) installé mais ARRÊTÉ** — candidat naturel au raccordement sur notre Zabbix ([17-zabbix.md](17-zabbix.md)) |
+| Accès distants | **AnyDesk (7070) + TeamViewer + Philips Telemedicine Remote Agent + stunnel** — plusieurs canaux tiers actifs sur le PACS de production ; RDP, SMB (partages `Devices`, `temp`) et WinRM (5985) ouverts |
+| Déploiement | Octopus Deploy Tentacle (28/04/2026) — quelqu'un déploie de l'applicatif dessus, qui ? ⚠️ |
+
+Deux indices convergents sur l'hyperviseur du site : la MAC `BC:24:11:…` de la
+2ᵉ carte est **le préfixe des MAC générées par Proxmox VE** — le PACS principal
+tourne vraisemblablement sur un Proxmox chez TELLIS (lequel ? où ? ⚠️ ajouté à
+la [checklist](#checklist-de-collecte)).
+
+> ⚠️ **Points de vigilance relevés** : correctifs Windows **figés depuis mars
+> 2025** (aucun KB depuis — 17 mois au moment du relevé) sur un Windows Server
+> 2019 build 1809 ; uptime 89 j ; sauvegarde applicative à éclaircir (volume
+> G: BACKUP + fonctionnalité Windows Server Backup, mais aucune tâche
+> planifiée visible — relevé sans droits admin, à refaire en admin).
 
 ### Analyse IA des images
 
@@ -163,16 +196,19 @@ Ce qui est établi :
 
 Validées aussitôt : ping prod01 → `10.40.0.40` en 17–23 ms TTL 126, session
 TCP complète ([15-pacs-secours.md](15-pacs-secours.md#mesures-du-25082026)).
-⚠️ À relever : le contenu exact des alias `SRV_TIM_WFMCORE` (quel(s)
-serveur(s) ? le cœur Workflow de la Vue PACS ?) et `DC_OVH_TIM`
-(vraisemblablement `10.40.0.0/24` — inclut-il `10.90.0.0/24` ?) — à ajouter à
-la [checklist de collecte](#checklist-de-collecte) du pfSense. Règles en
+✅ **`SRV_TIM_WFMCORE` identifié le 29/08/2026** : c'est la Vue PACS
+`TIMWFMCORE` (`192.168.101.52`), le PACS principal — la règle prépare donc le
+futur flux de réplication PACS principal → PACS de secours par `wg2`.
+⚠️ Reste à relever le contenu de l'alias `DC_OVH_TIM` (vraisemblablement
+`10.40.0.0/24` — inclut-il `10.90.0.0/24` ?) — dans la
+[checklist de collecte](#checklist-de-collecte) du pfSense. Règles en
 « tout protocole / tout port » : à restreindre quand les flux réels seront
 arrêtés ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)).
 
-Ce qui est inconnu ⚠️ : le rôle du second pfSense `.62` « FW-Passerelle », qui
-route réellement entre les trois sous-réseaux (le pfSense seul ? le routeur
-`.60` ?), les règles de filtrage internes, et le NAT.
+Ce qui est inconnu ⚠️ : les règles de filtrage internes et le NAT du second
+pfSense `.62` — on sait désormais (25 et 29/08/2026) qu'il est **passerelle par
+défaut + DHCP + DNS du bloc production**, mais pas ce qu'il filtre ; et qui
+route réellement entre les trois sous-réseaux (lui seul ? le routeur `.60` ?).
 
 ---
 
@@ -250,10 +286,28 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 - [ ] baux DHCP statiques, s'il est serveur DHCP
 - [ ] pairs des tunnels `tun_wg0` et `tun_wg2` (noms et `AllowedIPs`, pas les clés)
 
+**pfSense principal `192.168.101.59`** (suite) :
+
+- [ ] contenu de l'alias `DC_OVH_TIM` (règles `OPT1_TIM` — `SRV_TIM_WFMCORE`
+      identifié le 29/08 : `192.168.101.52`)
+
 **pfSense « FW-Passerelle » `192.168.101.62`** :
 
-- [ ] son rôle — que filtre-t-il, entre quoi et quoi ?
-- [ ] interfaces, règles, export `config.xml`
+- [x] ~~son rôle~~ — **passerelle par défaut + DHCP + DNS du bloc production**
+      (constaté sur prod01 le 25/08 et TIMWFMCORE le 29/08/2026)
+- [ ] ce qu'il filtre, son NAT, interfaces, règles, export `config.xml`
+
+**Vue PACS `TIMWFMCORE` `192.168.101.52`** — inventorié le 29/08/2026
+([relevé](configs/inventaire-timwfmcore-2026-08-29.md)) ; reste :
+
+- [ ] refaire le relevé **avec droits admin** (tâches planifiées, détails masqués)
+- [ ] rôle de la 2ᵉ patte `192.168.171.1/24` et du réseau `192.168.171.0/24`
+- [ ] l'hyperviseur qui la porte (MAC `BC:24:11` → Proxmox VE probable) : où,
+      qui l'administre, quelles autres VM ?
+- [ ] sauvegarde applicative et Oracle : le volume G: BACKUP, qui écrit dedans ?
+- [ ] qui utilise AnyDesk / TeamViewer / Octopus Deploy sur cette machine ?
+- [ ] politique de correctifs — figés depuis mars 2025, arbitrage éditeur
+      Philips à clarifier
 
 **VM `prod01` `192.168.101.54`** :
 

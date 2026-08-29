@@ -110,10 +110,21 @@ contrôle des passerelles DICOM.
 Depuis le 27/08/2026, **Keycloak (CT 203) est le premier candidat** : une
 panne d'IdP ne se voit qu'à la première connexion ratée, et personne ne
 surveille ni le service, ni l'échéance de son certificat, ni le timer
-`kc-pgdump` ([16-keycloak.md](16-keycloak.md#risques-et-limites)). À noter que
-`zabbix.teleimagerie.net` existe déjà dans le DNS de l'entreprise
-([14-noms-de-domaine.md](14-noms-de-domaine.md)) — mutualiser plutôt que
-construire un deuxième monitoring ?
+`kc-pgdump` ([16-keycloak.md](16-keycloak.md#risques-et-limites)).
+
+**La question « mutualiser ? » est tranchée le 29/08/2026 : le Zabbix
+d'entreprise migre dans le cluster** (CT 204, plomberie en place, bascule DNS
+restante — [17-zabbix.md](17-zabbix.md)). Restent ouverts, dans l'ordre :
+
+1. **Basculer le DNS** et résilier le VPS ([17-zabbix.md §Bascule restante](17-zabbix.md#bascule-restante--jour-j)) ;
+2. **une sonde externe** sur `https://zabbix.teleimagerie.net/` — l'incident du
+   28/08 (32 h de supervision morte sans alerte) montre que le monitoring ne
+   peut pas être son propre témoin ;
+3. **étendre Zabbix au cluster lui-même** (les priorités ci-dessus : OSD,
+   quorum, Ceph, RAM, certificats, Keycloak). Contrainte : depuis le VLAN 400
+   les hyperviseurs sont volontairement inaccessibles — il faudrait le patron
+   PBS (2ᵉ carte VLAN 300), ce qui rend la machine « de confiance » pour
+   `cluster.fw` : décision de sécurité à prendre, pas un détail technique.
 
 Les notifications mail fonctionnent déjà (fencing, tâches en échec) vers
 `mcapon@teleimagerie.net`.
@@ -202,7 +213,10 @@ fait ou pas été prouvé :
   référence) — MSS/MTU 1420 compris. Les règles posées (interface `OPT1_TIM`,
   alias `SRV_TIM_WFMCORE` et `DC_OVH_TIM`) sont transcrites dans
   [13-tellis.md](13-tellis.md#règles-posées-sur-opt1_tim-le-25082026-sens-tellis--dc-ovh).
-  Restes de ce chantier : **(a)** ⚠️ relever le contenu des deux alias ;
+  Restes de ce chantier : **(a)** ⚠️ relever le contenu de l'alias
+  `DC_OVH_TIM` (`SRV_TIM_WFMCORE` identifié le 29/08/2026 : c'est la Vue PACS
+  `TIMWFMCORE` `192.168.101.52` — la règle prépare la réplication PACS
+  principal → PACS de secours par `wg2`) ;
   **(b)** décider de la persistance des routes de test (`10.40.0.0/24 via
   .59` sur prod01 et les `/32` ActiveStore sur pacs03 — toutes volatiles, un
   reboot les efface), en retenant que **les deux côtés vont par paire** : si
@@ -298,9 +312,14 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   est déjà validé chez Mailjet (SPF/DKIM en zone), la procédure de reprise
   complète est prête :
   [16-keycloak.md](16-keycloak.md#e-mail-sortant--smtp-mailjet-préparé-le-29082026-️-en-attente-de-la-clé).
-- **MyTIM** (application interne de gestion) : documenter hébergement et
-  technologie (est-ce `app`/`gestion` → `51.210.24.59` ?), puis intégrer OIDC —
-  meilleur candidat après l'infra.
+- **MyTIM** (application interne de gestion) : ~~documenter hébergement et
+  technologie~~ (fait le 29/08/2026 : `app`/`gestion` → `51.210.24.59`,
+  Symfony 7.4/FrankenPHP chez OVH, deux tenants). **Intégration OIDC développée
+  côté appli le 29/08/2026** (branche `feature/sso` du dépôt gestion) — reste :
+  créer le realm `isoteam` + 4 clients (script kcadm et phasage dans
+  `docs/technique/sso-keycloak.md` du dépôt gestion), puis rollout progressif
+  (internes d'abord, formulaire local conservé en repli —
+  [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)).
 - **Applications d'entreprise** (Zabbix en SAML/LDAP, Odoo en OAuth/LDAP,
   CRM, e-learning, bastion) : collecter les accès, tableau des candidats dans
   [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026).
