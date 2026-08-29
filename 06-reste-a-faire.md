@@ -331,3 +331,24 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   `kc-pgdump` (le vzdump du CT, lui, suit la procédure standard de
   [10-sauvegardes.md](10-sauvegardes.md)).
 - **Supervision de l'IdP** : voir [§ 4](#4-supervision).
+
+---
+
+## 11. Migration Odoo (VPS → VM 101) — en cours depuis le 29/08/2026
+
+Préparation et répétition générale **terminées et validées** le 29/08 :
+VM 101 opérationnelle avec une copie de la prod, chaîne proxy testée,
+outillage de bascule en place — le détail et le runbook du jour J sont dans
+[18-odoo.md](18-odoo.md). Reste à faire :
+
+- **Bascule DNS** (fenêtre ~15-20 min en heures creuses) : runbook
+  [18-odoo.md](18-odoo.md#runbook-jour-j-bascule-fenêtre-15-20-min-en-heures-creuses) —
+  `ttl60` à H-1, gel du VPS, sync finale, `switch`, certbot, override Unbound.
+- **Deploy key GitHub de la VM** à déclarer sur `teleimagerie/odoo`
+  (clé `/home/ubuntu/.ssh/id_ed25519.pub` de la VM, commentaire `odoo-vm101`) ;
+  révoquer celle du VPS (déjà morte : `Permission denied` constaté le 29/08).
+- **Post-bascule** : HA `vm:101`, vérification du vzdump du premier matin,
+  test de restauration ID 299, inventaire Ansible → `10.40.0.70`, fusion de
+  la branche `proxmox` dans `main`, drainage 3 jours puis poweroff et
+  **résiliation du VPS** `vps-f18bcfe7` (décision actée : les données MySQL
+  Dolibarr partent avec lui, sans archive), `ttl3600`, mise à jour de la doc.
