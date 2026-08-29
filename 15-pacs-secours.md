@@ -166,16 +166,24 @@ vide sans admin, l'état du RAID logiciel est aujourd'hui invérifiable ⚠️
 (smartmontools est installé, sans doute pour ça). Partages SMB : `PACS`
 (`F:\PACS`) et `VBRCatalog` (`F:\VBRCatalog`).
 
-### Veeam B&R — un serveur de sauvegarde complet, rôle à documenter
+### Veeam B&R — installé mais jamais configuré : ne sauvegarde rien
 
-La machine ne porte pas un simple agent mais **Veeam Backup & Replication 12.1
-serveur entier** (installé le 28/06/2024) : ~20 services, tous les plugins
-(AWS, Azure, GCP, Nutanix, oVirt, Kasten), catalogue dans `F:\VBRCatalog`, une
-quinzaine de ports à l'écoute. Le PostgreSQL 15 local (écoute `127.0.0.1`
-uniquement, installé le même jour) est vraisemblablement sa base de
-configuration. **Qui sauvegarde quoi, vers où, et est-ce que ça tourne
-encore ?** — illisible sans admin, à documenter ⚠️ : c'est un deuxième système
-de sauvegarde, indépendant de PBS ([10-sauvegardes.md](10-sauvegardes.md)).
+La machine porte **Veeam Backup & Replication 12.1 serveur entier** (installé
+le 28/06/2024) : ~20 services, tous les plugins (AWS, Azure, GCP, Nutanix,
+oVirt, Kasten), catalogue dans `F:\VBRCatalog`, une quinzaine de ports à
+l'écoute, plus le PostgreSQL 15 local (sa base de configuration). Mais —
+**précision utilisateur du 29/08/2026 : il n'a jamais été configuré et ne
+sauvegarde rien.** Ce n'est donc pas un deuxième système de sauvegarde, c'est
+une **surface d'attaque et une consommation de ressources sans contrepartie**
+(dont un NFS 111/2049 à l'écoute) sur une machine au patching arrêté.
+Décision à prendre au [Reste à faire](#reste-à-faire) : désinstaller, ou
+enfin le configurer.
+
+Conséquence pour la fiche : la seule sauvegarde active sur ce serveur est la
+tâche applicative `Save_base.bat` (Oracle — destination et horaires à relever
+avec des droits admin ⚠️). Les images de `F:` n'ont pas d'autre copie ici —
+cohérent avec le rôle de la machine, qui est *elle-même* le secours du PACS
+principal, mais à garder en tête.
 
 ### Sécurité — relevé du 29/08/2026
 
@@ -213,9 +221,14 @@ de sauvegarde, indépendant de PBS ([10-sauvegardes.md](10-sauvegardes.md)).
   autoriser le port HTTP depuis `10.40.0.10` (proxy-tim), ICMP, et RDP depuis
   `10.90.0.0/24` ; bloquer le reste. Sans risque de verrouillage : l'accès
   public n'est pas concerné.
-- ⚠️ **Documenter les sauvegardes** : jobs Veeam B&R (avec droits admin) et
-  tâche applicative `Save_base.bat` — quoi, vers où, à quelle fréquence, et
-  qui surveille leurs échecs.
+- ⚠️ **Statuer sur Veeam B&R : désinstaller, ou configurer** — jamais
+  configuré depuis son installation (28/06/2024, précision utilisateur du
+  29/08/2026), il ne sauvegarde rien mais expose ~15 ports (dont NFS).
+  Désinstaller est l'option simple ; le configurer n'a de sens que si un
+  besoin de sauvegarde locale est défini.
+- ⚠️ **Documenter la tâche applicative `Save_base.bat`** (avec droits admin) :
+  quoi, vers où, à quelle fréquence, et qui surveille ses échecs — c'est la
+  **seule** sauvegarde active du serveur.
 - ⚠️ **Statuer sur TeamViewer et Azure Arc** : les garder comme canaux
   d'administration, ou les remplacer par le tailnet.
 - 📋 À terme, enrôler le serveur dans le tailnet headscale avec `tag:pacs`
