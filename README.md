@@ -68,7 +68,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
 | [15-pacs-secours.md](15-pacs-secours.md) | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
 | [16-keycloak.md](16-keycloak.md) | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale), split-horizon `auth.*`, candidats SSO |
-| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale) |
+| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche) |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 
 Si vous reprenez ce dossier après une longue interruption, lisez
