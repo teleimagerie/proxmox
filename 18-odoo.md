@@ -132,6 +132,20 @@ Déroulé réel (heures UTC), sur le runbook ci-dessous exécuté tel quel :
   IMAP était donc déjà inopérante avant la migration. À réactiver un jour
   depuis l'interface (Paramètres → Techniques → Serveurs entrants,
   bouton *Confirmer*), chantier indépendant.
+- **16:38** — migration à chaud de validation pve1 → pve2 sous sonde HTTP
+  (2 requêtes/s) : **1 seule sonde perdue sur 120** (~1 s de gel), 119 × 200.
+  La promesse HA est démontrée en production réelle.
+- **16:40** — validation exhaustive des pièces jointes sur la VM : les
+  **3 918 références filestore** de `ir_attachment` vérifiées une à une
+  (existence + **SHA1 conforme au champ `checksum`**) — 0 manquant,
+  0 corrompu ; les 226 restantes vivent en base (`db_datas`, portées par le
+  dump). Comparaison VPS/VM : la VM a 4 attachments et 20 fichiers de plus —
+  dérive normale de la production vivante (assets régénérés par `-u base`).
+- **16:42** — **VPS éteint** (`systemctl poweroff`, ping muet, production
+  intacte). Décision utilisateur du 29/08 au soir : extinction immédiate
+  après la validation des documents, sans les 3 jours d'observation du
+  patron habituel — redémarrage possible depuis la console OVH tant que la
+  résiliation n'est pas faite.
 
 ## Runbook utilisé (archivé)
 
@@ -192,20 +206,21 @@ sur la VM entre bascule et revert sont perdues. Le point de non-retour est la
 
 ## Post-bascule — reste à faire
 
-1. ✅ HA déclarée le 29/08 ; **migration à chaud de validation** vers un
-   autre nœud encore à faire (~1 s de coupure attendue, à caler hors usage).
-2. Sauvegardes : la VM entre seule dans le vzdump quotidien de 02:00 (job
-   `all`) — **vérifier au matin du 30/08** (`pvesm list pbs | grep vm/101` +
-   mail) ; test de restauration sous l'ID 299 (retirer `net0` avant boot,
-   [10-sauvegardes.md](10-sauvegardes.md)). Timer `odoo-pgdump` déjà armé et
+1. ✅ HA déclarée le 29/08 ; ✅ migration à chaud de validation faite le soir
+   même (pve1 → pve2, ~1 s, voir récit) — la VM tourne sur **pve2**.
+2. Sauvegardes : vérification du **vzdump du matin du 30/08** + test de
+   restauration sous l'ID 299 (retirer `net0` avant boot,
+   [10-sauvegardes.md](10-sauvegardes.md)) — programmée le 30/08 ~07:52
+   dans la session Claude de la migration. Timer `odoo-pgdump` armé et
    validé ; le cron applicatif `auto_backup` d'Odoo continue en 3e niveau.
 3. Ansible : inventaire → `10.40.0.70` (ProxyJump pve1 ou WireGuard),
    fusionner `proxmox` dans `main`, **déclarer la deploy key de la VM sur
    GitHub** (`odoo-vm101`), révoquer celle du VPS (déjà morte).
-4. Drainage (patron [06 §2](06-reste-a-faire.md)) : `web` arrêté sur le VPS
-   depuis le gel ; 3 jours d'observation des logs Traefik (accès **par IP**
-   `91.134.75.199`), `poweroff`, résiliation OVH (⚠️ emporte les données
-   MySQL Dolibarr, décision actée), `bascule-odoo.py ttl3600`, re-rafraîchir
+4. ✅ Documents joints validés (SHA1, voir récit) ; ✅ **VPS éteint le 29/08
+   16:42 UTC** sur décision utilisateur (drainage de 3 jours sauté). Reste :
+   **résiliation** dans l'espace client OVH (⚠️ emporte définitivement les
+   données MySQL Dolibarr, décision actée), puis `bascule-odoo.py ttl3600`
+   sur pve1 et re-rafraîchir
    [configs/zone-teleimagerie.net](configs/zone-teleimagerie.net).
 5. Réactiver un jour la relève du mail entrant (état `draft` hérité du VPS,
    voir récit) ; raccordement Keycloak : chantier séparé.

@@ -357,10 +357,11 @@ déclarée. Nettoyage restant :
   (clé `/home/ubuntu/.ssh/id_ed25519.pub`, commentaire `odoo-vm101`) ;
   révoquer celle du VPS (déjà morte) ; inventaire Ansible → `10.40.0.70` ;
   fusion de la branche `proxmox` dans `main` ;
-- **drainage du VPS** (gelé, accès par IP `91.134.75.199` — le nom résout
-  vers le cluster) : 3 jours d'observation, poweroff, **résiliation**
-  `vps-f18bcfe7` (décision actée : les données MySQL Dolibarr partent avec
-  lui, sans archive), puis `bascule-odoo.py ttl3600` et rafraîchissement de
-  l'export de zone ;
+- ✅ documents joints validés (3 918 fichiers, SHA1 conformes) et **VPS
+  éteint le 29/08 16:42 UTC** — drainage de 3 jours sauté sur décision
+  utilisateur, redémarrage possible depuis la console OVH. Reste :
+  **résiliation** `vps-f18bcfe7` dans l'espace client (décision actée : les
+  données MySQL Dolibarr partent avec lui, sans archive), puis
+  `bascule-odoo.py ttl3600` et rafraîchissement de l'export de zone ;
 - **relève du mail entrant** : déjà à l'état `draft` sur le VPS (constat
   post-bascule, pas une régression) — à réactiver un jour depuis l'interface.
