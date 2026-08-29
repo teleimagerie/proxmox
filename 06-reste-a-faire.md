@@ -164,6 +164,11 @@ Deux corrections possibles si l'on veut le supprimer :
 
 ## 7. Divers
 
+- ⚠️⚠️ **pacs03 sans correctif Windows depuis le 20/02/2024** (inventaire du
+  29/08/2026) — un Windows exposé sur IP publique, hors cluster mais portant
+  le PACS de secours. Le plan d'action (patching, scan de surface, pare-feu,
+  Veeam à documenter) vit dans
+  [15-pacs-secours.md](15-pacs-secours.md#reste-à-faire).
 - **Un 4ᵉ nœud** rendrait l'auto-guérison Ceph possible et supprimerait la
   dégradation durable après panne. À considérer si la charge grandit.
 - ~~**CephFS** pour partager ISO et templates~~ — sans objet depuis le

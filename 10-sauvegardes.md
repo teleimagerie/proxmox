@@ -4,6 +4,12 @@ Mis en place le **13 août 2026**. Jusqu'à cette date le cluster n'avait
 **aucune sauvegarde** — c'était son principal risque résiduel, Ceph ne protégeant
 que de la panne matérielle.
 
+> **Périmètre : le cluster.** Le serveur pacs03, hors cluster, porte son
+> propre système découvert à l'inventaire du 29/08/2026 : un **Veeam B&R 12.1
+> complet** (indépendant de PBS) plus une sauvegarde applicative de la base
+> Oracle — jobs, cibles et supervision **non documentés** à ce jour, voir
+> [15-pacs-secours.md](15-pacs-secours.md#veeam-br--un-serveur-de-sauvegarde-complet-rôle-à-documenter).
+
 ---
 
 ## Le NAS-HA

@@ -18,11 +18,11 @@ l'Internet public.
 | Nom DNS public | `pacs03.teleimagerie.net` → `188.165.77.137` ([14-noms-de-domaine.md](14-noms-de-domaine.md)) |
 | Hostname | `ns3062628` ✅ (PTR : `ns3062628.ip-188-165-77.eu`) |
 | Serveur OVH | ID `1693386`, datacentre **GRA3**, baie `GRA0328A03B` 📋 |
-| Matériel | Xeon-E 2386G (6c/12t, 3,5/4,7 GHz), 32 Go ECC 3200 MHz 📋 |
-| Disques | 2×512 Go SSD NVMe + 2×6 To HDD SATA, soft RAID 📋 |
-| OS | Windows Server 2022 Standard 21H2 ✅ |
+| Matériel | carte mère GIGABYTE MX33-BS1-V1 (BIOS F09d de 08/2023) ✅ ; Xeon-E 2386G (6c/12t, 3,5/4,7 GHz) ✅ ; 32 Go ECC DDR4-3200 (2×16 Go Samsung, 2 slots libres, 64 Go max) ✅ |
+| Disques | 2×512 Go SSD NVMe + 2×6 To HDD SATA, soft RAID 📋 — volumes relevés : [Inventaire](#inventaire-du-29082026) |
+| OS | Windows Server 2022 Standard 21H2 (build 20348) ✅, installé le 13/05/2024, licence volume (KMS), hors domaine (WORKGROUP) |
 | Statut | HDS 📋 |
-| Rôle | backend HTTP de `pacs-secours.teleimagerie.net` ✅ ; réplication depuis TELLIS par tunnel WireGuard direct ✅ |
+| Rôle | **PACS complet EDL Xplore sur Oracle 19c** ✅ ([Inventaire](#inventaire-du-29082026)) — backend HTTP de `pacs-secours.teleimagerie.net` ✅ ; réplication depuis TELLIS par tunnel WireGuard direct ✅ |
 
 Le cluster est en **GRA4**, ce serveur en **GRA3** : le vRack s'étend entre les
 deux datacentres et la latence mesurée est sub-milliseconde (voir
@@ -120,18 +120,108 @@ vRack/`wg2` est un chantier futur, consigné dans
 
 ---
 
+## Inventaire du 29/08/2026
+
+Relevé complet par [scripts/inventaire-windows.ps1](scripts/inventaire-windows.ps1),
+**sans droits administrateur** (la liste et la santé des disques physiques
+manquent), archivé brut dans
+[configs/inventaire-pacs03-2026-08-29.md](configs/inventaire-pacs03-2026-08-29.md).
+Ci-dessous ce que la fiche doit en retenir.
+
+### Ce que fait réellement ce serveur
+
+Le « backend HTTP » est un **PACS complet de l'éditeur EDL (gamme Xplore)** :
+une douzaine de services `Xn*` sous `E:\EDL\` (tous sous le compte local
+`.\admin`), adossés à **Oracle Database 19c** (instance `XPLORE`, `E:\ORACLE`,
+listener 1521). `XnCONSOLEPACS` porte la console web (`/xaconsolepacs/`,
+publiée par http.sys sur le port 80) et écoute aussi en **DICOM sur le
+port 104** ; `XnXPLOREVIEWWEB` est le viewer web, `XnPUSH` (8005) et
+`XnTELEMEDGATEWAY` (109) les échanges télémédecine — six services
+`XnTELEMEDCLOUD_TLMTIM723x` sont à l'arrêt.
+
+S'y ajoutent trois **agents DICOM « MyTIM »** hors gamme EDL :
+`DicomAgent-isoteam` (**11112**), `DicomAgent-tim` (**11113**) et
+`isoteam-sender`. Les ports 104 et 11112 sont précisément ceux prévus par les
+ACL du tailnet pour `tag:pacs` ([11-headscale.md](11-headscale.md)) :
+l'enrôlement futur collera au trafic déjà en place.
+
+Les tâches planifiées « Sauvegarde de la base de données »
+(`E:\__XPLORE32\Backup\Scripts\Save_base.bat`) et « Optimisation » sont le
+mécanisme de sauvegarde *applicatif* — horaires et destination à lire avec des
+droits admin ⚠️.
+
+### Stockage
+
+| Volume | Label | Taille | Libre |
+|---|---|---|---|
+| C: | Windows | 181,4 Go | 130,7 Go |
+| D: | TEMP | 295 Go | 242,6 Go |
+| E: | BDD | 976,6 Go | 901,8 Go |
+| F: | IMAGE | 4 612,5 Go | 915,9 Go |
+
+Recoupement avec le matériel déclaré 📋 : C:+D: (≈ 476 Go) sur le miroir NVMe
+512 Go, E:+F: (≈ 5,6 To) sur le miroir HDD 6 To. **F: (les images) est plein à
+80 %** — premier volume à surveiller. Le relevé des disques physiques étant
+vide sans admin, l'état du RAID logiciel est aujourd'hui invérifiable ⚠️
+(smartmontools est installé, sans doute pour ça). Partages SMB : `PACS`
+(`F:\PACS`) et `VBRCatalog` (`F:\VBRCatalog`).
+
+### Veeam B&R — un serveur de sauvegarde complet, rôle à documenter
+
+La machine ne porte pas un simple agent mais **Veeam Backup & Replication 12.1
+serveur entier** (installé le 28/06/2024) : ~20 services, tous les plugins
+(AWS, Azure, GCP, Nutanix, oVirt, Kasten), catalogue dans `F:\VBRCatalog`, une
+quinzaine de ports à l'écoute. Le PostgreSQL 15 local (écoute `127.0.0.1`
+uniquement, installé le même jour) est vraisemblablement sa base de
+configuration. **Qui sauvegarde quoi, vers où, et est-ce que ça tourne
+encore ?** — illisible sans admin, à documenter ⚠️ : c'est un deuxième système
+de sauvegarde, indépendant de PBS ([10-sauvegardes.md](10-sauvegardes.md)).
+
+### Sécurité — relevé du 29/08/2026
+
+- ⚠️⚠️ **Dernier correctif Windows : 20/02/2024** (KB5034770). Deux ans et
+  demi sans mise à jour de sécurité pour un Windows exposé sur IP publique,
+  uptime 124 j (dernier boot 27/04/2026) : le canal de mise à jour semble à
+  l'arrêt, pas seulement en retard. **Le point noir de la fiche.**
+- ⚠️ **RDP (3389), WinRM (5985), SMB (445), RPC (135), Oracle (1521), NFS
+  Veeam (111/2049) écoutent sur toutes les adresses**, patte publique
+  comprise. Le pare-feu Windows filtre peut-être — invérifiable sans admin :
+  scanner depuis l'extérieur pour établir la surface réelle, puis appliquer la
+  restriction déjà prévue au [Reste à faire](#reste-à-faire).
+- NetBIOS (137/139) toujours lié aux **trois pattes**, vRack et tunnel TELLIS
+  compris — confirme le point ouvert du 25/08.
+- **TeamViewer Host** actif (accès distant tiers permanent) et **AzureArcSetup**
+  présent — deux canaux d'administration à inventorier/statuer ⚠️.
+- Defender actif ✅. **Zabbix Agent 2** (7.4, port 10050) déjà en place depuis
+  le 15/08/2025 — à raccorder au Zabbix du cluster ([17-zabbix.md](17-zabbix.md)).
+
+---
+
 ## Reste à faire
 
+- ⚠️⚠️ **Reprendre le patching Windows** : dernier correctif de sécurité le
+  20/02/2024, uptime 124 j ([Sécurité](#sécurité--relevé-du-29082026)).
+  Prévoir une fenêtre de maintenance (reboot) en coordination avec la
+  réplication TELLIS et l'alimentation `/PACS_TIM_BCK/`.
+- ⚠️ **Scanner la surface publique depuis l'extérieur** (`188.165.77.137`) :
+  l'inventaire montre RDP/WinRM/SMB/Oracle à l'écoute sur toutes les adresses,
+  le filtrage réel est inconnu.
 - ⚠️ **Désactiver NetBIOS sur « Ethernet 2 »** (propriétés IPv4 → WINS, ou clé
-  `NetbiosOptions=2` de l'interface) — encore actif au 25/08/2026.
+  `NetbiosOptions=2` de l'interface) — confirmé encore actif au 29/08/2026
+  (ports 137/139 liés aux trois pattes).
 - ⚠️ **Restreindre le pare-feu Windows sur la patte vRack** : en entrée,
   autoriser le port HTTP depuis `10.40.0.10` (proxy-tim), ICMP, et RDP depuis
   `10.90.0.0/24` ; bloquer le reste. Sans risque de verrouillage : l'accès
   public n'est pas concerné.
+- ⚠️ **Documenter les sauvegardes** : jobs Veeam B&R (avec droits admin) et
+  tâche applicative `Save_base.bat` — quoi, vers où, à quelle fréquence, et
+  qui surveille leurs échecs.
+- ⚠️ **Statuer sur TeamViewer et Azure Arc** : les garder comme canaux
+  d'administration, ou les remplacer par le tailnet.
 - 📋 À terme, enrôler le serveur dans le tailnet headscale avec `tag:pacs`
   (clé sous le user `infra`, client Windows + « Run unattended » —
   [11-headscale.md](11-headscale.md#enrôler-une-passerelle-dicom-procédure-par-site))
   s'il doit recevoir du DICOM des passerelles de sites — c'est le rôle prévu
-  par les ACL.
+  par les ACL, et les ports attendus (104, 11112) sont déjà servis.
 - 📋 Chantier futur : supprimer le tunnel `DC-TELLIS-PARTENAIRES`
   ([06-reste-a-faire.md](06-reste-a-faire.md)).
