@@ -54,8 +54,9 @@ Reste à faire :
   toujours facturé) ; par prudence, prendre un snapshot avant. Rien à
   récupérer dessus : config nginx et certificats déjà migrés sur le CT 201
   le 12/08.
-- **Remonter le TTL** des trois noms (60 → 3600) une fois la stabilité
-  confirmée.
+- ~~**Remonter le TTL** des trois noms (60 → 3600)~~ — **fait le 29/08/2026**,
+  vérifié sur les deux paires d'autoritaires ; exports de zone rafraîchis dans
+  `configs/`.
 - **`syngo-via.*` restent en direct sur TSplus** (`37.61.243.246`) : les faire
   passer par le relais TLS du proxy est une décision séparée, non prise —
   le relais ACME du port 80 vers TSplus est prêt depuis le 24/08 si elle

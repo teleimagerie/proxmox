@@ -35,7 +35,7 @@ Conteneur LXC **201**, Debian 13, nginx 1.26.3. Migré depuis le VPS
 ## Bascule DNS du 26/08/2026
 
 **Le proxy reçoit la production depuis le 26/08/2026** : les trois noms servis
-en HTTP local pointent sur `57.130.34.122` (TTL 60). Modification par l'API OVH
+en HTTP local pointent sur `57.130.34.122`. Modification par l'API OVH
 depuis pve1, vérifiée sur les serveurs autoritaires (`ns17`/`dns17.ovh.net`
 pour `teleimagerie.net`, `ns102`/`dns102.ovh.net` pour `isoteam.mn` — chaque
 zone a sa paire, [14-noms-de-domaine.md](14-noms-de-domaine.md#serveurs-autoritaires)),
@@ -43,9 +43,9 @@ sur `1.1.1.1` et `8.8.8.8`.
 
 | Nom | DNS réel (Internet) | TTL | Changement |
 |---|---|---|---|
-| `pacs-secours.teleimagerie.net` | `57.130.34.122` ✅ | 60 | était `51.75.203.20` (TTL 3600, abaissé à 60 une heure avant) |
-| `syngo.teleimagerie.net` | `57.130.34.122` ✅ | 60 | était `51.75.203.20` |
-| `syngo.isoteam.mn` | `57.130.34.122` ✅ | 60 | **créé** — n'existait pas (anomalie n°2 de [14](14-noms-de-domaine.md#anomalies-relevées-25082026), soldée) |
+| `pacs-secours.teleimagerie.net` | `57.130.34.122` ✅ | 3600 | était `51.75.203.20` (TTL abaissé à 60 une heure avant la bascule, remonté le 29/08) |
+| `syngo.teleimagerie.net` | `57.130.34.122` ✅ | 3600 | était `51.75.203.20` (TTL remonté le 29/08) |
+| `syngo.isoteam.mn` | `57.130.34.122` ✅ | 3600 | **créé** — n'existait pas (anomalie n°2 de [14](14-noms-de-domaine.md#anomalies-relevées-25082026), soldée) ; TTL remonté le 29/08 |
 | `syngo-via.teleimagerie.net` | `37.61.243.246` — TSplus direct | 60 | inchangé, volontairement |
 | `syngo-via.isoteam.mn` | `37.61.243.246` — TSplus direct | — | inchangé, volontairement |
 
@@ -69,16 +69,20 @@ Contrôles post-bascule (26/08/2026, ~07 h UTC) :
   d'**alimentation sous `/PACS_TIM_BCK/`**, pas la console
   ([15-pacs-secours.md](15-pacs-secours.md)).
 
-Retour arrière si besoin : `python3 /root/bascule-3noms.py revert` sur pve1
-(repointe les deux noms sur `51.75.203.20` et supprime `syngo.isoteam.mn`),
-effectif en ~60 s grâce au TTL abaissé. Copie du script archivée dans
-[scripts/bascule-3noms.py](scripts/bascule-3noms.py).
+Le script de bascule reste archivé dans
+[scripts/bascule-3noms.py](scripts/bascule-3noms.py) (copie sur pve1 :
+`/root/bascule-3noms.py`). Son action `revert` repointait vers l'ancien VPS —
+**caduque depuis le 29/08/2026** : le VPS est éteint
+([06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage)),
+et depuis le 29/08 le TTL est remonté à 3600 (annuler prendrait jusqu'à une
+heure, plus le rallumage du VPS par la console OVH).
 
-### Après stabilisation (voir [06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage))
+### Nettoyage post-bascule (voir [06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage))
 
-- décommissionner l'ancien VPS `51.75.203.20` quand ses logs ne montrent plus
-  de trafic légitime ;
-- remonter le TTL des trois noms (60 → 3600) ;
+- ✅ ancien VPS vérifié sans trafic légitime et **éteint le 29/08/2026** —
+  reste la résiliation dans l'espace client OVH ;
+- ✅ TTL des trois noms remonté 60 → 3600 le 29/08/2026, vérifié sur les deux
+  paires d'autoritaires ;
 - décider (ou pas) de la bascule de `syngo-via.*` vers le relais TLS du proxy —
   session RemoteApp réelle et paires de lignes `stream_access.log` à contrôler
   ce jour-là ; le relais ACME du port 80 vers TSplus est prêt.
