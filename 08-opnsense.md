@@ -223,10 +223,17 @@ des **host overrides** :
 Les overrides sont inscrits dans `config.xml` (`unboundplus/hosts`) : ils
 survivent à une reconstruction depuis l'export hebdomadaire, et la GUI les
 montre dans *Services → Unbound DNS → Overrides*. Sauvegardes préalables aux
-éditions : `/conf/config.xml.bak-keycloak-20260827` et
+éditions : `/conf/config.xml.bak-keycloak-20260827`,
 `/conf/config.xml.bak-zabbix-20260829` (celle-ci posée en éditant
 `config.xml` en direct puis `configctl unbound restart` + `configctl filter
-reload` — même effet que la GUI).
+reload` — même effet que la GUI) et `/conf/config.xml.bak-zabbixagent-20260829`.
+
+> **Plugin `os-zabbix7-agent` depuis le 29/08/2026** : agent Zabbix 7.0
+> (`zabbix_agentd`) en écoute sur `10.40.0.1:10050` **uniquement**, interrogé
+> en passif par le serveur Zabbix du CT 204 (`10.40.0.60`) — supervision
+> interne de la VM 100, la vue hyperviseur ayant sa RAM toujours « pleine »
+> (FreeBSD sans balloon). Config dans `config.xml` (`OPNsense/ZabbixAgent`) —
+> [17-zabbix.md](17-zabbix.md#supervision-du-cluster--depuis-le-29082026).
 
 ```bash
 # vérifier la réponse interne (sur OPNsense)

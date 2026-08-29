@@ -109,7 +109,9 @@ Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix
 Authentification         Keycloak 26.7.2 (CT 203) · auth.teleimagerie.net
                          realm tim · TOTP obligatoire · OIDC : PVE, PBS, headscale
 Supervision              Zabbix 7.0 (CT 204) · zabbix.teleimagerie.net
-                         migré du VPS le 29/08 · 6 hôtes re-collectés < 4 min
+                         migré du VPS le 29/08 · supervise aussi le cluster :
+                         quorum, Ceph, nearfull 85 %, 7 invités (API + agents),
+                         certificats · dashboard « Cluster PVE » · mail testé
 ERP                      Odoo 17 (VM 101, Ubuntu 24.04 + Docker) · odoo.teleimagerie.net
                          en production depuis le 29/08 16:18 UTC · VPS gelé, à résilier
 ```

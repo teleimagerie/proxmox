@@ -9,4 +9,5 @@ policy_out: ACCEPT
 # Seuls les 3 hyperviseurs joignent PBS : interface web 8007 et SSH.
 # L'IPSET cluster couvre les IP publiques et 10.30.0.0/24.
 IN ACCEPT -source +cluster -log nolog
+IN ACCEPT -source 10.40.0.60 -p tcp -dport 10050 -log nolog # agent Zabbix (CT 204) — 17-zabbix.md, 29/08/2026
 IN Ping(ACCEPT) -log nolog

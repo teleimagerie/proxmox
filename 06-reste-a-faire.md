@@ -93,44 +93,34 @@ apt update && apt full-upgrade
 
 ---
 
-## 4. Supervision
+## 4. Supervision — ✅ TRAITÉ le 29/08/2026 (reste la sonde externe)
 
-Aucun monitoring. Le cluster expose des métriques exploitables :
+**Le Zabbix d'entreprise tourne dans le cluster** (CT 204, migré le 29/08 —
+[17-zabbix.md](17-zabbix.md)) **et supervise le cluster lui-même depuis le
+même jour** : quorum, nœuds, Ceph (`HEALTH_*`, OSD), stockages avec seuil
+nearfull 85 %, les 7 VM/CT (vue hyperviseur **et** agents internes, OPNsense
+compris), certificats TLS — tableau de bord « Cluster PVE », alertes
+High/Disaster par mail vers support@ + mcapon@, chaîne testée en réel.
+Détail, seuils et pièges :
+[17-zabbix.md §Supervision du cluster](17-zabbix.md#supervision-du-cluster--depuis-le-29082026).
 
-- `Datacenter → Metric Server` : InfluxDB ou Graphite en natif
-- Le module `prometheus` de Ceph MGR : `ceph mgr module enable prometheus`
+> La contrainte « depuis le VLAN 400 les hyperviseurs sont inaccessibles »
+> annoncée ici s'est révélée contournable proprement : **l'API PVE répond par
+> le chemin public existant** avec un token lecture seule — la 2ᵉ carte
+> VLAN 300 (patron PBS) n'a pas été nécessaire.
 
-À surveiller en priorité : `%USE` des OSD (seuil `nearfull` à 85 %), état du
-quorum Corosync, `HEALTH_*` de Ceph, RAM par nœud face au plafond de ~100 Go
-cumulés, et expiration des certificats. Depuis le 15/08/2026, headscale expose
-aussi ses métriques Prometheus sur `127.0.0.1:9090` du CT 202
-([11-headscale.md](11-headscale.md)) — nœuds en ligne et santé du plan de
-contrôle des passerelles DICOM.
+Restent ouverts :
 
-Depuis le 27/08/2026, **Keycloak (CT 203) est le premier candidat** : une
-panne d'IdP ne se voit qu'à la première connexion ratée, et personne ne
-surveille ni le service, ni l'échéance de son certificat, ni le timer
-`kc-pgdump` ([16-keycloak.md](16-keycloak.md#risques-et-limites)).
-
-**La question « mutualiser ? » est tranchée, et la migration est faite : le
-Zabbix d'entreprise tourne dans le cluster depuis le 29/08/2026 15:51 UTC**
-(CT 204, bascule mesurée, 6 hôtes re-collectés en moins de 4 minutes —
-[17-zabbix.md](17-zabbix.md)). Restent ouverts, dans l'ordre :
-
-1. la **fin de vie du VPS** : fenêtre d'observation puis résiliation, TTL à
-   remonter — checklist dans
-   [17-zabbix.md §Reste à faire](17-zabbix.md#reste-à-faire-fenêtre-dobservation) ;
-2. **une sonde externe** sur `https://zabbix.teleimagerie.net/` — l'incident du
+1. **une sonde externe** sur `https://zabbix.teleimagerie.net/` — l'incident du
    28/08 (32 h de supervision morte sans alerte) montre que le monitoring ne
    peut pas être son propre témoin ;
-3. **étendre Zabbix au cluster lui-même** (les priorités ci-dessus : OSD,
-   quorum, Ceph, RAM, certificats, Keycloak). Contrainte : depuis le VLAN 400
-   les hyperviseurs sont volontairement inaccessibles — il faudrait le patron
-   PBS (2ᵉ carte VLAN 300), ce qui rend la machine « de confiance » pour
-   `cluster.fw` : décision de sécurité à prendre, pas un détail technique.
+2. options non retenues pour l'instant : templates applicatifs dans les
+   invités (nginx du proxy, PostgreSQL de Keycloak, Docker d'odoo, datastore
+   PBS), SNMP OPNsense, Metric Server/InfluxDB natif, Prometheus headscale
+   (`127.0.0.1:9090` du CT 202).
 
-Les notifications mail fonctionnent déjà (fencing, tâches en échec) vers
-`mcapon@teleimagerie.net`.
+Les notifications mail Proxmox (fencing, tâches en échec) continuent en
+parallèle vers `mcapon@teleimagerie.net`.
 
 ---
 

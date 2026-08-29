@@ -150,7 +150,10 @@ publique. Ils ne sont plus joignables depuis Internet.
 
 **La VM PBS a son propre firewall** (`/etc/pve/firewall/102.fw`) : `policy_in:
 DROP`, entrée limitée à l'ipset `cluster`. Sa seconde carte, sur le LAN des VM
-(VLAN 400), ne sert qu'aux mises à jour sortantes — rien n'y entre.
+(VLAN 400), ne sert qu'aux mises à jour sortantes — **une seule exception
+depuis le 29/08/2026** : `tcp/10050` depuis `10.40.0.60` (l'agent Zabbix du
+CT 204 est interrogé par cette patte —
+[configs/firewall-102-pbs.fw](configs/firewall-102-pbs.fw)).
 
 ### Modifier le firewall sans se verrouiller
 
@@ -227,6 +230,8 @@ Forcer un renouvellement : `pvenode acme cert order --force`
 | Mot de passe admin Keycloak (console, realm `master`) | **gestionnaire de secrets uniquement** | recopié puis **détruit des serveurs le 27/08/2026** (`rm /etc/pve/priv/keycloak/credentials`), comme le root OPNsense. Récupération possible sans lui : `kc.sh bootstrap-admin user` sur le CT 203 |
 | Secrets opérationnels Keycloak (base, clients OIDC) | chacun à son poste de travail | mdp base : `keycloak.conf` du CT 203 · client `proxmox` : `/etc/pve/domains.cfg` · client `pbs` : `domains.cfg` de PBS · client `headscale` : `/etc/headscale/oidc_secret` — voir [16-keycloak.md](16-keycloak.md) |
 | Config OPNsense sauvegardée | `/mnt/pve/nas-vm/opnsense-config/` | **contient les clés privées WireGuard**, répertoire 700 |
+| Token PVE `zabbix@pve!monitoring` (PVEAuditor, lecture seule) | macro secrète `{$PVE.TOKEN.SECRET}` de l'hôte `cluster-pve` dans Zabbix | créé le 29/08/2026 pour la supervision du cluster — révocable par `pveum user token remove zabbix@pve monitoring` ([17-zabbix.md](17-zabbix.md#supervision-du-cluster--depuis-le-29082026)) |
+| Jeton API Zabbix `provisioning` (Super admin, rattaché à `supportTIM`) | `/root/.zbx-api-token` sur le **CT 204**, mode 600 | révocable dans l'UI (*Users → API tokens*) — sert au script [scripts/zabbix-provision-pve.py](scripts/zabbix-provision-pve.py) |
 
 `/etc/pve/priv/` est accessible à root seulement et répliqué par pmxcfs.
 `/root/.secrets/` ne l'est pas : ces fichiers n'existent que sur pve1.
