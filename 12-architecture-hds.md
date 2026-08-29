@@ -26,8 +26,12 @@ nouveau hors des interconnexions entre les deux sites.
 > périmètre exact couvert par chaque contrat restent **⚠️ à formaliser** — ne
 > rien affirmer avant vérification contractuelle. Depuis le 27/08/2026, le
 > serveur d'authentification ([16-keycloak.md](16-keycloak.md)) porte
-> l'authentification d'accès : sa place dans le périmètre HDS est à trancher
-> dans la même revue.
+> l'authentification d'accès.
+> 📋 **Déclaré le 29/08/2026** : l'ensemble des serveurs (cluster Proxmox
+> compris, donc Keycloak/CT 203) est hébergé en offre **HDS**. La question
+> « l'IdP est-il dans le périmètre ? » ne bloque donc plus le raccordement
+> SSO de MyTIM (y compris son extension future aux médecins) ; reste à
+> consigner cette couverture dans la revue contractuelle ci-dessus.
 
 Un troisième lieu intervient, sans être un datacenter opéré : le **NAS-HA
 OVH de Roubaix**, qui reçoit les sauvegardes du cluster
