@@ -33,34 +33,30 @@ Ce qui reste ouvert sur le sujet :
 
 ---
 
-## 2. Bascule DNS vers `proxy-tim` — faite le 26/08/2026, reste le nettoyage
+## 2. Bascule DNS vers `proxy-tim` — ✅ TRAITÉ le 29/08/2026
 
 **Bascule faite le 26/08/2026** : `pacs-secours.teleimagerie.net`,
 `syngo.teleimagerie.net` et `syngo.isoteam.mn` (créé à cette occasion) pointent
-sur `57.130.34.122`, TTL 60. Vérifiée de bout en bout — détail dans
+sur `57.130.34.122`. Vérifiée de bout en bout — détail dans
 [09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026).
 
-Reste à faire :
+Nettoyage terminé :
 
-- **Résilier l'ancien VPS** `51.75.203.20` — **éteint le 29/08/2026**
-  (`systemctl poweroff`, ping muet vérifié, production intacte via le proxy).
-  Drainage contrôlé deux fois avant extinction (accès `ssh ubuntu@`, sudo) :
+- **ancien VPS `51.75.203.20` résilié le 29/08/2026** (espace client OVH).
+  Auparavant : drainage contrôlé les 27 et 29/08 (accès `ssh ubuntu@`, sudo) —
   du 26 au 29/08, ~6 800 requêtes reçues, **zéro** sur les chemins légitimes
-  (`/xaconsolepacs`, `/PACS_TIM_BCK`), zéro connexion TLS sur le relais 443 —
-  uniquement des scanners (dont du bruit RDP :3389 en `502`) ; seuls nginx et
-  sshd tournaient encore. Plus aucun nom des six zones ne pointe sur cette IP.
-  L'extinction fait office de test final : tout rallumage passe par la console
-  OVH. Reste la **résiliation** dans l'espace client (le VPS éteint est
-  toujours facturé) ; par prudence, prendre un snapshot avant. Rien à
-  récupérer dessus : config nginx et certificats déjà migrés sur le CT 201
-  le 12/08.
-- ~~**Remonter le TTL** des trois noms (60 → 3600)~~ — **fait le 29/08/2026**,
-  vérifié sur les deux paires d'autoritaires ; exports de zone rafraîchis dans
-  `configs/`.
-- **`syngo-via.*` restent en direct sur TSplus** (`37.61.243.246`) : les faire
-  passer par le relais TLS du proxy est une décision séparée, non prise —
-  le relais ACME du port 80 vers TSplus est prêt depuis le 24/08 si elle
-  se prend un jour.
+  (`/xaconsolepacs`, `/PACS_TIM_BCK`), zéro connexion TLS sur le relais 443,
+  uniquement des scanners (dont du bruit RDP :3389 en `502`) — puis **éteint
+  le 29/08** (`systemctl poweroff`, ping muet, production intacte via le
+  proxy). Rien n'avait à être récupéré : config nginx et certificats migrés
+  sur le CT 201 le 12/08. L'accès `ssh ubuntu@51.75.203.20` n'existe plus.
+- **TTL des trois noms remonté** 60 → 3600 le 29/08/2026, vérifié sur les deux
+  paires d'autoritaires ; exports de zone rafraîchis dans `configs/`.
+
+Seul point encore ouvert : **`syngo-via.*` restent en direct sur TSplus**
+(`37.61.243.246`) — les faire passer par le relais TLS du proxy est une
+décision séparée, non prise ; le relais ACME du port 80 vers TSplus est prêt
+depuis le 24/08 si elle se prend un jour.
 
 ---
 

@@ -72,15 +72,15 @@ Contrôles post-bascule (26/08/2026, ~07 h UTC) :
 Le script de bascule reste archivé dans
 [scripts/bascule-3noms.py](scripts/bascule-3noms.py) (copie sur pve1 :
 `/root/bascule-3noms.py`). Son action `revert` repointait vers l'ancien VPS —
-**caduque depuis le 29/08/2026** : le VPS est éteint
-([06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage)),
-et depuis le 29/08 le TTL est remonté à 3600 (annuler prendrait jusqu'à une
-heure, plus le rallumage du VPS par la console OVH).
+**caduque et inutilisable depuis le 29/08/2026** : VPS éteint puis **résilié**
+([06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim---traité-le-29082026)),
+TTL remonté à 3600. Il n'y a plus d'« ancien chemin » : le proxy est le seul
+point d'entrée de ces trois noms.
 
-### Nettoyage post-bascule (voir [06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage))
+### Nettoyage post-bascule (voir [06 §2](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim---traité-le-29082026))
 
-- ✅ ancien VPS vérifié sans trafic légitime et **éteint le 29/08/2026** —
-  reste la résiliation dans l'espace client OVH ;
+- ✅ ancien VPS vérifié sans trafic légitime, **éteint puis résilié le
+  29/08/2026** (espace client OVH) ;
 - ✅ TTL des trois noms remonté 60 → 3600 le 29/08/2026, vérifié sur les deux
   paires d'autoritaires ;
 - décider (ou pas) de la bascule de `syngo-via.*` vers le relais TLS du proxy —

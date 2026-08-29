@@ -230,7 +230,7 @@ Relevé du 25/08/2026 (`dig -x @1.1.1.1`) :
 |---|---|---|
 | `91.134.84.222`, `51.68.240.48`, `51.68.240.191` | `ns….ip-91-134-84.eu` / `ns….ip-51-68-240.eu` | défauts OVH des nœuds, jamais personnalisés |
 | `57.130.34.121`–`123` | `ip12N.ip-57-130-34.eu` | défauts OVH du bloc public |
-| `51.75.203.20` | `vps-f89a8456.vps.ovh.net` | l'ancien VPS |
+| `51.75.203.20` | `vps-f89a8456.vps.ovh.net` | l'ancien VPS — **résilié le 29/08/2026**, l'IP ne nous appartient plus |
 | `188.165.77.137` | `ns3062628.ip-188-165-77.eu` | backend PACS (`pacs03`) |
 | `77.158.128.112` | `112.128.158.77.rev.sfr.net` | accès **SFR** — TELLIS 📋 |
 | `37.61.243.245`, `37.61.243.246` | *(aucun)* | TELLIS, pas de reverse |
@@ -315,7 +315,7 @@ curl -s https://rdap.verisign.com/net/v1/domain/teleimagerie.net \
 | Cibles d'architecture des noms | [12-architecture-hds.md](12-architecture-hds.md) |
 | Pièges DNS n°2, 6, 10, 30 | [07-pieges.md](07-pieges.md) |
 | Le DC TELLIS (cibles `37.61.243.24x`, VENUS, nginx `.61`) | [13-tellis.md](13-tellis.md) |
-| Nettoyage post-bascule (VPS, TTL) | [06-reste-a-faire.md](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim--faite-le-26082026-reste-le-nettoyage) |
+| Bascule DNS et nettoyage (traités) | [06-reste-a-faire.md](06-reste-a-faire.md#2-bascule-dns-vers-proxy-tim---traité-le-29082026) |
 
 ## À vérifier / à documenter ⚠️
 
