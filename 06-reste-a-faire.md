@@ -288,11 +288,16 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
 - ~~**Décider du rôle de `brtrnd@keycloak`**~~ — tranché le 27/08/2026 :
   **Administrator sur `/`** côté PVE et **Admin sur `/`** côté PBS, comme
   `matt@keycloak` (vérifié dans les deux ACL le jour même).
-- ~~**Brokering Google Workspace**~~ — **en place le 27/08/2026** (client
-  OAuth interne au Workspace, `hd` vérifié, PKCE, liaison avec confirmation —
+- ~~**Brokering Google Workspace**~~ — **en place et testé en réel le
+  27/08/2026** (client OAuth interne au Workspace, `hd` vérifié, PKCE,
+  liaison avec confirmation ; compte Workspace technique passé puis supprimé —
   [16-keycloak.md](16-keycloak.md#brokering-google-workspace--en-place-depuis-le-27082026)).
-  Reste un **test de connexion réelle** par un compte Workspace non admin.
   Microsoft 365 (`isoteam.mn`) pourra suivre par la même mécanique.
+- **SMTP Mailjet — en attente de la clé API** (préparé le 29/08/2026) : sans
+  lui, pas de « mot de passe oublié » ni d'e-mails d'onboarding. Le domaine
+  est déjà validé chez Mailjet (SPF/DKIM en zone), la procédure de reprise
+  complète est prête :
+  [16-keycloak.md](16-keycloak.md#e-mail-sortant--smtp-mailjet-préparé-le-29082026-️-en-attente-de-la-clé).
 - **MyTIM** (application interne de gestion) : documenter hébergement et
   technologie (est-ce `app`/`gestion` → `51.210.24.59` ?), puis intégrer OIDC —
   meilleur candidat après l'infra.

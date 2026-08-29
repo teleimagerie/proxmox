@@ -302,6 +302,65 @@ Deux notes pour éviter des heures perdues :
 
 ---
 
+## E-mail sortant — SMTP Mailjet (préparé le 29/08/2026, ⚠️ en attente de la clé)
+
+**Ce que le mail fait — et ne fait pas — dans Keycloak** : le TOTP n'a
+besoin d'aucun e-mail (généré hors ligne par l'application — enrôlé pour
+`matt` et `brtrnd` sans SMTP). Le SMTP sert à trois choses, toutes absentes
+aujourd'hui :
+
+1. **« Mot de passe oublié »** (`resetPasswordAllowed`, désactivé faute de
+   SMTP) — aujourd'hui un mot de passe perdu = intervention admin, et pour
+   le compte `admin` lui-même la procédure de re-bootstrap. Le lien de
+   réinitialisation **ne contourne pas le TOTP** au login ;
+2. **Onboarding** : l'e-mail « définissez votre mot de passe et enrôlez
+   votre TOTP » (*execute actions email*) — remplace la transmission
+   manuelle de mots de passe temporaires faite pour les deux premiers
+   comptes ; indispensable à l'arrivée des utilisateurs MyTIM ;
+3. Vérifications d'adresse et notifications, si activées un jour.
+
+**Le domaine est déjà prêt** (vérifié le 29/08/2026 dans la zone) : SPF
+`include:spf.mailjet.com`, DKIM `mailjet._domainkey` et TXT de validation
+Mailjet présents — tout envoi `@teleimagerie.net` via Mailjet passera.
+
+### Procédure de reprise, dès que la clé existe
+
+1. Créer chez Mailjet une **clé API dédiée à Keycloak** si le plan le permet
+   (révocable indépendamment), sinon la clé principale. La clé API sert de
+   nom d'utilisateur SMTP, la clé secrète de mot de passe.
+2. La déposer sur pve1 (gestionnaire de secrets d'abord) :
+   ```bash
+   install -m 600 /dev/null /root/.secrets/mailjet
+   cat > /root/.secrets/mailjet <<'FIN'
+   MJ_APIKEY=la-cle-api
+   MJ_SECRET=la-cle-secrete
+   FIN
+   ```
+3. Configurer le realm `tim` (admin de bootstrap éphémère, patron habituel) :
+   ```bash
+   kcadm.sh update realms/tim -s 'smtpServer={"host":"in-v3.mailjet.com",
+     "port":"587","starttls":"true","auth":"true","ssl":"false",
+     "user":"<MJ_APIKEY>","password":"<MJ_SECRET>",
+     "from":"auth@teleimagerie.net",
+     "fromDisplayName":"Authentification Téléimagerie"}'
+   kcadm.sh update realms/tim -s resetPasswordAllowed=true
+   ```
+   Expéditeur retenu : `auth@teleimagerie.net` (la boîte n'a pas besoin
+   d'exister, le domaine est validé chez Mailjet) — changer si une adresse
+   de réponse est souhaitée.
+4. **Test réel** : page de login `tim` → « Mot de passe oublié ? » avec
+   `matt` → le mail doit arriver sur `mcapon@teleimagerie.net`, le lien
+   fonctionner, et le TOTP rester exigé au login suivant. Détruire ensuite
+   la copie de transit (`shred -u /root/.secrets/mailjet`) — la clé vit
+   alors dans le gestionnaire + la config du realm (base Keycloak).
+5. Mettre à jour le tableau des secrets de
+   [04-securite.md](04-securite.md#secrets--où-ils-vivent) et cette section.
+
+Le realm `master` reste sans SMTP (seul le compte `admin` y vit, sans
+e-mail) — à équiper le jour où on voudra des notifications sur ce compte.
+
+---
+
 ## Diagnostic
 
 ```bash
