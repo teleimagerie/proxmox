@@ -107,6 +107,14 @@ postconf -e "smtp_address_preference = ipv4" && systemctl restart postfix
 **Diagnostic** — `journalctl | grep "to=<"` montre le relais utilisé et le
 verdict. Il n'y a pas de `/var/log/mail.log` sur Debian 13, tout est dans journald.
 
+> **Note du 30/08/2026** — largement caduc : les notifications Proxmox (vzdump,
+> fencing, system-mail) ne passent plus par le Postfix local mais par le
+> système de notifications → endpoint SMTP Mailjet, et uniquement en cas de
+> problème (matcher `erreurs-mailjet`, les succès sont avalés — canal principal :
+> Zabbix, [17-zabbix.md](17-zabbix.md#supervision-des-sauvegardes--depuis-le-30082026)).
+> Le contournement `smtp_address_preference = ipv4` reste en place et ne
+> concerne plus que l'éventuel courrier Postfix résiduel hors notifications.
+
 ---
 
 ## 7. fail2ban n'active qu'une prison sur deux

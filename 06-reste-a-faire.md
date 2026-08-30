@@ -119,8 +119,12 @@ Restent ouverts :
    PBS), SNMP OPNsense, Metric Server/InfluxDB natif, Prometheus headscale
    (`127.0.0.1:9090` du CT 202).
 
-Les notifications mail Proxmox (fencing, tâches en échec) continuent en
-parallèle vers `mcapon@teleimagerie.net`.
+Les notifications mail Proxmox ne partent plus qu'en cas de problème depuis le
+30/08/2026 : matchers `erreurs-mailjet` (warning/error/unknown → Mailjet) sur
+PVE et PBS, builtin `default-matcher` désactivé — plus aucun mail de succès.
+Zabbix est le canal principal (échec **et absence** de sauvegarde,
+[17-zabbix.md](17-zabbix.md#supervision-des-sauvegardes--depuis-le-30082026)) ;
+le mail direct n'est que le filet si Zabbix tombe.
 
 ---
 

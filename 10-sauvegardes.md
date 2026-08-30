@@ -217,7 +217,16 @@ Le secret du jeton vit dans `/etc/pve/priv/storage/pbs.pw` (répliqué par pmxcf
 | dimanche **05:30** | ramasse-miettes du datastore | PBS |
 
 Les tâches de sauvegarde sont dans `/etc/pve/jobs.cfg` (répliqué), celles de PBS
-dans la VM 102. Les échecs sont notifiés par mail à `mcapon@teleimagerie.net`.
+dans la VM 102.
+
+**Qui alerte (depuis le 30/08/2026)** — plus aucun mail de succès. Le canal
+principal est **Zabbix** ([17-zabbix.md](17-zabbix.md#supervision-des-sauvegardes--depuis-le-30082026)) :
+échec d'une tâche vzdump, mais aussi **absence** de sauvegarde (quotidien > 26 h,
+hebdo VM 102 > 8 j, verify/GC/prune PBS) → problème High → mail. En filet de
+secours (panne de Zabbix), les notifications PVE/PBS de sévérité warning/error
+partent aussi en direct via Mailjet (matcher `erreurs-mailjet`,
+[configs/notifications.cfg](configs/notifications.cfg)) ; les succès (`info`)
+sont avalés.
 
 **Rétention : environ 8 mois de profondeur.** 7 quotidiennes, 4 hebdomadaires,
 6 mensuelles.

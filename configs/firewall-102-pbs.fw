@@ -10,4 +10,5 @@ policy_out: ACCEPT
 # L'IPSET cluster couvre les IP publiques et 10.30.0.0/24.
 IN ACCEPT -source +cluster -log nolog
 IN ACCEPT -source 10.40.0.60 -p tcp -dport 10050 -log nolog # agent Zabbix (CT 204) — 17-zabbix.md, 29/08/2026
+IN ACCEPT -source 10.40.0.60 -p tcp -dport 8007 -log nolog # API PBS lecture seule pour Zabbix (CT 204) — 17-zabbix.md, 30/08/2026
 IN Ping(ACCEPT) -log nolog

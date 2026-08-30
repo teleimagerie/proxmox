@@ -174,11 +174,13 @@ perte : ce que le CT a collecté entre-temps.
 
 ### Reste à faire (fenêtre d'observation)
 
-- [ ] **test mail depuis l'UI** (*Alerts → Media types → Test*) : le chemin
-  SMTP est vérifié jusqu'à la bannière Mailjet, mais seul un envoi authentifié
-  le prouve de bout en bout. Non simulable sans compte UI — et l'action
-  « ALERTE HAUTE » ne notifie que High/Disaster (masque 48), un incident de
-  test banal reste muet ;
+- [x] ~~**test mail depuis l'UI** (*Alerts → Media types → Test*)~~ — **prouvé
+  en réel** : chaîne complète validée le 29/08 (nearfull) puis re-validée le
+  30/08 avec les déclencheurs sauvegardes — 2 problèmes High → 4 mails
+  (mcapon@ + support@) **reçus en boîte** (labels INBOX, pas spam), vérifié
+  dans Gmail. À noter : ces mails Zabbix ne figurent pas dans la liste
+  `GET /v3/REST/message` de la clé API « keycloack » — le média Zabbix utilise
+  d'autres identifiants Mailjet (hérités du VPS, dans le dump) ;
 - [ ] vérifier la **première sauvegarde PBS** du CT 204 (job de 02:00) puis
   **restauration de test sous l'ID 299** ([10-sauvegardes.md](10-sauvegardes.md#rejouer-le-test)) ;
 - [ ] `bascule-zabbix.py ttl3600` après quelques jours de stabilité (précédent
@@ -247,6 +249,7 @@ avec un token **lecture seule** :
 | Nœuds (indépendant du point d'entrée API) | simple checks | `:8006` joignable sur chaque nœud |
 | Invités (vue interne) | **agents dans les 7 invités** | Linux by Zabbix agent (201, 202, 203, 101, 102, 204) · FreeBSD by Zabbix agent (OPNsense, plugin `os-zabbix7-agent`, écoute `10.40.0.1:10050` seule) |
 | Certificats | 9 hôtes `cert-*`, template Website certificate by Zabbix agent 2 | zabbix, auth, pacs-secours, odoo, syngo, headscale + `pveX:8006` — expiration < 14 j |
+| Sauvegardes | template TIM (API PVE par nœud + API PBS, token `zabbix@pbs!monitoring`) | échec **et absence** de vzdump, verify/GC/prune PBS — [§ dédié](#supervision-des-sauvegardes--depuis-le-30082026) |
 
 Tableau de bord **« Cluster PVE »** (partagé) : état instantané (quorum, Ceph,
 OSD, API) + problèmes, graphes nœuds, stockage, invités vus par l'API, FS et
@@ -267,7 +270,9 @@ dans la base : couverts par le dump 01:15 + PBS 02:00.
 down/out · **vm-storage ≥ 85 %** (nearfull — le template officiel pré-alerte
 en Warning à 80) · mémoire nœud ≥ 90 % · mémoire invité ≥ 95 % · disque LXC
 ≥ 90 % · FS des VM (`pbs` dont `/mnt/datastore/tim`, `odoo`) ≥ 90 % ·
-certificat < 14 j ou invalide. **Tableau de bord seulement** : CPU/RAM/swap
+certificat < 14 j ou invalide · tâche vzdump en échec ou sauvegarde absente ·
+verify/GC/prune PBS en échec ou absents
+([§ sauvegardes](#supervision-des-sauvegardes--depuis-le-30082026)). **Tableau de bord seulement** : CPU/RAM/swap
 élevés, `HEALTH_WARN` (état *attendu* pendant une perte de nœud — le
 « nœud hors-ligne » a déjà sonné), redémarrages, agent injoignable (l'arrêt
 de l'invité sonne déjà via l'API).
@@ -299,7 +304,94 @@ problème High à 19:40:29 → **mails partis vers support@ et mcapon@** (statut
 - Le dépôt `pbs-enterprise` (sans abonnement) fait échouer `apt update` sur
   PBS — tolérer l'erreur (`|| true`) pour installer depuis les autres dépôts.
 
-## Risques et limites
+## Supervision des sauvegardes — depuis le 30/08/2026
+
+Les mails vzdump (« backup successful ») arrivaient en spam — envoi direct par
+le Postfix local des nœuds, expéditeur `root@pveN`, PTR OVH, IP hors SPF — et
+la décision a été plus radicale que « réparer le mail » : **plus aucun mail de
+succès**. Zabbix détient l'information et alerte en cas de problème ; le mail
+direct ne subsiste qu'en filet de secours, filtré sur les erreurs.
+
+Tout est posé par [scripts/zabbix-provision-backups.py](scripts/zabbix-provision-backups.py)
+(script frère de `zabbix-provision-pve.py`, mêmes helpers, idempotent) dans le
+template **TIM Cluster PVE**.
+
+### Ce que Zabbix voit
+
+- **vzdump** : 1 item HTTP par nœud sur
+  `/api2/json/nodes/{n}/tasks?typefilter=vzdump&source=archive&limit=50`
+  (token `zabbix@pve!monitoring` existant, macro réutilisée à l'identique —
+  zéro risque fail2ban). **Pas `/cluster/tasks`** : sa liste « récente » n'a
+  aucune garantie de couverture ni de champ `status`. Le champ `id` de la
+  tâche discrimine les jobs : `""` = job quotidien 02:00, `"102"` = hebdo
+  samedi 03:30 — un vzdump manuel (`id=<vmid>`) ne rafraîchit donc pas l'âge
+  du quotidien. L'âge du hebdo est replié en `min()` des 3 nœuds (la VM 102
+  migre).
+- **PBS** : 3 items HTTP sur
+  `{$PBS.URL}/api2/json/nodes/localhost/tasks?typefilter=<type>&limit=20` avec
+  `garbage_collection`, `verificationjob`, `prunejob` — le typefilter est un
+  « contains », ces valeurs excluent les GC/verify/prune **manuels** : on suit
+  les jobs planifiés. Header `PBSAPIToken={$PBS.TOKEN.ID}:{$PBS.TOKEN.SECRET}`
+  (séparateur **`:`**, pas `=` comme PVE). Vérification TLS désactivée sur ces
+  items (certificat auto-signé, flux interne VLAN 400 — assumé).
+
+### Déclencheurs (tous High → mail via « ALERTE HAUTE », rien changé à l'action)
+
+| Déclencheur | Expression (idée) | Fenêtre |
+|---|---|---|
+| tâche vzdump en échec (par nœud) | nb de tâches `status ≠ OK` < 26 h `> 0` | 26 h glissantes, manuelles comprises (`WARNINGS:` compte) |
+| quotidien absent (par nœud) | âge du dernier succès du job > **26 h** | 02:00 + marge ; `or nodata(3h)` — sans lui, un item cassé gèlerait `last()` et l'absence deviendrait invisible |
+| hebdo VM 102 absent (cluster) | `min()` des âges > **8 j** | samedi 03:30 + marge |
+| verify / GC / prune PBS en échec | dernier verdict `≠ "OK"` | se referme au succès suivant (pas de fenêtre qui traîne) |
+| verify / GC absents | âge du dernier succès > **8 j** | dimanche 04:00 / 05:30 |
+| prune absent | âge > **26 h** | quotidien 03:00 |
+
+### Accès API PBS
+
+- principal `zabbix@pbs` + token `zabbix@pbs!monitoring`, rôle **Audit** posé
+  sur l'utilisateur **et** le jeton (intersection — piège n° 26). Secret
+  uniquement dans la macro secrète `{$PBS.TOKEN.SECRET}` de `cluster-pve` ;
+  révocation : `proxmox-backup-manager user delete-token zabbix@pbs monitoring`.
+- règle firewall ajoutée à la VM 102 : `tcp/8007 depuis 10.40.0.60`
+  ([configs/firewall-102-pbs.fw](configs/firewall-102-pbs.fw)) — validée par
+  curl depuis le CT 204 sur `10.40.0.20:8007` (même L2, pas de transit
+  OPNsense).
+
+### Plus aucun mail de succès — matchers PVE et PBS
+
+Les deux systèmes de notifications (PVE 9 et PBS 4, `notification-mode
+notification-system` déjà partout) sont réglés pareil, le 30/08/2026 :
+
+- endpoint SMTP `mailjet` (`in-v3.mailjet.com:587` STARTTLS, même clé API que
+  Keycloak, expéditeurs `pve@`/`pbs@teleimagerie.net` — couverts par le sender
+  wildcard `*@teleimagerie.net` validé Actif) ; le mot de passe atterrit dans
+  `/etc/pve/priv/notifications.cfg` (répliqué) et
+  `/etc/proxmox-backup/notifications-priv.cfg` ;
+- matcher `erreurs-mailjet` : `match-severity warning,error,unknown` →
+  `mailjet`. vzdump succès = `info` → avalé ; échec = `error` → mail ; fencing
+  = `error` → mail ; `unknown` = **system-mail** (cron/smartd forwardés à root
+  par proxmox-mail-forward) → délivrés via Mailjet, ce qui règle au passage le
+  résiduel Postfix sans relayhost ;
+- builtin `default-matcher` **désactivé** (`disable`, origin
+  `modified-builtin`). Rollback : supprimer `erreurs-mailjet` et l'override du
+  `default-matcher` (le builtin réapparaît intact, cible `mail-to-root`).
+
+Copies : [configs/notifications.cfg](configs/notifications.cfg) et
+[configs/notifications-pbs.cfg](configs/notifications-pbs.cfg) (username =
+placeholder). ⚠️ Les targets SMTP n'ont **ni file ni reprise** : un envoi raté
+est perdu (journalisé seulement) — c'est précisément pourquoi Zabbix, qui
+re-teste en continu, est le canal principal et le mail le filet.
+
+### Vérifié le 30/08/2026
+
+- valeurs réelles cohérentes dès la première collecte : quotidien ~19 h,
+  hebdo ~42 h, GC ~15,6 h, verify ~17,2 h, prune ~18,2 h — chaque fenêtre
+  validée par les vraies données ;
+- tests des targets PVE et PBS : messages `sent` chez Mailjet (contrôle
+  `GET /v3/REST/message` — un retour SMTP OK ne prouve rien, leçon Keycloak ;
+  penser `Sort=ArrivedAt+DESC`, la liste sort en ascendant par défaut) ;
+- déclencheurs testés en réel par la méthode du 29/08 (constante abaissée →
+  problème High → mail → restauration).
 
 - **SPOF OPNsense** : tous les polls sortants sortent en **`.122`** (NAT
   sortant dédié depuis le 30/08 — l'identité publique de zabbix, celle que

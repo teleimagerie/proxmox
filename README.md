@@ -69,7 +69,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
 | [15-pacs-secours.md](15-pacs-secours.md) | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
 | [16-keycloak.md](16-keycloak.md) | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale), split-horizon `auth.*`, candidats SSO |
-| [17-zabbix.md](17-zabbix.md) | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie, jour J restant) |
+| [17-zabbix.md](17-zabbix.md) | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie) + supervision des sauvegardes (échec **et absence**, 30/08) |
 | [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
 | [19-carte-reseau.md](19-carte-reseau.md) | **Carte réseau régénérable** : `make carte` interroge l'API Proxmox, confronte aux intentions de `topologie.yml` et réécrit le schéma — les écarts aux règles sont peints en rouge sur la carte |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation), `genere-carte.py` (carte réseau depuis l'API Proxmox — voir `make aide`) |
@@ -113,7 +113,10 @@ Authentification         Keycloak 26.7.2 (CT 203) · auth.teleimagerie.net
 Supervision              Zabbix 7.0 (CT 204) · zabbix.teleimagerie.net
                          migré du VPS le 29/08 · supervise aussi le cluster :
                          quorum, Ceph, nearfull 85 %, 7 invités (API + agents),
-                         certificats · dashboard « Cluster PVE » · mail testé
+                         certificats, sauvegardes (échec + absence, vzdump/PBS)
+                         · dashboard « Cluster PVE » · mail testé
+Notifications            plus aucun mail de succès depuis le 30/08 · Zabbix
+                         alerte (High) · filet : erreurs PVE/PBS via Mailjet
 ERP                      Odoo 17 (VM 101, Ubuntu 24.04 + Docker) · odoo.teleimagerie.net
                          en production depuis le 29/08 · VPS résilié le 30/08
 ```
