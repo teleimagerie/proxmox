@@ -287,6 +287,10 @@ TeamViewer (sortant vers son cloud) n'est **pas** affecté par le pare-feu — l
 légitime imprévu casse : `Set-NetFirewallProfile -All -Enabled False` par SSH,
 puis lire `%systemroot%\system32\LogFiles\Firewall\pfirewall.log`.
 
+L'ensemble (liste blanche + purge des règles « Any » + allumage) est rejouable
+tel quel après réinstallation : [`scripts/parefeu-pacs03.ps1`](scripts/parefeu-pacs03.ps1)
+— à lancer **en arrivant par le VPN**, jamais par la patte publique.
+
 ---
 
 ## Reste à faire
