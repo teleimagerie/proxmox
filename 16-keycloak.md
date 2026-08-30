@@ -289,6 +289,8 @@ CSS + un fichier de messages — aucune structure HTML touchée, les pages
 > l'ancienne version (constaté le 30/08/2026 : deux déploiements invisibles
 > pour l'utilisateur).
 
+**Rendu validé visuellement par l'utilisateur le 30/08/2026** (logo dans le
+bandeau, textes « TIM », après le correctif de cache `tim-2.css`).
 Vérifié le 30/08/2026 sur la page réelle : `lang="fr"`, onglet « Se connecter
 à TIM », `tim.css` et `logo.png` servis en 200, formulaire en français,
 bouton Google Workspace présent. Premier essai raté instructif : un
