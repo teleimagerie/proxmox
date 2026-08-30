@@ -73,11 +73,11 @@ le SPF, la configuration voyage dans le dump).
 | Hôte | Mode | IP constatée (tcpdump 10051) | Après bascule (29/08, 15:55 UTC) |
 |---|---|---|---|
 | Zabbix server | passif local | 127.0.0.1 | ✅ agent2 du CT |
-| `pacs03.teleimagerie.net` | **passif** (197 items) | 188.165.77.137 | ⚠️ corrigé le 30/08 : rejetait la source `.121` (whitelist = le nom → VIP) — **réparé par le NAT sortant `.122`** |
+| `pacs03.teleimagerie.net` | **passif** (197 items) | 188.165.77.137 | ⚠️ corrigé le 30/08 : rejetait la source `.121` (whitelist = le nom → VIP) — **réparé par le NAT sortant `.122`**. **Seuils disque `IMAGE(F:)` (4,6 To, ~80 %) personnalisés le 30/08** : Warning 90 % (macro contextuelle `"IMAGE(F:)"`), **High 95 %** et **Disaster 98 %** (déclencheurs dédiés, mail ; le High se tait quand le Disaster est actif), CRIT template neutralisé à 100 |
 | `gestion.teleimagerie.net` | **passif** (137 items) | 51.210.24.59 | ✝ serveur décommissionné (mort depuis le 27/08) — **hôte supprimé de Zabbix le 30/08** |
 | `prod01.teleimagerie.net` | **actif** (62 items) | 37.61.243.245 | ✝ **hôte supprimé de Zabbix le 30/08** sur instruction (agent muet depuis le 27/08) |
 | `WIN-SRV-TSPLUS` | **actif** (156 items) | 37.61.243.246 (TSplus, TELLIS) | ✅ a suivi le DNS (< 4 min) |
-| `TIMWFMCORE` | **actif Windows** | IP non capturée (agent actif) | ✅ **rétabli le 30/08** : muet depuis la bascule (agent accroché à l'ancienne résolution DNS), reparti après **redémarrage de l'agent sur la machine** — 63/77 items frais en 2 min. Épisode du 30/08 au matin : cru à tort Linux à cause de `162.19.25.107` (voir ligne suivante), re-templaté ~1 h puis rétabli |
+| `TIMWFMCORE` | **actif Windows** | IP non capturée (agent actif) | ✅ **rétabli le 30/08** : muet depuis la bascule (agent accroché à l'ancienne résolution DNS), reparti après **redémarrage de l'agent sur la machine** — 63/77 items frais en 2 min. Épisode du 30/08 au matin : cru à tort Linux à cause de `162.19.25.107` (voir ligne suivante), re-templaté ~1 h puis rétabli. **Seuils disque `Database(F:)` personnalisés le 30/08** : Warning à 90 % (macro `{$VFS.FS.PUSED.MAX.WARN:"Database(F:)"}` — ⚠️ le contexte est `{#FSLABEL}({#FSNAME})`, pas la lettre seule), palier template neutralisé (CRIT à 100) et remplacé par un déclencheur **High ≥ 95 %** qui part en mail |
 | ~~`162.19.25.107`~~ (`vps-2e178199.vps.ovh.net`) | — | 162.19.25.107 | **ancien serveur MYTIM** : ne sert plus mais toujours allumé, agent Zabbix 7.4 actif et whitelist ouverte sur zabbix — **pas de supervision souhaitée** (décidé le 30/08). Candidat à l'extinction/résiliation : une machine oubliée allumée est une surface d'attaque |
 | `CMSI-LES-HERBIERS` | 1 item, quasi mort | pas vu en 3 min | toujours muet — à trancher (supprimer ?) |
 
