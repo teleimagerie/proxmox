@@ -110,11 +110,16 @@ L'accès admin lève le doute : la sauvegarde n'est **pas** Windows Server Backu
 mais une **chaîne de tâches planifiées Carestream** écrivant sur le volume
 **`G:` (BACKUP, 1 To, 379 Go libres)** — `run_full_backups.pl`,
 `run_cfg_backups.pl` (export Data Pump Oracle `CFG_EXPDP`),
-`run_software_backup.pl`, tous sous `G:\Backup\scripts\`. À relever encore :
-leur **horaire de déclenchement** et **qui surveille leurs échecs** (les logs
-sont sous `…\System5\log\Scheduled_Tasks\`). Le volume `G:` est **local**
-(pas un montage réseau) : une panne de la VM emporte la sauvegarde avec la
-base — à confirmer, mais pas de copie hors-machine visible.
+`run_software_backup.pl`, tous sous `G:\Backup\scripts\` (logs sous
+`…\System5\log\Scheduled_Tasks\`).
+
+✅ **Reprise hors-machine assurée par TELLIS** : le prestataire exploitant du DC
+**sauvegarde `G:` quotidiennement** (confirmé par l'utilisateur le 30/08/2026) —
+c'est la copie externe qui manquait au raisonnement « `G:` est local ». La
+chaîne Carestream produit donc le jeu de sauvegarde sur `G:`, que TELLIS
+rapatrie ensuite. Nous ne maîtrisons ni la destination ni la rétention côté
+TELLIS : à documenter auprès d'eux si une restauration devait un jour être
+pilotée depuis notre côté.
 
 Autres découvertes de l'inventaire admin (~80 tâches planifiées, toutes
 `Ready`) : deux **lecteurs réseau mappés vers la 2ᵉ patte `192.168.171.x`** —
@@ -348,9 +353,10 @@ canal des secrets et ne rejoignent jamais ce dépôt.
       en `M:`/`N:` (découvert en admin le 30/08)
 - [ ] l'hyperviseur qui la porte (MAC `BC:24:11` → Proxmox VE probable) : où,
       qui l'administre, quelles autres VM ?
-- [~] sauvegarde applicative et Oracle : **chaîne de tâches Carestream vers
-      `G:` local** identifiée (30/08) — reste l'horaire, la surveillance des
-      échecs, et **la confirmation qu'il n'existe aucune copie hors-machine**
+- [x] sauvegarde applicative et Oracle : **chaîne de tâches Carestream vers
+      `G:` local** (30/08), **sauvegardé quotidiennement hors-machine par
+      TELLIS** (confirmé 30/08) — reste à documenter côté TELLIS la destination
+      et la rétention si une restauration doit être pilotée de notre côté
 - [ ] **pare-feu Windows local** : désactivé, décision à prendre avec
       l'exploitant du DC après cartographie des flux (cf. Accès SSH)
 - [ ] qui utilise AnyDesk / TeamViewer / Octopus Deploy sur cette machine ?
