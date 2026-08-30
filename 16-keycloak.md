@@ -370,10 +370,25 @@ Configuration du realm `tim` (posée le 30/08/2026 par admin de bootstrap
 | Expéditeur | `auth@teleimagerie.net` — « Authentification Téléimagerie » (boîte inexistante, domaine validé chez Mailjet : SPF `spf.mailjet.com`, DKIM `mailjet._domainkey` en zone) |
 | `resetPasswordAllowed` | **activé** — « Mot de passe oublié ? » sur la page de login (le lien ne contourne pas le TOTP) |
 
-Vérifié le 30/08/2026 : `testSMTPConnection` → **204**, e-mail de test
-réellement expédié vers `mcapon@teleimagerie.net` via Mailjet ; le lien
-« Mot de passe oublié ? » apparaît sur la page de login. Copie de transit
-de la clé détruite de pve1 après le test.
+Vérifié le 30/08/2026, **après un faux départ instructif** : les deux
+premiers tests renvoyaient `204` mais aucun mail n'arrivait — les
+expéditeurs (`auth@` puis `*@teleimagerie.net`) étaient déclarés sur le
+compte Mailjet mais **`Inactive`** : Mailjet accepte l'envoi en SMTP puis
+le **jette silencieusement** tant que l'expéditeur n'est pas validé, sans
+même une trace dans sa liste de messages. Validation déclenchée par l'API
+(`POST /v3/REST/sender/<id>/validate`) — instantanée, le TXT de propriété
+`mailjet._6d687b5a` étant déjà en zone (même compte que la validation
+historique du domaine). Après validation : messages au statut **`sent`**
+dans `/v3/REST/message`, réception confirmée.
+
+> ⚠️ **Un `204` de `testSMTPConnection` ne prouve que l'acceptation par le
+> relais, pas l'envoi.** Pour vérifier un problème de délivrance Mailjet :
+> `GET /v3/REST/sender` (les expéditeurs doivent être `Active`) et
+> `GET /v3/REST/message` (statut `sent`) — identifiants lisibles dans la
+> base Keycloak (`realm_smtp_config`), le mot de passe n'est pas chiffré.
+
+Le lien « Mot de passe oublié ? » apparaît sur la page de login. Copie de
+transit de la clé détruite de pve1 après le test.
 
 **Re-tester l'envoi sans la clé** (fait le 30/08/2026 après un réglage côté
 Mailjet) : `POST /admin/realms/tim/testSMTPConnection` avec la config
