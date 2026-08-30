@@ -77,9 +77,11 @@ environnement.
 
 #### `TIMWFMCORE` — le PACS principal, inventorié le 29/08/2026
 
-Relevé complet (sans droits admin) :
-[`configs/inventaire-timwfmcore-2026-08-29.md`](configs/inventaire-timwfmcore-2026-08-29.md),
-premier produit du script `scripts/inventaire-windows.ps1`. L'essentiel :
+Relevés : [`configs/inventaire-timwfmcore-2026-08-29.md`](configs/inventaire-timwfmcore-2026-08-29.md)
+(premier produit du script `scripts/inventaire-windows.ps1`, sans droits admin) puis
+[`configs/inventaire-timwfmcore-2026-08-30.md`](configs/inventaire-timwfmcore-2026-08-30.md)
+(**avec droits admin**, par SSH — complète les partages, tâches planifiées et
+la sauvegarde applicative, voir [Accès SSH](#accès-ssh-30082026) plus bas). L'essentiel :
 
 | | |
 |---|---|
@@ -100,9 +102,48 @@ la [checklist](#checklist-de-collecte)).
 
 > ⚠️ **Points de vigilance relevés** : correctifs Windows **figés depuis mars
 > 2025** (aucun KB depuis — 17 mois au moment du relevé) sur un Windows Server
-> 2019 build 1809 ; uptime 89 j ; sauvegarde applicative à éclaircir (volume
-> G: BACKUP + fonctionnalité Windows Server Backup, mais aucune tâche
-> planifiée visible — relevé sans droits admin, à refaire en admin).
+> 2019 build 1809 ; uptime 89 j.
+
+##### Sauvegarde applicative — éclaircie en admin le 30/08/2026
+
+L'accès admin lève le doute : la sauvegarde n'est **pas** Windows Server Backup
+mais une **chaîne de tâches planifiées Carestream** écrivant sur le volume
+**`G:` (BACKUP, 1 To, 379 Go libres)** — `run_full_backups.pl`,
+`run_cfg_backups.pl` (export Data Pump Oracle `CFG_EXPDP`),
+`run_software_backup.pl`, tous sous `G:\Backup\scripts\`. À relever encore :
+leur **horaire de déclenchement** et **qui surveille leurs échecs** (les logs
+sont sous `…\System5\log\Scheduled_Tasks\`). Le volume `G:` est **local**
+(pas un montage réseau) : une panne de la VM emporte la sauvegarde avec la
+base — à confirmer, mais pas de copie hors-machine visible.
+
+Autres découvertes de l'inventaire admin (~80 tâches planifiées, toutes
+`Ready`) : deux **lecteurs réseau mappés vers la 2ᵉ patte `192.168.171.x`** —
+`M: \\192.168.171.3\FIR_TIM\fir_fs_04` et `N: \\192.168.171.2\FIR_TIM`, tous
+deux `Unavailable` au moment du relevé — ce qui **éclaire enfin le réseau
+`192.168.171.0/24`** : c'est le réseau de stockage FIR (« Fast Image
+Repository ») du PACS, servi par au moins deux serveurs de fichiers `.2` et
+`.3`. Un volume local **`I:` « `Images02_TO_NOT_USED` » (4 To, quasi vide)**
+confirme son nom : ne pas s'en servir. Watchdogs Philips (`C:\PhilipsWD\`) et
+tâches `wfm_*`/`fir_*` très nombreux — l'applicatif s'auto-surveille.
+
+##### Accès SSH (30/08/2026)
+
+OpenSSH serveur activé sur TIMWFMCORE, clé `id_ed25519` du poste d'admin dans
+`C:\ProgramData\ssh\administrators_authorized_keys` (compte **`Administrator`**),
+`PasswordAuthentication no`. **Chemin obligatoire : rebond par pacs03** —
+l'alias `ssh timwfmcore` du `~/.ssh/config` le fait (`ProxyJump pacs03`). La
+connexion directe poste→`192.168.101.52` par le VPN nomade **échoue à l'échange
+de bannière** (trou noir MTU sur le chemin `wg0`→OPNsense→`wg2`) alors que le
+port TCP s'ouvre : passer par pacs03, dont le tunnel direct TELLIS arrive en
+`172.32.0.2`, contourne le problème.
+
+> **Pare-feu Windows : laissé désactivé, volontairement.** Contrairement à
+> pacs03 (nu sur Internet), TIMWFMCORE est un serveur **de production interne
+> derrière les deux pfSense de TELLIS**, opéré par le prestataire, avec des
+> dizaines de flux LAN (modalités, RIS, IA, Vue Motion, syngo, FIR…). Poser un
+> pare-feu local ici sans cartographie complète couperait la production. C'est
+> une décision à prendre **avec l'exploitant du DC**, pas un oubli — le point
+> reste ouvert dans la [checklist](#checklist-de-collecte).
 
 ### Analyse IA des images
 
@@ -300,11 +341,18 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 **Vue PACS `TIMWFMCORE` `192.168.101.52`** — inventorié le 29/08/2026
 ([relevé](configs/inventaire-timwfmcore-2026-08-29.md)) ; reste :
 
-- [ ] refaire le relevé **avec droits admin** (tâches planifiées, détails masqués)
-- [ ] rôle de la 2ᵉ patte `192.168.171.1/24` et du réseau `192.168.171.0/24`
+- [x] refaire le relevé **avec droits admin** — fait le 30/08/2026 par SSH
+      ([Accès SSH](#accès-ssh-30082026))
+- [x] rôle de la 2ᵉ patte `192.168.171.1/24` et du réseau `192.168.171.0/24` —
+      **réseau de stockage FIR** du PACS, serveurs de fichiers `.2`/`.3` montés
+      en `M:`/`N:` (découvert en admin le 30/08)
 - [ ] l'hyperviseur qui la porte (MAC `BC:24:11` → Proxmox VE probable) : où,
       qui l'administre, quelles autres VM ?
-- [ ] sauvegarde applicative et Oracle : le volume G: BACKUP, qui écrit dedans ?
+- [~] sauvegarde applicative et Oracle : **chaîne de tâches Carestream vers
+      `G:` local** identifiée (30/08) — reste l'horaire, la surveillance des
+      échecs, et **la confirmation qu'il n'existe aucune copie hors-machine**
+- [ ] **pare-feu Windows local** : désactivé, décision à prendre avec
+      l'exploitant du DC après cartographie des flux (cf. Accès SSH)
 - [ ] qui utilise AnyDesk / TeamViewer / Octopus Deploy sur cette machine ?
 - [ ] politique de correctifs — figés depuis mars 2025, arbitrage éditeur
       Philips à clarifier
