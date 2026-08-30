@@ -108,6 +108,8 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 | `proxmox` | `https://pve{1,2,3}.infra.teleimagerie.net:8006/*` |
 | `pbs` | `https://10.30.0.20:8007/*`, `https://10.40.0.20:8007/*`, `https://localhost:8007/*` (l'interface s'ouvre par tunnel SSH — [10-sauvegardes.md](10-sauvegardes.md#accès-à-linterface-pbs)) |
 | `headscale` | `https://headscale.teleimagerie.net/oidc/callback` |
+| `mytim` (créé le 30/08/2026, PKCE S256 imposé) | `https://app.teleimagerie.net/oidc/callback` |
+| `mytim-staging` (créé le 30/08/2026, PKCE S256 imposé — sert staging **et** dev) | `https://app.staging.teleimagerie.net/oidc/callback`, `https://app.localhost/oidc/callback`, `http://app.localhost/oidc/callback` |
 
 > ⚠️ **headscale ne démarre pas si l'issuer est injoignable** : la section
 > `oidc` est validée au démarrage (constaté le 27/08/2026, crash-loop tant que
@@ -163,8 +165,11 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 | `/var/backups/keycloak/keycloak-<1..7>.sql.gz` | 7 dumps glissants (un par jour de semaine), repris par le vzdump de 02:00 |
 
 **Mise à jour de version** : télécharger le tarball, `tar xzf` dans `/opt`,
-`chown -R keycloak:`, rejouer `kc.sh build --db=postgres`, basculer le lien
-`/opt/keycloak`, `systemctl restart keycloak`. Retour arrière = remettre le
+`chown -R keycloak:`, rejouer `kc.sh build --db=postgres`, **recopier le
+thème** (`cp -a /opt/keycloak-<ancienne>/themes/tim /opt/keycloak-<nouvelle>/themes/`
+— il vit dans le répertoire versionné, voir
+[Personnalisation](#personnalisation--thème-de-connexion-tim)), basculer le
+lien `/opt/keycloak`, `systemctl restart keycloak`. Retour arrière = remettre le
 lien sur l'ancien répertoire (attention aux migrations de schéma : vérifier
 les notes de version avant tout saut majeur). Keycloak publie des correctifs
 de sécurité fréquents — surveiller <https://www.keycloak.org/blog>.
@@ -214,7 +219,7 @@ connecté ; seuls les nouveaux logins attendent.
 |---|---|---|
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
 | **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim` — compte de test supprimé après validation) |
-| **MyTIM** (appli interne de gestion) | OIDC | 📋 **intégration développée le 29/08/2026** côté appli (question hébergement soldée : oui, `app`/`gestion` → `51.210.24.59`, Symfony 7.4/FrankenPHP chez OVH, deux tenants `app.teleimagerie.net` + `app.isoteam.mn`). Code applicatif prêt (drenso/symfony-oidc-bundle, rapprochement par e-mail, aucun provisioning, formulaire local en repli). Reste côté Keycloak : créer le **realm `isoteam`** (copie de `tim` : force brute, `browser-totp`, broker Google avec redirect URI `…/realms/isoteam/broker/google/endpoint` à ajouter au client OAuth Google) et **4 clients** confidentiels PKCE S256 (`mytim` + `mytim-staging` dans chaque realm). Détail applicatif, script kcadm et phasage : `docs/technique/sso-keycloak.md` du dépôt gestion |
+| **MyTIM** (appli interne de gestion) | OIDC | 📋 **intégration développée le 29/08/2026** côté appli (question hébergement soldée : oui, `app`/`gestion` → `51.210.24.59`, Symfony 7.4/FrankenPHP chez OVH, deux tenants `app.teleimagerie.net` + `app.isoteam.mn`). Code applicatif prêt (drenso/symfony-oidc-bundle, rapprochement par e-mail, aucun provisioning, formulaire local en repli). Clients `mytim` + `mytim-staging` du realm `tim` **créés le 30/08/2026** (tableau ci-dessus). Reste côté Keycloak : créer le **realm `isoteam`** (copie de `tim` : force brute, `browser-totp`, broker Google avec redirect URI `…/realms/isoteam/broker/google/endpoint` à ajouter au client OAuth Google) et ses **2 clients** (`mytim`, `mytim-staging`). Détail applicatif, script kcadm et phasage : `docs/technique/sso-keycloak.md` du dépôt gestion |
 | Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | 📋 accès SSH collecté le 29/08/2026 (clé, compte `ubuntu` sur le VPS `vps-41b1229b`) — raccordement à instruire après la migration vers le cluster (17-zabbix.md à venir) |
 | Odoo (`odoo.teleimagerie.net`) | OAuth/LDAP natifs | ⚠️ accès à collecter |
 | CRM, e-learning, bastion, app/gestion | à déterminer | ⚠️ hors périmètre du dépôt |
@@ -251,6 +256,34 @@ détruite après usage.
 > La configuration a été posée via un **admin temporaire de bootstrap**
 > (`kc.sh bootstrap-admin user`, supprimé aussitôt) : le mot de passe admin
 > n'a pas eu à quitter le gestionnaire.
+
+---
+
+## Personnalisation — thème de connexion `tim`
+
+Depuis le 30/08/2026, le realm `tim` est en **français par défaut**
+(internationalisation activée, `fr` + `en` proposés) et sert un **thème de
+connexion maison** calqué sur la page de login de gestion/MyTIM : logo TIM
+centré (125 px) au-dessus du formulaire, bleu `#1e3a8a` sur fond `#eff6ff` —
+les valeurs viennent du projet gestion
+(`assets/styles/themes/tim.css`, logo `assets/images/logos/logo_main_tim.png`).
+
+Mécanique : le thème **hérite de `keycloak.v2`** et ne pose qu'une surcouche
+CSS + un fichier de messages — aucune structure HTML touchée, les pages
+(TOTP, Google, reset…) restent celles de Keycloak. Fichiers dans
+`/opt/keycloak/themes/tim/login/` sur le CT 203, copie conforme dans
+[configs/keycloak-theme-tim/](configs/keycloak-theme-tim/).
+
+> ⚠️ **Le thème vit dans le répertoire versionné**
+> (`/opt/keycloak-26.7.2/themes/`) : à chaque mise à jour de Keycloak, le
+> recopier dans la nouvelle version (étape ajoutée à la routine ci-dessus).
+> Oubli = retour silencieux au thème standard au premier restart.
+> Après toute modification du thème : `systemctl restart keycloak`
+> (le cache de thèmes est actif en production).
+
+Vérifié le 30/08/2026 sur la page réelle : `lang="fr"`, titre « Se connecter
+à Téléimagerie », `tim.css` et `logo.png` servis en 200, formulaire en
+français, bouton Google Workspace présent.
 
 ---
 

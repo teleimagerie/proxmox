@@ -1,0 +1,30 @@
+/* Page de connexion aux couleurs TIM — calquee sur la page de login de
+   gestion/MyTIM (assets/styles/themes/tim.css du projet gestion). */
+
+:root {
+  --pf-v5-global--primary-color--100: #1e3a8a;
+  --pf-v5-global--primary-color--200: #16295f;
+  --pf-v5-global--link--Color: #1e3a8a;
+  --pf-v5-global--link--Color--hover: #16295f;
+  --pf-v5-global--active-color--100: #1e3a8a;
+}
+
+/* fond bleu tres clair du theme TIM, carte blanche au centre */
+body, .pf-v5-c-login {
+  background: #eff6ff !important;
+}
+
+/* logo centre au-dessus du titre, comme sur gestion (125 px) */
+.pf-v5-c-login__main-header::before {
+  content: "";
+  display: block;
+  height: 125px;
+  margin: 8px auto 4px;
+  background: url("../img/logo.png") no-repeat center / contain;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: #1e3a8a;
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: #2b4ba8;
+  --pf-v5-c-button--m-primary--active--BackgroundColor: #16295f;
+}
