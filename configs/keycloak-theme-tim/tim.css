@@ -14,12 +14,15 @@ body, .pf-v5-c-login {
   background: #eff6ff !important;
 }
 
-/* logo centre au-dessus du titre, comme sur gestion (125 px) */
-.pf-v5-c-login__main-header::before {
-  content: "";
+/* bandeau haut : le nom du realm (texte blanc, invisible sur fond clair)
+   est remplace par le logo TIM, centre, 125 px — comme sur gestion */
+#kc-header-wrapper.pf-v5-c-brand,
+#kc-header-wrapper {
   display: block;
   height: 125px;
-  margin: 8px auto 4px;
+  width: 100%;
+  text-indent: -9999px;
+  overflow: hidden;
   background: url("../img/logo.png") no-repeat center / contain;
 }
 

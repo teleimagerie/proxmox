@@ -263,10 +263,13 @@ détruite après usage.
 
 Depuis le 30/08/2026, le realm `tim` est en **français par défaut**
 (internationalisation activée, `fr` + `en` proposés) et sert un **thème de
-connexion maison** calqué sur la page de login de gestion/MyTIM : logo TIM
-centré (125 px) au-dessus du formulaire, bleu `#1e3a8a` sur fond `#eff6ff` —
-les valeurs viennent du projet gestion
-(`assets/styles/themes/tim.css`, logo `assets/images/logos/logo_main_tim.png`).
+connexion maison** calqué sur la page de login de gestion/MyTIM : **logo TIM
+dans le bandeau haut** (125 px, centré — il remplace le nom du realm, servi
+en blanc par le thème standard donc invisible sur fond clair), bleu `#1e3a8a`
+sur fond `#eff6ff` — valeurs et logo repris du projet gestion
+(`assets/styles/themes/tim.css`, `assets/images/logos/logo_main_tim.png`).
+`displayName` du realm : **TIM** (onglet « Se connecter à TIM », titre
+« Connexion à TIM »).
 
 Mécanique : le thème **hérite de `keycloak.v2`** et ne pose qu'une surcouche
 CSS + un fichier de messages — aucune structure HTML touchée, les pages
@@ -281,9 +284,13 @@ CSS + un fichier de messages — aucune structure HTML touchée, les pages
 > Après toute modification du thème : `systemctl restart keycloak`
 > (le cache de thèmes est actif en production).
 
-Vérifié le 30/08/2026 sur la page réelle : `lang="fr"`, titre « Se connecter
-à Téléimagerie », `tim.css` et `logo.png` servis en 200, formulaire en
-français, bouton Google Workspace présent.
+Vérifié le 30/08/2026 sur la page réelle : `lang="fr"`, onglet « Se connecter
+à TIM », `tim.css` et `logo.png` servis en 200, formulaire en français,
+bouton Google Workspace présent. Premier essai raté instructif : un
+`::before` posé dans le conteneur flex du titre n'a **aucune largeur** (logo
+invisible) — le logo vit désormais dans `#kc-header-wrapper`
+(texte masqué par `text-indent`, image en fond), ce qui règle du même coup
+le nom du realm illisible en blanc.
 
 ---
 
