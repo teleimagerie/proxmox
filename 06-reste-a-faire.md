@@ -340,9 +340,12 @@ fenêtre TLS, vérifiée de bout en bout (récit chiffré dans
 [18-odoo.md](18-odoo.md#bascule-du-29082026--récit-chiffré)). HA `vm:101`
 déclarée. Nettoyage restant :
 
-- **vzdump du premier matin** à vérifier le 30/08 (`pvesm list pbs | grep vm/101`),
-  puis test de restauration sous l'ID 299 ;
-- **migration à chaud de validation** de la VM 101 vers un autre nœud (~1 s) ;
+- ✅ vzdump du 30/08 vérifié (backup 02:00 présent, tâches OK) et
+  **restauration testée** en VM 299 le 30/08 : Odoo a répondu 200 dans la VM
+  restaurée, détruite ensuite. Le cron `auto_backup` échouait en droits sur
+  `./backups` (dossier du clone git) — corrigé (`chown` uid 101), sauvegarde
+  de preuve produite ;
+- ✅ migration à chaud de validation faite le 29/08 au soir (pve1 → pve2, ~1 s) ;
 - **deploy key GitHub de la VM** à déclarer sur `teleimagerie/odoo`
   (clé `/home/ubuntu/.ssh/id_ed25519.pub`, commentaire `odoo-vm101`) ;
   révoquer celle du VPS (déjà morte) ; inventaire Ansible → `10.40.0.70` ;

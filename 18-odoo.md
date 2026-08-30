@@ -208,11 +208,20 @@ sur la VM entre bascule et revert sont perdues. Le point de non-retour est la
 
 1. ✅ HA déclarée le 29/08 ; ✅ migration à chaud de validation faite le soir
    même (pve1 → pve2, ~1 s, voir récit) — la VM tourne sur **pve2**.
-2. Sauvegardes : vérification du **vzdump du matin du 30/08** + test de
-   restauration sous l'ID 299 (retirer `net0` avant boot,
-   [10-sauvegardes.md](10-sauvegardes.md)) — programmée le 30/08 ~07:52
-   dans la session Claude de la migration. Timer `odoo-pgdump` armé et
-   validé ; le cron applicatif `auto_backup` d'Odoo continue en 3e niveau.
+2. ✅ Sauvegardes vérifiées le 30/08 — les trois niveaux :
+   - **vzdump** : `vm/101/2026-08-30T02:00:05Z` présent sur PBS, tâches OK ;
+   - **odoo-pgdump** : `odoo-7.dump` de 01:15 présent (22 Mo) ;
+   - **restauration testée** : `qmrestore` du backup de la nuit en VM 299
+     (28 s à 1,45 Go/s), `net0` retiré avant boot, **Odoo a répondu 200 dans
+     la VM restaurée**, puis 299 détruite. Noter : sans carte réseau, le
+     boot prend ~2 min (timeouts cloud-init/réseau) avant que l'agent réponde ;
+   - **auto_backup** : avait échoué à 03:00 (`Permission denied` sur
+     `/var/lib/odoo/backups/odoo`) — le dossier `./backups` recréé par le
+     clone git appartenait à `ubuntu` au lieu de l'uid 101 du process odoo
+     (c'est le `messagebus` observé sur le VPS). Corrigé par `chown 101`,
+     sauvegarde de preuve produite (470 Mo, rétention 30 j). Les erreurs
+     `.map … debug assets` des logs sont cosmétiques (sourcemaps d'anciennes
+     versions d'assets après le `-u base`).
 3. Ansible : inventaire → `10.40.0.70` (ProxyJump pve1 ou WireGuard),
    fusionner `proxmox` dans `main`, **déclarer la deploy key de la VM sur
    GitHub** (`odoo-vm101`), révoquer celle du VPS (déjà morte).
