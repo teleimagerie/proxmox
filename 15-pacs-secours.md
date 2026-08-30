@@ -23,6 +23,7 @@ l'Internet public.
 | OS | Windows Server 2022 Standard 21H2 (build 20348) ✅, installé le 13/05/2024, licence volume (KMS), hors domaine (WORKGROUP) |
 | Statut | HDS 📋 |
 | Rôle | **PACS complet EDL Xplore sur Oracle 19c** ✅ ([Inventaire](#inventaire-du-29082026)) — backend HTTP de `pacs-secours.teleimagerie.net` ✅ ; réplication depuis TELLIS par tunnel WireGuard direct ✅ |
+| Accès admin | RDP et **SSH par clé** (compte `admin`) sur `10.40.0.40`, **via VPN nomade uniquement** depuis le 30/08/2026 — pare-feu allumé, IP publique fermée ([Accès SSH et pare-feu](#accès-ssh-et-pare-feu-30082026)) ✅ |
 
 Le cluster est en **GRA4**, ce serveur en **GRA3** : le vRack s'étend entre les
 deux datacentres et la latence mesurée est sub-milliseconde (voir
@@ -221,11 +222,11 @@ ces cinq-là (anti-doublon). Le ménage du même jour : les `XnTELEMEDCLOUD_*`
   2 Go (plein à 100 % depuis décembre, allocations en danger) à 16 Go fixes**
   — l'alerte swap Zabbix s'est refermée seule. Reste à s'assurer que le canal
   de mise à jour **continue** de fonctionner (vérifier dans un mois).
-- ⚠️ **RDP (3389), WinRM (5985), SMB (445), RPC (135), Oracle (1521), NFS
-  Veeam (111/2049) écoutent sur toutes les adresses**, patte publique
-  comprise. Le pare-feu Windows filtre peut-être — invérifiable sans admin :
-  scanner depuis l'extérieur pour établir la surface réelle, puis appliquer la
-  restriction déjà prévue au [Reste à faire](#reste-à-faire).
+- ✅ ~~RDP (3389), WinRM (5985), SMB (445), RPC (135), Oracle (1521), NFS
+  Veeam (111/2049) écoutent sur toutes les adresses, le filtrage réel est
+  inconnu~~ — **tranché le 30/08/2026 : le pare-feu était entièrement
+  désactivé, tout était exposé et attaqué ; allumé et fermé le jour même**
+  ([Accès SSH et pare-feu](#accès-ssh-et-pare-feu-30082026)).
 - NetBIOS (137/139) toujours lié aux **trois pattes**, vRack et tunnel TELLIS
   compris — confirme le point ouvert du 25/08.
 - **TeamViewer Host** actif (accès distant tiers permanent) et **AzureArcSetup**
@@ -233,24 +234,85 @@ ces cinq-là (anti-doublon). Le ménage du même jour : les `XnTELEMEDCLOUD_*`
 - Defender actif ✅. **Zabbix Agent 2** (7.4, port 10050) déjà en place depuis
   le 15/08/2025 — à raccorder au Zabbix du cluster ([17-zabbix.md](17-zabbix.md)).
 
+### Accès SSH et pare-feu (30/08/2026)
+
+**SSH opérationnel et verrouillé.** OpenSSH serveur (natif Windows) activé le
+30/08 ; la clé `id_ed25519` du poste d'admin est dans
+`C:\ProgramData\ssh\administrators_authorized_keys` (ACL restreinte par SID
+`S-1-5-18`/`S-1-5-32-544` — obligatoire, sinon sshd ignore le fichier en
+silence ; et c'est **ce** fichier qui vaut pour tout compte admin, pas
+`~\.ssh\authorized_keys`). Connexion : `ssh admin@10.40.0.40` **depuis le VPN
+nomade uniquement** ; `PasswordAuthentication no` + `KbdInteractiveAuthentication
+no` dans `sshd_config`. Une session SSH d'un compte admin porte le jeton complet
+(pas de filtre UAC) : le serveur se pilote intégralement depuis WSL
+(`scp` + `powershell -File`), inventaire compris
+(`scripts/inventaire-windows.ps1`, laissé dans `C:\Users\admin\`).
+
+**Découverte en verrouillant : le pare-feu Windows était entièrement désactivé**
+(les trois profils `Enabled=False`) — c'était la réponse au « filtrage réel
+inconnu » du relevé du 29/08 et au « bonus » troublant des mesures du 25/08 :
+tout ce qui écoutait était exposé sur l'IP publique. Et la surface était
+**activement attaquée** : 7–11 connexions SMB établies depuis `189.253.31.199`
+(aucune session authentifiée derrière — pré-auth uniquement), 3 sessions RDP
+établies depuis des IP APAC/Huawei Cloud, **> 5 000 échecs de connexion (4625)
+sur les dernières 24 h**. Audit des réussites (4624 réseau/RDP) : **aucune
+depuis une IP publique** autre que `88.140.70.114` (IP résidentielle de
+l'utilisateur) — fenêtre couverte ≈ 24 h (plafond de 5 000 événements),
+un audit plus profond reste possible.
+
+**Allumage le 30/08 vers 15 h 15** : `DefaultInboundAction Block` sur les trois
+profils, journal des rejets activé (`pfirewall.log`, 16 Mo), et purge de
+~60 règles d'autorisation héritées à portée « Any » (Bureau à distance, partage
+de fichiers 445/139/137, RPC, une règle 80/443, les règles applicatives
+`Any/Any` des services Xn/TeamViewer/iperf, un reliquat 10051…). Les règles
+`CoreNet-*` sont **préservées** — l'IP publique est en DHCP OVH, couper
+`CoreNet-DHCP-In` tuerait le renouvellement du bail. Liste blanche posée :
+
+| Règle | Flux autorisé |
+|---|---|
+| `ssh-in` | TCP 22 depuis `10.90.0.0/24` (VPN nomade) |
+| `rdp-vpn` | TCP 3389 depuis `10.90.0.0/24` |
+| `pacs-http-proxy` | TCP 80 depuis `10.40.0.10` (proxy-tim — seul client HTTP observé) |
+| `zabbix-agent` | TCP 10050 depuis `10.40.0.0/24` + `57.130.34.122` (serveur Zabbix) |
+| `tunnel-tellis` | **tout** flux entrant arrivant par l'interface `DC-TELLIS-PARTENAIRES` (même confiance qu'avant, réplication comprise) |
+| `wg-endpoint` | UDP 51736 depuis `37.61.243.246` (ceinture-bretelles : pacs03 initie le tunnel, keepalive 25 s) |
+| `icmp-prive` | ICMPv4 depuis `10/8`, `172.16/12`, `192.168/16` |
+
+**Vérifications après bascule** : 22/80/135/445/3389/5985/11112 injoignables
+depuis Internet ✅ ; flux proxy→80 vivant ✅ ; Zabbix interroge toujours
+(source `57.130.34.122`) ✅ ; handshake WireGuard frais ✅ ; sessions RDP
+hostiles coupées par la bascule, connexions SMB restantes tuées à la main ✅.
+TeamViewer (sortant vers son cloud) n'est **pas** affecté par le pare-feu — le
+« statuer » du reste-à-faire garde tout son sens. Retour arrière si un flux
+légitime imprévu casse : `Set-NetFirewallProfile -All -Enabled False` par SSH,
+puis lire `%systemroot%\system32\LogFiles\Firewall\pfirewall.log`.
+
 ---
 
 ## Reste à faire
 
-- ⚠️⚠️ **Reprendre le patching Windows** : dernier correctif de sécurité le
-  20/02/2024, uptime 124 j ([Sécurité](#sécurité--relevé-du-29082026)).
-  Prévoir une fenêtre de maintenance (reboot) en coordination avec la
-  réplication TELLIS et l'alimentation `/PACS_TIM_BCK/`.
-- ⚠️ **Scanner la surface publique depuis l'extérieur** (`188.165.77.137`) :
-  l'inventaire montre RDP/WinRM/SMB/Oracle à l'écoute sur toutes les adresses,
-  le filtrage réel est inconnu.
+- ✅ ~~Reprendre le patching Windows~~ — **patché et redémarré le 30/08/2026**
+  ([Sécurité](#sécurité--relevé-du-29082026)). Reste : vérifier fin septembre
+  que le canal de mise à jour continue de fonctionner.
+- ✅ ~~Scanner la surface publique depuis l'extérieur~~ — fait le 30/08/2026,
+  verdict sans appel : pare-feu désactivé, tout exposé. Fermé le jour même
+  ([Accès SSH et pare-feu](#accès-ssh-et-pare-feu-30082026)).
+- ⚠️ **Changer le mot de passe du compte `admin`** : il a essuyé un bruteforce
+  massif (> 5 000 tentatives/24 h) pendant une durée indéterminée, sur un nom
+  de compte évident. Aucune réussite détectée sur la fenêtre auditée (~24 h),
+  mais la fenêtre est courte — rotation prudente, et l'occasion d'auditer les
+  journaux plus en profondeur si le cœur nous en dit.
+- 📋 **Relire `pfirewall.log` d'ici quelques jours** (rejets journalisés) pour
+  attraper un éventuel flux légitime rare que la liste blanche du 30/08 aurait
+  manqué — un client DICOM direct oublié, par exemple.
 - ⚠️ **Désactiver NetBIOS sur « Ethernet 2 »** (propriétés IPv4 → WINS, ou clé
   `NetbiosOptions=2` de l'interface) — confirmé encore actif au 29/08/2026
-  (ports 137/139 liés aux trois pattes).
-- ⚠️ **Restreindre le pare-feu Windows sur la patte vRack** : en entrée,
-  autoriser le port HTTP depuis `10.40.0.10` (proxy-tim), ICMP, et RDP depuis
-  `10.90.0.0/24` ; bloquer le reste. Sans risque de verrouillage : l'accès
-  public n'est pas concerné.
+  (ports 137/139 liés aux trois pattes). Exposition **bloquée** par le pare-feu
+  depuis le 30/08, mais la désactivation propre reste à faire.
+- ✅ ~~Restreindre le pare-feu Windows sur la patte vRack~~ — **dépassé le
+  30/08/2026 : pare-feu allumé sur les trois profils avec liste blanche
+  complète**, patte publique comprise
+  ([Accès SSH et pare-feu](#accès-ssh-et-pare-feu-30082026)).
 - ✅ ~~Statuer sur Veeam B&R~~ — **entièrement désinstallé le 30/08/2026**
   (B&R puis, dans la foulée, Agent + VSS Integration + VSS HW Provider +
   VDDK — l'inventaire de 14:07 ne montre plus aucun composant). Restes
