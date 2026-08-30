@@ -10,7 +10,7 @@ re-collectés dans les 4 minutes suivant le switch.
 |---|---|
 | Adresse interne | `10.40.0.60/24` (VLAN 400), passerelle `10.40.0.1` |
 | Nom public | `zabbix.teleimagerie.net` — derrière **proxy-tim** (VIP `.122`), pas de VIP dédiée |
-| Ressources | 4 vCPU, 8 Go RAM (plafond LXC), disque 40 Go sur Ceph |
+| Ressources | **2 vCPU, 4 Go RAM** (réduits le 30/08 sur mesures : 608 Mio utilisés, load 0,00 — caches Zabbix ramenés à 128M/128M, remplis à 2 %/0 %, et `innodb_buffer_pool_size` **monté** 128M → 512M pour la base de 3,2 Gio), disque 40 Go sur Ceph |
 | Accès | `ssh root@10.40.0.60` depuis un nœud (clés cluster + clé WSL de matt) |
 | Haute dispo | ressource HA depuis le 29/08/2026 (`max_restart 3`, `max_relocate 3`) |
 | Bascule mesurée | **~19-20 s** (relocalisation pve2 → pve3, sonde 1 s sur l'UI publique) |
@@ -73,11 +73,12 @@ le SPF, la configuration voyage dans le dump).
 | Hôte | Mode | IP constatée (tcpdump 10051) | Après bascule (29/08, 15:55 UTC) |
 |---|---|---|---|
 | Zabbix server | passif local | 127.0.0.1 | ✅ agent2 du CT |
-| `pacs03.teleimagerie.net` | **passif** (197 items) | 188.165.77.137 | ✅ accepte les polls depuis `.121` sans reconfiguration |
-| `gestion.teleimagerie.net` | **passif** (137 items) | 51.210.24.59 | ✅ idem |
-| `prod01.teleimagerie.net` | **actif** (62 items) | 37.61.243.245 | ✅ a suivi le DNS (< 4 min) |
+| `pacs03.teleimagerie.net` | **passif** (197 items) | 188.165.77.137 | ⚠️ corrigé le 30/08 : rejetait la source `.121` (whitelist = le nom → VIP) — **réparé par le NAT sortant `.122`** |
+| `gestion.teleimagerie.net` | **passif** (137 items) | 51.210.24.59 | ✝ serveur décommissionné (mort depuis le 27/08) — **hôte supprimé de Zabbix le 30/08** |
+| `prod01.teleimagerie.net` | **actif** (62 items) | 37.61.243.245 | ✝ **hôte supprimé de Zabbix le 30/08** sur instruction (agent muet depuis le 27/08) |
 | `WIN-SRV-TSPLUS` | **actif** (156 items) | 37.61.243.246 (TSplus, TELLIS) | ✅ a suivi le DNS (< 4 min) |
-| `TIMWFMCORE` | **actif** (187 items) | 162.19.25.107 (`vps-2e178199.vps.ovh.net`) 📋 | ✅ a suivi le DNS (< 4 min) |
+| `TIMWFMCORE` | **actif Windows** | IP non capturée (agent actif) | ✅ **rétabli le 30/08** : muet depuis la bascule (agent accroché à l'ancienne résolution DNS), reparti après **redémarrage de l'agent sur la machine** — 63/77 items frais en 2 min. Épisode du 30/08 au matin : cru à tort Linux à cause de `162.19.25.107` (voir ligne suivante), re-templaté ~1 h puis rétabli |
+| ~~`162.19.25.107`~~ (`vps-2e178199.vps.ovh.net`) | — | 162.19.25.107 | **ancien serveur MYTIM** : ne sert plus mais toujours allumé, agent Zabbix 7.4 actif et whitelist ouverte sur zabbix — **pas de supervision souhaitée** (décidé le 30/08). Candidat à l'extinction/résiliation : une machine oubliée allumée est une surface d'attaque |
 | `CMSI-LES-HERBIERS` | 1 item, quasi mort | pas vu en 3 min | toujours muet — à trancher (supprimer ?) |
 
 Pas de proxy Zabbix, pas de traps SNMP (trapper désactivé), pas de JMX/IPMI,
@@ -140,10 +141,21 @@ heure d'attente pour l'expiration des caches 3600) :
 
 Contrôles post-bascule, tous ✅ le jour même :
 
-- **les 6 hôtes re-collectés < 4 min après le switch** — les 3 agents actifs
-  (TSplus, prod01, TIMWFMCORE) référençaient le **nom**, et les agents passifs
-  (pacs03, gestion) ont accepté les polls depuis la nouvelle source `.121`
-  sans reconfiguration : la « campagne agents » redoutée n'a pas eu lieu ;
+- les 3 agents actifs (TSplus, prod01, TIMWFMCORE) référençaient le **nom**
+  et ont suivi le DNS en < 4 min ;
+- ⚠️ **corrigé le 30/08 : les passifs n'ont PAS suivi.** Les « données
+  fraîches » vues le soir de la bascule n'étaient que le sous-ensemble actif.
+  En réalité : **pacs03** rejette les polls depuis la nouvelle source `.121`
+  (whitelist `Server=` de son agent — problème « agent not available » ouvert
+  depuis 15:55 le 29/08, sévérité Average donc jamais mailé), et **gestion**
+  était déjà morte **avant** la migration (refus TCP depuis le 27/08 07:16 —
+  et pour cause : **serveur décommissionné**, hôte supprimé de Zabbix le
+  30/08 sur instruction). **Résolution pacs03 le 30/08, sans toucher à
+  Windows** : test depuis le CT 201 (qui sort en `.122`) → `agent.ping=1`,
+  preuve que sa whitelist contient le *nom* (→ VIP `.122`) ; une règle de
+  NAT sortant fait désormais sortir le CT 204 en `.122` (son identité
+  publique) et la collecte passive est repartie en ~60 s
+  ([08-opnsense.md](08-opnsense.md#filtrage)) ;
 - UI par le vrai DNS : `200 via 57.130.34.122` ; schéma migré 7.0.22 → 7.0.30
   automatiquement à la première connexion ;
 - **drainage instantané : zéro paquet** sur 10051/443 du VPS 10 min après le
@@ -175,7 +187,18 @@ perte : ce que le CT a collecté entre-temps.
   fenêtre par prudence ; archivage à froid (dump + `/etc/zabbix`) vers
   `nas-vm`, `poweroff`, puis espace client OVH — et marquer `revert` caduque
   dans `bascule-zabbix.py` (précédent `bascule-3noms.py`) ;
-- [ ] `CMSI-LES-HERBIERS` : hôte quasi mort (1 item), à supprimer ou réparer.
+- [ ] `CMSI-LES-HERBIERS` : hôte quasi mort (1 item), à supprimer ou réparer ;
+- [ ] **agent Zabbix de pacs03 planté le 30/08 ~08:08** (port 10050 refusé =
+  processus mort ; agent2 7.4.1 pourtant récent — crash survenu juste après
+  une découverte de services forcée). **Action RDP/PowerShell** :
+  `Restart-Service 'Zabbix Agent 2'` puis armer le redémarrage automatique :
+  `sc.exe failure "Zabbix Agent 2" reset= 86400 actions= restart/60000/restart/60000/restart/60000`.
+  La production PACS (web/DICOM) n'est pas affectée ;
+- [ ] **backlog d'alertes purgé le 30/08** (13 problèmes anciens fermés, dont
+  services XnTELEMEDCLOUD arrêtés sur pacs03 depuis le 15/08, disques F: > 80 %
+  sur pacs03 et TSplus) : ces conditions persistantes **re-déclencheront** —
+  c'est voulu, elles reviendront datées d'aujourd'hui ; les traiter sur les
+  machines ([15-pacs-secours.md](15-pacs-secours.md#reste-à-faire)).
 
 ---
 
@@ -226,7 +249,15 @@ avec un token **lecture seule** :
 
 Tableau de bord **« Cluster PVE »** (partagé) : état instantané (quorum, Ceph,
 OSD, API) + problèmes, graphes nœuds, stockage, invités vus par l'API, FS et
-charge vus par les agents, échéances des certificats.
+charge vus par les agents, échéances des certificats. Depuis le 30/08/2026,
+les invités figurent aussi dans les deux tableaux **« Top hosts by CPU
+utilization » et « Top hosts by RAM utilization » de « Global view »**, mêlés
+à la flotte historique (groupe « Infrastructure PVE » ajouté à ces deux
+widgets seulement, limite d'affichage relevée à 20 lignes — 11 hôtes
+éligibles, les invités idle passaient sous la coupe des 10 par défaut).
+OPNsense n'y apparaît pas : son agent FreeBSD nomme ses items autrement ; sa
+santé est sur le tableau de bord « Cluster PVE ». Les tableaux de bord vivent
+dans la base : couverts par le dump 01:15 + PBS 02:00.
 
 ### Alertes (mail = High/Disaster via « ALERTE HAUTE » → support@ + mcapon@)
 
@@ -269,9 +300,11 @@ problème High à 19:40:29 → **mails partis vers support@ et mcapon@** (statut
 
 ## Risques et limites
 
-- **SPOF OPNsense** : tous les polls sortants passent par le NAT `.121` et le
-  10051 entrant par la VIP `.122` — une panne d'OPNsense (~2 min de bascule HA)
-  aveugle la supervision, exactement la fenêtre du test 6
+- **SPOF OPNsense** : tous les polls sortants sortent en **`.122`** (NAT
+  sortant dédié depuis le 30/08 — l'identité publique de zabbix, celle que
+  les whitelists `Server=` des agents reconnaissent via le nom) et le 10051
+  entrant arrive par la même VIP — une panne d'OPNsense (~2 min de bascule
+  HA) aveugle la supervision, exactement la fenêtre du test 6
   ([08-opnsense.md](08-opnsense.md#risques-et-limites)).
 - **Le monitoring ne se surveille toujours pas lui-même** : l'incident du 28/08
   le prouve. Une sonde externe minimale sur `https://zabbix.teleimagerie.net/`

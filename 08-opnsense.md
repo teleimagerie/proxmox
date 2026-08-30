@@ -93,7 +93,9 @@ Règles dans l'ordre d'évaluation (la première qui correspond gagne) :
 > ([07-pieges.md, piège 29](07-pieges.md#29-la-réflexion-nat-seule-ne-suffit-pas--il-faut-aussi-le-nat-sortant-du-retour)).
 
 **NAT sortant** en mode hybride : `10.40.0.0/24` est masqué derrière
-`57.130.34.121`, `10.40.0.10` (proxy-tim) derrière `57.130.34.122`, et
+`57.130.34.121`, `10.40.0.10` (proxy-tim) et **`10.40.0.60` (zabbix, depuis
+le 30/08/2026 — les whitelists `Server=` des agents distants reconnaissent le
+nom, donc la VIP)** derrière `57.130.34.122`, et
 `10.40.0.30` (headscale) derrière `57.130.34.123`. Les règles
 automatiques sont toutes attachées à `vtnet0` : le trafic à destination du site
 distant sort par `wg2` et **n'est donc pas masqué**, ce qu'il faut pour un
