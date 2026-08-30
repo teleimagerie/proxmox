@@ -343,7 +343,9 @@ Deux notes pour éviter des heures perdues :
   pas d'autres alias nativement. Sans importance en SSO : on ne tape son
   identifiant qu'une fois, chez Keycloak, plus jamais dans les applications.
 - **Vérifier des attributs avec l'API brute**, pas avec
-  `kcadm get users/<id> --fields attributes` : ce filtre affiche `{}` même
+  `kcadm get … --fields <champ-carte>` — le filtre affiche `{}` pour
+  **toute carte** (`attributes`, `smtpServer`… constaté deux fois, les
+  29 et 30/08/2026) même
   quand les attributs existent (constaté le 29/08/2026 —
   `GET /admin/realms/tim/users/<id>` sans filtre montre la réalité).
 
@@ -372,6 +374,11 @@ Vérifié le 30/08/2026 : `testSMTPConnection` → **204**, e-mail de test
 réellement expédié vers `mcapon@teleimagerie.net` via Mailjet ; le lien
 « Mot de passe oublié ? » apparaît sur la page de login. Copie de transit
 de la clé détruite de pve1 après le test.
+
+**Re-tester l'envoi sans la clé** (fait le 30/08/2026 après un réglage côté
+Mailjet) : `POST /admin/realms/tim/testSMTPConnection` avec la config
+stockée du realm et `"password": "**********"` — Keycloak substitue le mot
+de passe enregistré ; le mail part vers l'e-mail de l'admin connecté.
 
 **Rotation de la clé** : redéposer `/root/.secrets/mailjet`
 (`MJ_APIKEY=`/`MJ_SECRET=`) sur pve1 et rejouer la mise à jour
