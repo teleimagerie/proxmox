@@ -306,11 +306,11 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   liaison avec confirmation ; compte Workspace technique passé puis supprimé —
   [16-keycloak.md](16-keycloak.md#brokering-google-workspace--en-place-depuis-le-27082026)).
   Microsoft 365 (`isoteam.mn`) pourra suivre par la même mécanique.
-- **SMTP Mailjet — en attente de la clé API** (préparé le 29/08/2026) : sans
-  lui, pas de « mot de passe oublié » ni d'e-mails d'onboarding. Le domaine
-  est déjà validé chez Mailjet (SPF/DKIM en zone), la procédure de reprise
-  complète est prête :
-  [16-keycloak.md](16-keycloak.md#e-mail-sortant--smtp-mailjet-préparé-le-29082026-️-en-attente-de-la-clé).
+- ~~**SMTP Mailjet — en attente de la clé API**~~ — **en place le
+  30/08/2026** : relais `in-v3.mailjet.com:587` sur le realm `tim`,
+  expéditeur `auth@teleimagerie.net`, « mot de passe oublié » activé,
+  e-mail de test réellement expédié (`testSMTPConnection` → 204) —
+  [16-keycloak.md](16-keycloak.md#e-mail-sortant--smtp-mailjet-en-place-depuis-le-30082026).
 - **MyTIM** (application interne de gestion) : ~~documenter hébergement et
   technologie~~ (fait le 29/08/2026 : `app`/`gestion` → `51.210.24.59`,
   Symfony 7.4/FrankenPHP chez OVH, deux tenants). **Intégration OIDC développée
