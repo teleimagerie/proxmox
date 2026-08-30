@@ -188,12 +188,13 @@ perte : ce que le CT a collecté entre-temps.
   `nas-vm`, `poweroff`, puis espace client OVH — et marquer `revert` caduque
   dans `bascule-zabbix.py` (précédent `bascule-3noms.py`) ;
 - [ ] `CMSI-LES-HERBIERS` : hôte quasi mort (1 item), à supprimer ou réparer ;
-- [ ] **agent Zabbix de pacs03 planté le 30/08 ~08:08** (port 10050 refusé =
-  processus mort ; agent2 7.4.1 pourtant récent — crash survenu juste après
-  une découverte de services forcée). **Action RDP/PowerShell** :
-  `Restart-Service 'Zabbix Agent 2'` puis armer le redémarrage automatique :
-  `sc.exe failure "Zabbix Agent 2" reset= 86400 actions= restart/60000/restart/60000/restart/60000`.
-  La production PACS (web/DICOM) n'est pas affectée ;
+- [x] ~~agent Zabbix de pacs03 planté le 30/08 ~08:08~~ — **traité le 30/08** :
+  service redémarré par l'utilisateur (198/213 items re-collectés, alerte
+  refermée seule) puis **récupération automatique armée** en console élevée :
+  `sc.exe failure "Zabbix Agent 2" reset= 86400 actions= restart/60000/restart/60000/restart/60000`
+  (le crash — agent2 7.4.1, survenu juste après une découverte de services
+  forcée — ne restera plus silencieux : Windows relance sous 60 s). La
+  production PACS n'avait pas été affectée ;
 - [ ] **backlog d'alertes purgé le 30/08** (13 problèmes anciens fermés, dont
   services XnTELEMEDCLOUD arrêtés sur pacs03 depuis le 15/08, disques F: > 80 %
   sur pacs03 et TSplus) : ces conditions persistantes **re-déclencheront** —
