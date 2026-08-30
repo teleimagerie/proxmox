@@ -282,7 +282,12 @@ CSS + un fichier de messages — aucune structure HTML touchée, les pages
 > recopier dans la nouvelle version (étape ajoutée à la routine ci-dessus).
 > Oubli = retour silencieux au thème standard au premier restart.
 > Après toute modification du thème : `systemctl restart keycloak`
-> (le cache de thèmes est actif en production).
+> (le cache de thèmes est actif en production) — **et renommer le fichier
+> CSS** (`tim-2.css` → `tim-3.css`…, référencé dans `theme.properties`) :
+> les ressources `/resources/` sont servies avec **30 jours de cache
+> navigateur** et une URL stable — sans renommage, les clients gardent
+> l'ancienne version (constaté le 30/08/2026 : deux déploiements invisibles
+> pour l'utilisateur).
 
 Vérifié le 30/08/2026 sur la page réelle : `lang="fr"`, onglet « Se connecter
 à TIM », `tim.css` et `logo.png` servis en 200, formulaire en français,

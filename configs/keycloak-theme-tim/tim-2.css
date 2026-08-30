@@ -1,5 +1,8 @@
 /* Page de connexion aux couleurs TIM — calquee sur la page de login de
-   gestion/MyTIM (assets/styles/themes/tim.css du projet gestion). */
+   gestion/MyTIM (assets/styles/themes/tim.css du projet gestion).
+   Fichier renomme tim-2.css le 30/08/2026 : les ressources /resources/ sont
+   servies avec un cache navigateur de 30 jours — toute modification de CSS
+   doit changer de nom de fichier pour etre vue immediatement partout. */
 
 :root {
   --pf-v5-global--primary-color--100: #1e3a8a;
@@ -16,14 +19,16 @@ body, .pf-v5-c-login {
 
 /* bandeau haut : le nom du realm (texte blanc, invisible sur fond clair)
    est remplace par le logo TIM, centre, 125 px — comme sur gestion */
-#kc-header-wrapper.pf-v5-c-brand,
 #kc-header-wrapper {
-  display: block;
-  height: 125px;
-  width: 100%;
-  text-indent: -9999px;
-  overflow: hidden;
-  background: url("../img/logo.png") no-repeat center / contain;
+  display: block !important;
+  height: 125px !important;
+  width: 100% !important;
+  max-width: none !important;
+  text-indent: -9999px !important;
+  font-size: 0 !important;
+  color: transparent !important;
+  overflow: hidden !important;
+  background: url("../img/logo.png") no-repeat center / contain !important;
 }
 
 .pf-v5-c-button.pf-m-primary {
