@@ -1,11 +1,11 @@
 # ERP Odoo — migration VPS → VM 101
 
-> **✅ EN PRODUCTION sur le cluster depuis le 29/08/2026, 16:18 UTC.**
-> Bascule DNS faite et vérifiée de bout en bout (récit chiffré plus bas),
-> coupure effective ~4 min + ~2 min de fenêtre TLS. Le VPS est gelé
-> (conteneur `web` arrêté, données intactes) : le retour arrière
-> `bascule-odoo.py revert` reste possible jusqu'à sa résiliation, mais
-> toute écriture postérieure à la bascule serait alors perdue.
+> **✅ EN PRODUCTION sur le cluster depuis le 29/08/2026, 16:18 UTC —
+> migration terminée et soldée le 30/08/2026.** Bascule vérifiée de bout en
+> bout (récit chiffré plus bas), sauvegardes 3 niveaux validées dont une
+> restauration réelle, **VPS résilié le 30/08** : il n'y a plus d'« ancien
+> chemin », l'action `revert` de `bascule-odoo.py` est caduque (comme celle
+> de `bascule-3noms.py` avant elle).
 
 ## Identité
 
@@ -14,10 +14,10 @@
 | Invité | **VM 101** `odoo`, QEMU, Ubuntu 24.04 (cloud-init noble) |
 | Ressources | 4 vCPU `host`, 4 Go RAM, 40 Go sur `vm-storage` (Ceph) |
 | Réseau | vmbr1 `tag=400`, `10.40.0.70/24`, gw `10.40.0.1`, DNS `10.40.0.1` |
-| Nom public | `odoo.teleimagerie.net` → `57.130.34.122` (TTL 60 jusqu'à résiliation du VPS), AAAA supprimé ; vue interne : override Unbound → `10.40.0.10` |
+| Nom public | `odoo.teleimagerie.net` → `57.130.34.122` (TTL 3600 depuis le 30/08), AAAA supprimé ; vue interne : override Unbound → `10.40.0.10` |
 | Application | Odoo 17 (Docker Compose), PostgreSQL 16, base `odoo` ~175 Mo, filestore ~586 Mo |
 | Dépôt | `github.com:teleimagerie/odoo.git`, **branche `proxmox`** déployée dans `/srv/odoo` |
-| Source remplacée | VPS OVH `vps-f18bcfe7.vps.ovh.net` — gelé le 29/08, accès **par IP** `ssh ubuntu@91.134.75.199` (le nom résout désormais vers le cluster) |
+| Source remplacée | VPS OVH `vps-f18bcfe7.vps.ovh.net` — éteint le 29/08, **résilié le 30/08/2026** (les données MySQL Dolibarr sont parties avec lui, décision actée) ; l'accès `ssh ubuntu@91.134.75.199` n'existe plus |
 | HA | **ressource HA depuis le 29/08/2026** (`max_restart 3`, `max_relocate 3`), démarrée sur pve1 |
 
 Choix structurants : **VM plutôt que CT** (Docker en LXC non privilégié =
@@ -222,17 +222,16 @@ sur la VM entre bascule et revert sont perdues. Le point de non-retour est la
      sauvegarde de preuve produite (470 Mo, rétention 30 j). Les erreurs
      `.map … debug assets` des logs sont cosmétiques (sourcemaps d'anciennes
      versions d'assets après le `-u base`).
-3. Ansible : inventaire → `10.40.0.70` (ProxyJump pve1 ou WireGuard),
-   fusionner `proxmox` dans `main`, **déclarer la deploy key de la VM sur
-   GitHub** (`odoo-vm101`), révoquer celle du VPS (déjà morte).
-4. ✅ Documents joints validés (SHA1, voir récit) ; ✅ **VPS éteint le 29/08
-   16:42 UTC** sur décision utilisateur (drainage de 3 jours sauté). Reste :
-   **résiliation** dans l'espace client OVH (⚠️ emporte définitivement les
-   données MySQL Dolibarr, décision actée), puis `bascule-odoo.py ttl3600`
-   sur pve1 et re-rafraîchir
-   [configs/zone-teleimagerie.net](configs/zone-teleimagerie.net).
-5. Réactiver un jour la relève du mail entrant (état `draft` hérité du VPS,
-   voir récit) ; raccordement Keycloak : chantier séparé.
+3. ✅ Le 30/08 : deploy key `odoo-vm101` déclarée sur GitHub et **testée**
+   (fetch depuis la VM avec sa propre clé), branche `proxmox` **fusionnée
+   dans `main`** (fast-forward) et la VM repasse sur `main` ; inventaire
+   Ansible basculé sur `10.40.0.70` (clé ed25519, ProxyJump pve1).
+4. ✅ Documents joints validés (SHA1, voir récit) ; ✅ VPS éteint le 29/08
+   16:42 UTC puis **résilié le 30/08** ; ✅ TTL remonté à 3600 et export de
+   zone rafraîchi le 30/08.
+5. Reste (chantiers séparés) : réactiver un jour la relève du mail entrant
+   (état `draft` hérité du VPS, voir récit) ; raccordement Keycloak
+   ([16-keycloak.md](16-keycloak.md)).
 
 ## Restauration
 

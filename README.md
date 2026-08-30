@@ -113,7 +113,7 @@ Supervision              Zabbix 7.0 (CT 204) · zabbix.teleimagerie.net
                          quorum, Ceph, nearfull 85 %, 7 invités (API + agents),
                          certificats · dashboard « Cluster PVE » · mail testé
 ERP                      Odoo 17 (VM 101, Ubuntu 24.04 + Docker) · odoo.teleimagerie.net
-                         en production depuis le 29/08 16:18 UTC · VPS gelé, à résilier
+                         en production depuis le 29/08 · VPS résilié le 30/08
 ```
 
 **Capacité réellement exploitable** : ~1,36 Tio de disque Ceph (seuil `nearfull` à

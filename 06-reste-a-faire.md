@@ -157,11 +157,12 @@ Deux corrections possibles si l'on veut le supprimer :
 
 ## 7. Divers
 
-- ⚠️⚠️ **pacs03 sans correctif Windows depuis le 20/02/2024** (inventaire du
-  29/08/2026) — un Windows exposé sur IP publique, hors cluster mais portant
-  le PACS de secours. Le plan d'action (patching, scan de surface, pare-feu,
-  Veeam à documenter) vit dans
-  [15-pacs-secours.md](15-pacs-secours.md#reste-à-faire).
+- ✅ **pacs03 patché, redémarré et allégé le 30/08/2026** (précédent
+  correctif : 20/02/2024) — swap porté de 2 à 16 Go, **Veeam désinstallé**
+  (jamais configuré ; ports 111/2049/6160/9392 vérifiés fermés). Restent au
+  plan d'action : scan de surface, pare-feu, canal de mise à jour à revérifier
+  dans un mois — et noter que **hors cluster, hors PBS : sa seule sauvegarde
+  est la tâche Oracle** — [15-pacs-secours.md](15-pacs-secours.md#reste-à-faire).
 - **Un 4ᵉ nœud** rendrait l'auto-guérison Ceph possible et supprimerait la
   dégradation durable après panne. À considérer si la charge grandit.
 - ~~**CephFS** pour partager ISO et templates~~ — sans objet depuis le
@@ -332,7 +333,7 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
 
 ---
 
-## 11. Migration Odoo (VPS → VM 101) — ✅ bascule faite le 29/08/2026
+## 11. Migration Odoo (VPS → VM 101) — ✅ TRAITÉ, soldé le 30/08/2026
 
 **En production sur le cluster depuis le 29/08/2026 16:18 UTC** — préparation,
 répétition générale et bascule le même jour, coupure ~4 min + ~2 min de
@@ -346,15 +347,13 @@ déclarée. Nettoyage restant :
   `./backups` (dossier du clone git) — corrigé (`chown` uid 101), sauvegarde
   de preuve produite ;
 - ✅ migration à chaud de validation faite le 29/08 au soir (pve1 → pve2, ~1 s) ;
-- **deploy key GitHub de la VM** à déclarer sur `teleimagerie/odoo`
-  (clé `/home/ubuntu/.ssh/id_ed25519.pub`, commentaire `odoo-vm101`) ;
-  révoquer celle du VPS (déjà morte) ; inventaire Ansible → `10.40.0.70` ;
-  fusion de la branche `proxmox` dans `main` ;
-- ✅ documents joints validés (3 918 fichiers, SHA1 conformes) et **VPS
-  éteint le 29/08 16:42 UTC** — drainage de 3 jours sauté sur décision
-  utilisateur, redémarrage possible depuis la console OVH. Reste :
-  **résiliation** `vps-f18bcfe7` dans l'espace client (décision actée : les
-  données MySQL Dolibarr partent avec lui, sans archive), puis
-  `bascule-odoo.py ttl3600` et rafraîchissement de l'export de zone ;
+- ✅ deploy key `odoo-vm101` déclarée et testée le 30/08, branche `proxmox`
+  fusionnée dans `main` (la VM suit `main`), inventaire Ansible basculé sur
+  `10.40.0.70` ;
+- ✅ documents joints validés (3 918 fichiers, SHA1 conformes), **VPS
+  éteint le 29/08 16:42 UTC puis résilié le 30/08** (drainage de 3 jours
+  sauté sur décision utilisateur ; les données MySQL Dolibarr sont parties
+  avec lui, sans archive, décision actée), TTL remonté à 3600 et export de
+  zone rafraîchi le 30/08 ;
 - **relève du mail entrant** : déjà à l'état `draft` sur le VPS (constat
   post-bascule, pas une régression) — à réactiver un jour depuis l'interface.
