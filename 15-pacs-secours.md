@@ -120,13 +120,21 @@ vRack/`wg2` est un chantier futur, consigné dans
 
 ---
 
-## Inventaire du 29/08/2026
+## Inventaire du 30/08/2026
 
 Relevé complet par [scripts/inventaire-windows.ps1](scripts/inventaire-windows.ps1),
-**sans droits administrateur** (la liste et la santé des disques physiques
-manquent), archivé brut dans
-[configs/inventaire-pacs03-2026-08-29.md](configs/inventaire-pacs03-2026-08-29.md).
+**avec droits administrateur** cette fois (post-patching et désinstallation de
+Veeam B&R), archivé brut dans
+[configs/inventaire-pacs03-2026-08-30.md](configs/inventaire-pacs03-2026-08-30.md)
+(remplace celui du 29/08, conservé dans l'historique git).
 Ci-dessous ce que la fiche doit en retenir.
+
+Matériel désormais connu : GIGABYTE MX33-BS1-V1, Xeon E-2386G (6c/12t),
+32 Go ECC (64 max), **2 × 6 To HDD SATA + 2 × 512 Go NVMe Samsung, les 4
+« Healthy »**. Les tailles de volumes (C:+D: ≈ un NVMe ; E:+F: ≈ un HDD)
+suggèrent **deux miroirs** 📋 — à confirmer (gestionnaire de disques ou BIOS).
+BIOS F09d de 2023 : une mise à jour existe probablement, à regarder lors d'une
+prochaine fenêtre.
 
 ### Ce que fait réellement ce serveur
 
@@ -166,31 +174,53 @@ vide sans admin, l'état du RAID logiciel est aujourd'hui invérifiable ⚠️
 (smartmontools est installé, sans doute pour ça). Partages SMB : `PACS`
 (`F:\PACS`) et `VBRCatalog` (`F:\VBRCatalog`).
 
-### Veeam B&R — installé mais jamais configuré : ne sauvegarde rien
+### Veeam B&R — ✅ désinstallé le 30/08/2026 (n'avait jamais rien sauvegardé)
 
-La machine porte **Veeam Backup & Replication 12.1 serveur entier** (installé
-le 28/06/2024) : ~20 services, tous les plugins (AWS, Azure, GCP, Nutanix,
-oVirt, Kasten), catalogue dans `F:\VBRCatalog`, une quinzaine de ports à
-l'écoute, plus le PostgreSQL 15 local (sa base de configuration). Mais —
-**précision utilisateur du 29/08/2026 : il n'a jamais été configuré et ne
-sauvegarde rien.** Ce n'est donc pas un deuxième système de sauvegarde, c'est
-une **surface d'attaque et une consommation de ressources sans contrepartie**
-(dont un NFS 111/2049 à l'écoute) sur une machine au patching arrêté.
-Décision à prendre au [Reste à faire](#reste-à-faire) : désinstaller, ou
-enfin le configurer.
+La machine portait **Veeam Backup & Replication 12.1 serveur entier** (installé
+le 28/06/2024) : ~20 services, tous les plugins, catalogue dans `F:\VBRCatalog`,
+une quinzaine de ports à l'écoute — mais **jamais configuré, zéro sauvegarde**
+(précision utilisateur du 29/08). Une surface d'attaque sans contrepartie.
+Chronologie de la résolution : au reboot post-patching du 30/08 ses services
+ne sont pas repartis (salve d'alertes Zabbix), l'utilisateur a **désinstallé**
+dans la foulée. Vérifié depuis le vRack : **111, 2049, 6160, 9392 fermés**.
+Les 21 alertes ont été fermées manuellement ; les items découverts
+disparaîtront d'eux-mêmes à l'échéance de rétention LLD (7 j).
 
-Conséquence pour la fiche : la seule sauvegarde active sur ce serveur est la
-tâche applicative `Save_base.bat` (Oracle — destination et horaires à relever
-avec des droits admin ⚠️). Les images de `F:` n'ont pas d'autre copie ici —
-cohérent avec le rôle de la machine, qui est *elle-même* le secours du PACS
-principal, mais à garder en tête.
+L'inventaire de 13:55 avait révélé une désinstallation partielle (Agent,
+VSS Integration, VSS HW Provider, VDDK encore actifs) — **soldée dans la
+foulée : l'inventaire de 14:07 ne montre plus aucun composant Veeam**, ni
+logiciel, ni service, ni port. Restes passifs à nettoyer un jour : le partage
+SMB `VBRCatalog` (`F:\VBRCatalog`) et le **PostgreSQL 15** (l'ex-base de
+config B&R, service toujours en marche sur 127.0.0.1:5432 pour rien).
+
+### Services critiques — supervision renforcée depuis le 30/08/2026
+
+Déclarés critiques par l'utilisateur le 30/08/2026 : **`XnCONSOLEPACS`**
+(console web, port 104), **`XnDicomSCU`**, **`XnDICOMVIEWER`**,
+**`XnTELEMEDGATEWAY`** (port 109) et **`XnXPLOREVIEWWEB`**. Pour chacun,
+Zabbix porte un déclencheur dédié **High** « SERVICE CRITIQUE … en anomalie »
+qui sonne (et **part en mail** via ALERTE HAUTE) dès que l'état du service
+n'est plus *Running* — arrêté, en pause, bloqué en démarrage, ou disparu.
+Les déclencheurs Average « is not running » du template sont désactivés pour
+ces cinq-là (anti-doublon). Le ménage du même jour : les `XnTELEMEDCLOUD_*`
+(7230-7235) passés en **manuel + arrêtés**, WireGuard mis à jour 0.5.3 → 1.1.
+
+> ⚠️ **Situation de sauvegarde à garder en tête** : pacs03 est un **serveur
+> physique hors cluster — PBS ne le couvre pas**, et Veeam parti, la seule
+> sauvegarde active est la tâche applicative `Save_base.bat` (Oracle —
+> destination et horaires à relever avec des droits admin ⚠️). Les images de
+> `F:` n'ont **aucune copie** : cohérent avec le rôle de la machine, qui est
+> *elle-même* le secours du PACS principal — mais c'est un choix, pas un oubli,
+> et il doit rester visible ici.
 
 ### Sécurité — relevé du 29/08/2026
 
-- ⚠️⚠️ **Dernier correctif Windows : 20/02/2024** (KB5034770). Deux ans et
-  demi sans mise à jour de sécurité pour un Windows exposé sur IP publique,
-  uptime 124 j (dernier boot 27/04/2026) : le canal de mise à jour semble à
-  l'arrêt, pas seulement en retard. **Le point noir de la fiche.**
+- ✅ **Correctifs Windows appliqués et machine redémarrée le 30/08/2026**
+  (précédent : KB5034770 du 20/02/2024, deux ans et demi de retard — c'était
+  le point noir de la fiche). Même fenêtre : **fichier d'échange porté de
+  2 Go (plein à 100 % depuis décembre, allocations en danger) à 16 Go fixes**
+  — l'alerte swap Zabbix s'est refermée seule. Reste à s'assurer que le canal
+  de mise à jour **continue** de fonctionner (vérifier dans un mois).
 - ⚠️ **RDP (3389), WinRM (5985), SMB (445), RPC (135), Oracle (1521), NFS
   Veeam (111/2049) écoutent sur toutes les adresses**, patte publique
   comprise. Le pare-feu Windows filtre peut-être — invérifiable sans admin :
@@ -221,11 +251,19 @@ principal, mais à garder en tête.
   autoriser le port HTTP depuis `10.40.0.10` (proxy-tim), ICMP, et RDP depuis
   `10.90.0.0/24` ; bloquer le reste. Sans risque de verrouillage : l'accès
   public n'est pas concerné.
-- ⚠️ **Statuer sur Veeam B&R : désinstaller, ou configurer** — jamais
-  configuré depuis son installation (28/06/2024, précision utilisateur du
-  29/08/2026), il ne sauvegarde rien mais expose ~15 ports (dont NFS).
-  Désinstaller est l'option simple ; le configurer n'a de sens que si un
-  besoin de sauvegarde locale est défini.
+- ✅ ~~Statuer sur Veeam B&R~~ — **entièrement désinstallé le 30/08/2026**
+  (B&R puis, dans la foulée, Agent + VSS Integration + VSS HW Provider +
+  VDDK — l'inventaire de 14:07 ne montre plus aucun composant). Restes
+  passifs à nettoyer un jour : partage SMB `VBRCatalog` et PostgreSQL 15
+  (l'ex-base de config, service actif sur 127.0.0.1:5432 pour rien).
+- ✅ ~~`XnTELEMEDCLOUD_TLMTIM7235` arrêté~~ — tranché le 30/08/2026 :
+  **tous les `XnTELEMEDCLOUD_*` (7230-7235) sont passés en démarrage manuel
+  et arrêtés** (pas besoin de tourner en automatique). Ils sortent du champ
+  de la découverte de services Zabbix (qui ne suit que les services
+  automatiques) : plus d'alertes à leur sujet, par construction.
+- ⚠️ **Services GoogleUpdater** (`GoogleUpdaterService…` ×2) : toujours en
+  automatique + arrêtés → les deux alertes Average subsistent. Même recette
+  que les TELEMEDCLOUD (passage en manuel) ou désinstallation de l'updater.
 - ⚠️ **Documenter la tâche applicative `Save_base.bat`** (avec droits admin) :
   quoi, vers où, à quelle fréquence, et qui surveille ses échecs — c'est la
   **seule** sauvegarde active du serveur.
