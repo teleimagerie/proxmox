@@ -1,0 +1,148 @@
+# Carte réseau du cluster tim-cluster — 3 VM, 4 conteneurs, 3 nœuds.
+#
+# FICHIER GÉNÉRÉ par scripts/genere-carte.py — ne pas éditer à la main.
+# L'inventaire vient de l'API Proxmox ; les zones, rôles et cloisonnements
+# viennent de topologie.yml. Rendu du SVG : make carte.
+
+direction: down
+
+classes: {
+  zone: {
+    style: {
+      fill: "#EFF2F2"
+      stroke: "#B4BFC2"
+      font-size: 16
+    }
+  }
+  machine: {
+    shape: rectangle
+    style: {
+      fill: "#FFFFFF"
+      stroke: "#B4BFC2"
+      font-size: 14
+    }
+  }
+  pivot: {
+    style: {
+      stroke: "#0B7C87"
+      stroke-width: 3
+    }
+  }
+  parefeu: {
+    style: {
+      fill: "#E2F1F2"
+      stroke: "#0B7C87"
+      stroke-width: 3
+    }
+  }
+  publique: {
+    style: {
+      stroke: "#5F7F2E"
+      stroke-width: 2
+    }
+  }
+  wan: {
+    style: {
+      stroke: "#8A6A3B"
+      stroke-width: 2
+    }
+  }
+  externe: {
+    style: {
+      stroke-dash: 4
+    }
+  }
+  # Machines en écart aux règles de topologie.yml.
+  faute: {
+    style: {
+      fill: "#F7E7E3"
+      stroke: "#B0432E"
+      stroke-width: 3
+      font-color: "#8A2F1E"
+    }
+  }
+  alerte: {
+    style: {
+      fill: "#FBF3E7"
+      stroke: "#B8862B"
+      stroke-width: 2
+    }
+  }
+  flux: {
+    style: {
+      stroke: "#0B7C87"
+      stroke-width: 2
+      font-size: 12
+    }
+  }
+  bloque: {
+    style: {
+      stroke: "#B0432E"
+      stroke-width: 2
+      stroke-dash: 4
+      font-size: 12
+    }
+  }
+}
+
+internet: "Internet\nclients · nomades · site distant" { shape: cloud; class: [machine] }
+
+public: "Bloc public OVH — 57.130.34.120/29" {
+  class: [zone]
+  direction: right
+  ip121: ".121\nWAN OPNsense\n51820/udp · 51822/udp" { class: [machine; wan] }
+  ip122: ".122\nVIP proxy-tim\n80 · 443 · 10051" { class: [machine; publique] }
+  ip123: ".123\nVIP headscale\n443 · 3478/udp" { class: [machine; publique] }
+}
+
+internet -> public.ip121 { class: [flux] }
+internet -> public.ip122 { class: [flux] }
+internet -> public.ip123 { class: [flux] }
+
+opnsense: "opnsense\nVM 100 · pve3\n57.130.34.121 · 10.40.0.1" { class: [machine; parefeu] }
+
+public.ip121 -> opnsense: "règles wan" { class: [flux] }
+public.ip122 -> opnsense: "rdr → 10.40.0.10" { class: [flux] }
+public.ip123 -> opnsense: "rdr → 10.40.0.30" { class: [flux] }
+
+vlan400: "VLAN 400 — 10.40.0.0/24\nLAN des machines" {
+  class: [zone]
+  proxy_tim: "proxy-tim\nCT 201 · pve2\n10.40.0.10" { class: [machine; pivot] }
+  headscale: "headscale\nCT 202 · pve1\n10.40.0.30" { class: [machine] }
+  keycloak: "keycloak\nCT 203 · pve1\n10.40.0.50" { class: [machine] }
+  zabbix: "zabbix\nCT 204 · pve3\n10.40.0.60" { class: [machine] }
+  odoo: "odoo\nVM 101 · pve2\n10.40.0.70" { class: [machine] }
+  pacs03: "pacs03\nhors cluster\n10.40.0.40" { class: [machine; externe] }
+}
+
+vlan300: "VLAN 300 — 10.30.0.0/24\nInfrastructure" {
+  class: [zone]
+  pbs: "pbs\nVM 102 · pve1\n10.30.0.20" { class: [machine] }
+}
+
+vlan200_100: "VLAN 200 / 100 — 10.200.0.0/24 · 10.100.0.0/24\nCeph · Corosync" {
+  class: [zone]
+}
+
+opnsense -> vlan400.proxy_tim: "→ 10.40.0.10" { class: [flux] }
+opnsense -> vlan400.headscale: "→ 10.40.0.30" { class: [flux] }
+
+vlan400.proxy_tim -> vlan400.keycloak: "proxy_pass" { class: [flux] }
+vlan400.proxy_tim -> vlan400.zabbix: "proxy_pass" { class: [flux] }
+vlan400.proxy_tim -> vlan400.odoo: "proxy_pass" { class: [flux] }
+vlan400.proxy_tim -> vlan400.pacs03: "proxy_pass" { class: [flux] }
+
+vlan400 -> vlan300: "bloqué — LAN → 10.30.0.0/24" { class: [bloque] }
+vlan400 -> vlan200_100: "bloqué — LAN → Ceph et Corosync" { class: [bloque] }
+
+noeuds: "Hyperviseurs — ils portent tous les invités ci-dessus" {
+  class: [zone]
+  direction: right
+  pve1: "pve1\n3 invités" { class: [machine] }
+  pve2: "pve2\n2 invités" { class: [machine] }
+  pve3: "pve3\n2 invités" { class: [machine] }
+}
+
+etat: "✓ Aucun écart — conforme à topologie.yml" { style.fill: "#EDF3E2"; style.stroke: "#5F7F2E"; style.font-color: "#3F5720" }
+
+avertissement_0: "⚠ Une carte sans tag est raccordée au bloc public OVH" { style.fill: "#F7E7E3"; style.stroke: "#B0432E"; style.font-color: "#8A2F1E" }
