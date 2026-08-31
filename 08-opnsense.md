@@ -124,10 +124,10 @@ pair déclaré n'est pas un pair actif.
 point soldé, [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)).
 Clé publique serveur actuelle : `RAkbTNfimG4Lxg8+Ul5/fXYiI6Ov/zEa494EhNISdgE=`.
 La nouvelle clé privée a été générée par script sur OPNsense même et écrite
-directement dans `config.xml`, sans jamais transiter par un terminal. Une copie
-de la config d'avant rotation reste sur OPNsense
-(`/conf/config.xml.avant-brtrnd-2026-08-31-160657`, mode 600) — à supprimer une
-fois les deux clients revus en handshake.
+directement dans `config.xml`, sans jamais transiter par un terminal. La copie
+locale d'avant rotation a été supprimée le 31/08/2026 après contrôle du
+handshake `nomade-01` sur la nouvelle clé ; l'état antérieur reste couvert par
+la sauvegarde NAS (`config-2026-08-29.xml`).
 
 La configuration client `/root/wg-nomade-01.conf` a bien été **retirée de pve1** :
 elle contenait une clé privée et n'existe plus que dans le gestionnaire de secrets.
