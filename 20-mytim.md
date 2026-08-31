@@ -149,18 +149,9 @@ deux modes. À fusionner dans `main` **et** `staging` avant les déploiements
 ### Phase 2 — tim-staging (VM 103)
 
 1. Image `noble-server-cloudimg-amd64.img` (déjà sur `nas-vm/template/iso/`,
-   SHA256 vérifié le 26/08). Création depuis pve1 :
-   ```bash
-   qm create 103 --name tim-staging --memory 8192 --cores 4 --cpu host --ostype l26 \
-     --net0 virtio,bridge=vmbr1,tag=400 --scsihw virtio-scsi-single --agent 1 --onboot 1 \
-     --serial0 socket --vga serial0
-   qm importdisk 103 /mnt/pve/nas-vm/template/iso/noble-server-cloudimg-amd64.img vm-storage
-   qm set 103 --scsi0 vm-storage:vm-103-disk-0 --boot order=scsi0 --ide2 vm-storage:cloudinit
-   qm resize 103 scsi0 150G
-   qm set 103 --ipconfig0 ip=10.40.0.90/24,gw=10.40.0.1 --nameserver 10.40.0.1 \
-     --ciuser ubuntu --sshkeys /root/.ssh/cloudinit-admin-keys.pub   # clés admin + root@pve1
-   qm start 103
-   ```
+   SHA256 vérifié le 26/08). Création depuis pve1 avec le script de
+   l'[annexe A](#annexe-a--script-de-création-dune-vm-mytim) :
+   `bash creer-vm-mytim.sh staging`.
    Vérifier : `qm agent 103 ping`, `getent hosts auth.teleimagerie.net` → `10.40.0.10`
    (vue interne, piège 33), sortie Internet.
 2. Clé de la VM (`ssh-keygen -t ed25519 -C tim-staging-vm103` sous `ubuntu`)
@@ -306,3 +297,60 @@ porté par les hôtes restants), `d69eeb3e` supprimé,
 - Image `gestion-app-php` prébuild sur GHCR au lieu du build sur la VM, si le
   build sur Ceph s'avère lent.
 - Le rôle de `rappro` (dumps) pourrait rejoindre le cluster.
+
+## Annexe A — script de création d'une VM MyTIM
+
+À copier sur pve1 **le jour de la création seulement** (pas de dépôt à
+l'avance : le 31/08/2026 une copie posée « pour plus tard » a été exécutée par
+erreur — VM 103 créée sans disque, détruite dans la foulée, trace `qmcreate`
+puis `qmdestroy` dans l'historique des tâches de pve1). Reprend la recette de
+la VM 101 ([18-odoo.md](18-odoo.md)) : cloud-init noble, DNS `10.40.0.1`
+(piège 33), `serial0` + `vga serial0` pour `qm terminal`, agent invité.
+
+Préalables (humains) : fichier `/root/cloudinit-mytim.pub` sur pve1 contenant
+les clés publiques des admins (celles de `ssh_authorized_keys` dans
+`group_vars/default/vars.yaml` du dépôt gestion — le provisioning Ansible
+réécrira la liste de façon **exclusive**, donc la clé qui servira au rebond
+doit y être) plus `/root/.ssh/id_rsa.pub` de pve1 ; VMID et IP libres
+(`pvesh get /cluster/nextid`, `ping -c1 -W1 10.40.0.9x` depuis pve1).
+
+```bash
+#!/bin/bash
+# creer-vm-mytim.sh {staging|prod} — à exécuter sur pve1.
+# Idempotence : refuse de continuer si le VMID existe déjà.
+export LC_ALL=C
+set -euo pipefail
+
+case "${1:-}" in
+  staging) VMID=103; NAME=tim-staging; IP=10.40.0.90; MEM=8192;  CORES=4; DISK=150G ;;
+  prod)    VMID=104; NAME=tim-prod;    IP=10.40.0.80; MEM=16384; CORES=8; DISK=200G ;;
+  *) echo "usage : $0 {staging|prod}" >&2; exit 2 ;;
+esac
+IMG=/mnt/pve/nas-vm/template/iso/noble-server-cloudimg-amd64.img
+KEYS=/root/cloudinit-mytim.pub
+
+qm status "$VMID" >/dev/null 2>&1 && { echo "VM $VMID existe déjà — stop." >&2; exit 1; }
+[ -s "$KEYS" ] || { echo "$KEYS absent ou vide — stop." >&2; exit 1; }
+ping -c1 -W1 "$IP" >/dev/null 2>&1 && { echo "$IP répond déjà — stop." >&2; exit 1; }
+( cd "$(dirname "$IMG")" && grep "$(basename "$IMG")" SHA256SUMS-noble | sha256sum -c - )
+
+qm create "$VMID" --name "$NAME" --memory "$MEM" --cores "$CORES" --cpu host --ostype l26 \
+  --net0 virtio,bridge=vmbr1,tag=400 --scsihw virtio-scsi-single --agent 1 --onboot 1 \
+  --serial0 socket --vga serial0 --searchdomain teleimagerie.net --nameserver 10.40.0.1
+# Import du disque : ~1 min ; la sortie liste le volume créé (vm-<id>-disk-0).
+qm importdisk "$VMID" "$IMG" vm-storage | tail -1
+qm set "$VMID" --scsi0 "vm-storage:vm-${VMID}-disk-0" --boot order=scsi0 --ide2 vm-storage:cloudinit
+qm resize "$VMID" scsi0 "$DISK"
+qm set "$VMID" --ipconfig0 "ip=${IP}/24,gw=10.40.0.1" --ciuser ubuntu --sshkeys "$KEYS"
+qm start "$VMID"
+
+echo "--- $NAME ($VMID) démarrée ; attendre l'agent puis vérifier :"
+echo "qm agent $VMID ping && ssh ubuntu@$IP 'getent hosts auth.teleimagerie.net; curl -sI https://deb.debian.org | head -1'"
+qm config "$VMID" | grep -E "^(name|scsi0|ide2|ipconfig0|net0|memory|cores|nameserver|onboot)"
+```
+
+Après le script : `getent hosts auth.teleimagerie.net` doit rendre `10.40.0.10`
+(vue interne par l'override Unbound — sinon le DNS n'est pas `10.40.0.1`),
+la sortie Internet doit répondre, et `qm agent <id> ping` doit passer avant de
+lancer le provisioning Ansible. Le script ne touche ni au CT 201, ni à
+OPNsense, ni au DNS, ni à HA : ce sont des étapes séparées du plan.
