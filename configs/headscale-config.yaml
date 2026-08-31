@@ -1,3 +1,5 @@
+# source : CT202:/etc/headscale/config.yaml
+# releve le : 27/08/2026 — copie documentaire, verifier avec scripts/check-drift.sh
 ---
 # /etc/headscale/config.yaml — headscale v0.29.3, CT 202 (tim-cluster)
 # Genere le 15/08/2026. Copie de reference : proxmox/configs/headscale-config.yaml

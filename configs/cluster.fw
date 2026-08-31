@@ -1,3 +1,5 @@
+# source : pve1:/etc/pve/firewall/cluster.fw
+# releve le : 27/08/2026 — copie documentaire, verifier avec scripts/check-drift.sh
 [OPTIONS]
 
 enable: 1

@@ -51,35 +51,41 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 
 ## Sommaire
 
-| Fichier | Contenu |
+| Fichier                                          | Contenu |
 |---|---|
-| [01-architecture.md](01-architecture.md) | Matériel, réseau, disques, plan d'adressage |
-| [02-deploiement.md](02-deploiement.md) | Journal de ce qui a été fait, et pourquoi |
-| [03-exploitation.md](03-exploitation.md) | Diagnostic, pannes disque et nœud, procédures courantes |
-| [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
-| [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
-| [06-reste-a-faire.md](06-reste-a-faire.md) | Abonnement, supervision, IP publiques VM, points ouverts du VPN |
-| [07-pieges.md](07-pieges.md) | **Les 30 pièges rencontrés et leur résolution** |
-| [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
-| [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
-| [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
-| [11-headscale.md](11-headscale.md) | Plan de contrôle VPN (tailnet) : passerelles DICOM, ACLs, DERP, enrôlement |
+| [01-architecture.md](01-architecture.md)         | Matériel, réseau, disques, plan d'adressage |
+| [02-deploiement.md](02-deploiement.md)           | Journal de ce qui a été fait, et pourquoi |
+| [03-exploitation.md](03-exploitation.md)         | Diagnostic, pannes disque et nœud, procédures courantes |
+| [04-securite.md](04-securite.md)                 | Durcissement, TOTP, firewall, emplacement des secrets |
+| [05-tests-ha.md](05-tests-ha.md)                 | Mesures réelles de bascule (chiffres, pas estimations) |
+| [06-reste-a-faire.md](06-reste-a-faire.md)       | Abonnement, supervision, IP publiques VM, points ouverts du VPN |
+| [07-pieges.md](07-pieges.md)                     | **Les 30 pièges rencontrés et leur résolution** |
+| [08-opnsense.md](08-opnsense.md)                 | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
+| [09-proxy-tim.md](09-proxy-tim.md)               | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
+| [10-sauvegardes.md](10-sauvegardes.md)           | **NAS-HA, Proxmox Backup Server, restauration** |
+| [11-headscale.md](11-headscale.md)               | Plan de contrôle VPN (tailnet) : passerelles DICOM, ACLs, DERP, enrôlement |
 | [12-architecture-hds.md](12-architecture-hds.md) | Vue d'ensemble HDS : les deux datacenters, interconnexions, flux, DNS |
-| [13-tellis.md](13-tellis.md) | **DC TELLIS (site distant)** : inventaire, pfSense, tunnels WireGuard, checklist de collecte |
-| [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
-| [15-pacs-secours.md](15-pacs-secours.md) | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
-| [16-keycloak.md](16-keycloak.md) | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale), split-horizon `auth.*`, candidats SSO |
-| [17-zabbix.md](17-zabbix.md) | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie, jour J restant) |
-| [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
-| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation) |
-| `configs/` | Copie des configurations en production, pour comparaison ou restauration |
+| [13-tellis.md](13-tellis.md)                     | **DC TELLIS (site distant)** : inventaire, pfSense, tunnels WireGuard, checklist de collecte |
+| [14-noms-de-domaine.md](14-noms-de-domaine.md)   | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
+| [15-pacs-secours.md](15-pacs-secours.md)         | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
+| [16-keycloak.md](16-keycloak.md)                 | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale), split-horizon `auth.*`, candidats SSO |
+| [17-zabbix.md](17-zabbix.md)                     | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie, jour J restant) |
+| [18-odoo.md](18-odoo.md)                         | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
+| `scripts/`                                       | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation) |
+| [19-code-review.md](16-code-review.md)           | **Revue du dépôt (27/08/2026)** : ce qu'il faut corriger, par priorité, et les décisions à trancher |
+| [20-keycloak.md](17-keycloak.md)                 | **Keycloak (CT 203)** : SSO, realm `tim`, chaîne d'accès, points de sécurité ouverts |
+| `scripts/`                                       | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale) |
+| `configs/`                                       | Copie des configurations en production, pour comparaison ou restauration |
 
 Si vous reprenez ce dossier après une longue interruption, lisez
 [07-pieges.md](07-pieges.md) en premier : il contient ce qui a réellement coûté
 du temps.
 
-Aucun secret ne figure dans ces fichiers — ils vivent tous dans `/etc/pve/priv/`
-sur le cluster. Voir [04-securite.md](04-securite.md#secrets--où-ils-vivent).
+**Le dépôt ne contient aucun secret**, et ne doit jamais en contenir. Attention :
+tous les secrets du cluster ne sont pas pour autant dans `/etc/pve/priv/` —
+`/etc/pve/domains.cfg` porte le `client-key` OIDC **en clair** et ne doit jamais
+être copié dans `configs/`. Voir
+[04-securite.md](04-securite.md#secrets--où-ils-vivent).
 
 ---
 

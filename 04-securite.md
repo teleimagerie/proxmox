@@ -123,6 +123,111 @@ vaut pour les trois) :
 > **Cette clé est l'issue de secours ultime du cluster.** Sa perte, combinée à un
 > TOTP inaccessible, ne laisserait que la console KVM/IPMI OVH.
 
+### Les conteneurs ne sont pas durcis
+
+Relevé le 27/08/2026 — `sshd -T` donne la configuration **effective**, après
+fusion des `sshd_config.d/*`, là où lire le fichier induit en erreur :
+
+| | pve1·2·3 | CT 201 | CT 202 | CT 203 |
+|---|---|---|---|---|
+| `PasswordAuthentication` | no | **yes** | **yes** | **yes** |
+| `MaxAuthTries` | 3 | 6 | 6 | 6 |
+| `PermitRootLogin` | prohibit-password | prohibit-password | prohibit-password | prohibit-password |
+| fail2ban | actif | — | — | — |
+
+**La portée est faible, pour deux raisons vérifiées** : aucun compte de ces
+conteneurs n'a de mot de passe utilisable (`/etc/shadow` ne contient aucune
+empreinte), donc `PasswordAuthentication yes` n'ouvre rien ; et ils sont sur le
+VLAN 400 derrière OPNsense, sans route depuis Internet. Les 4 571 tentatives
+d'authentification échouées relevées en 7 jours sur pve1 ne les atteignent pas.
+
+C'est donc de l'**uniformisation**, pas une correction de faille. À faire avant
+d'exposer un service applicatif sur ce VLAN — pas en urgence.
+
+> **fail2ban n'a pas sa place dans ces conteneurs.** Sans exposition Internet et
+> sans mot de passe à deviner, il n'aurait rien à bannir. L'installer par réflexe
+> ajoute un service à maintenir sans contrepartie.
+
+### Durcir le SSH des conteneurs
+
+Fichier prêt : [`configs/sshd-10-hardening-ct.conf`](configs/sshd-10-hardening-ct.conf).
+C'est celui des nœuds **sans `LoginGraceTime 30`** : ce serrage vise un port 22
+exposé à Internet et balayé en continu ; ici il ne protège de rien et gêne un
+transfert lourd sur un cluster chargé.
+
+> `prohibit-password` et `without-password` sont **le même réglage**, le second
+> étant l'ancien nom que `sshd -T` continue d'afficher. Cette ligne ne change donc
+> rien sur les conteneurs : elle est là pour que les deux fichiers se relisent
+> à l'identique.
+
+**Le point délicat** : ces conteneurs n'ont aucun mot de passe. Se couper l'accès
+par clé y est définitif au sens SSH. La vérification se fait donc **avant**, jamais
+après.
+
+```bash
+# 0. localiser le conteneur — c'est une ressource HA, il change de nœud
+ha-manager status | grep ct:203
+
+# 1. vérifier l'accès par clé AVANT de toucher à quoi que ce soit
+#    BatchMode=yes interdit toute retombée interactive : c'est la situation
+#    d'après-durcissement, simulée avant
+ssh -o BatchMode=yes -o ConnectTimeout=5 root@10.40.0.50 true && echo OK
+
+# 2. poser le fichier — pct push s'exécute SUR LE NŒUD, le fichier doit donc
+#    d'abord y être copié depuis le poste d'administration :
+#      scp configs/sshd-10-hardening-ct.conf root@pveN...:/tmp/
+pct push 203 /tmp/sshd-10-hardening-ct.conf \
+    /etc/ssh/sshd_config.d/10-hardening.conf --perms 644
+
+# 3. valider la syntaxe SANS rien appliquer
+pct exec 203 -- sshd -t
+
+# 4. recharger — reload, jamais restart : les sessions établies survivent,
+#    ce qui laisse un chemin de retour si le réglage est mauvais
+pct exec 203 -- systemctl reload ssh
+
+# 5. vérifier l'effet, puis rouvrir une session NEUVE
+pct exec 203 -- sshd -T | grep -iE 'passwordauth|maxauthtries|permitroot'
+ssh -o BatchMode=yes root@10.40.0.50 true && echo "accès OK après durcissement"
+```
+
+L'étape 5 est la seule qui compte : **une session neuve**, pas celle déjà ouverte.
+C'est le piège classique — on valide depuis la connexion courante, qui fonctionne
+par définition.
+
+**Ordre recommandé** : `202` (headscale) → `203` (keycloak) → `201` (proxy-tim).
+Le CT 201 en dernier : il sert `syngo.*` et `auth.*` en production, autant avoir
+appris sur les deux autres. Un conteneur à la fois.
+
+Adresses : `10.40.0.10` (201), `10.40.0.30` (202), `10.40.0.50` (203).
+
+> **Filet de secours en toute circonstance** : `pct enter <CTID>` depuis le nœud
+> qui héberge le conteneur. Il passe par l'hyperviseur, **pas par SSH**, et
+> fonctionne quelle que soit la configuration `sshd` du conteneur. C'est ce qui
+> rend cette opération peu risquée.
+
+**Plus utile que ce durcissement**, sur le CT 203 :
+
+- `unattended-upgrades` est **absent**. Keycloak est une application Java qui
+  reçoit réellement des requêtes d'Internet via le proxy — des correctifs non
+  appliqués y pèsent plus lourd que six essais d'authentification au lieu de
+  trois. Voir [17-keycloak.md](17-keycloak.md#5-durcissement-du-conteneur--à-faire).
+- le port **57800** (cache Infinispan) écoute sur `*` sans usage : une seule
+  instance de Keycloak tourne.
+
+### Pare-feu par invité : une asymétrie voulue
+
+| Invité | `net0` |
+|---|---|
+| VM 102 (pbs) | `firewall=1` |
+| CT 201 (proxy-tim) | non précisé |
+| CT 202 (headscale) | `firewall=0` |
+| CT 203 (keycloak) | `firewall=0` |
+
+**C'est délibéré** : les CT du VLAN 400 sont derrière OPNsense, qui filtre déjà ;
+la VM 102 est sur le VLAN 300, directement joignable par les nœuds. Noté ici pour
+qu'on ne « corrige » pas un jour une différence intentionnelle.
+
 ## Firewall
 
 Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.
