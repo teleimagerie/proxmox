@@ -250,4 +250,128 @@ sur la VM entre bascule et revert sont perdues. Le point de non-retour est la
 | Sortant | Mailjet `in-v3.mailjet.com:25` STARTTLS (SPF de la zone déjà conforme) ; le 587 fonctionne aussi depuis le VLAN 400 si le 25 devait fermer |
 | Entrant | `imap.gmail.com` OAuth, boîte `ticket@teleimagerie.net` |
 | Agenda | synchro Google Calendar (12 h) |
-| SSO | candidat Keycloak (OAuth) — **chantier séparé**, après migration ([16-keycloak.md](16-keycloak.md)) ; `auth_oauth` et `auth_totp` déjà installés |
+| SSO | ✅ Keycloak OIDC en place depuis le 31/08/2026 — voir [SSO Keycloak](#sso-keycloak) ci-dessous |
+
+## SSO Keycloak
+
+Mis en place le **31/08/2026**. Doctrine reprise de MyTIM
+(`docs/technique/sso-keycloak.md` du dépôt gestion) : flux **authorization
+code + PKCE S256**, signature de l'`id_token` vérifiée via JWKS,
+rapprochement par e-mail, **aucun provisioning**, formulaire local conservé
+en repli permanent.
+
+### Pourquoi le module OCA et pas l'`auth_oauth` natif
+
+L'`auth_oauth` livré avec Odoo 17 Community ne sait faire que le **flux
+implicite** : le jeton transite dans l'URL du navigateur, sans vérification
+de signature, et il aurait fallu activer `implicitFlowEnabled` sur le client
+Keycloak — à rebours de tous les autres clients du realm. Le module OCA
+**`auth_oidc`** (dépôt `OCA/server-auth`, branche `17.0`, version
+17.0.1.2.0, AGPL-3) ajoute le flux code + PKCE par-dessus `auth_oauth`.
+
+Il est **vendoré dans le dépôt `teleimagerie/odoo`** (`addons/auth_oidc`,
+commit `060426c`), comme les autres modules OCA. Sa dépendance Python
+**`python-jose`** a été ajoutée au `Dockerfile` (stage `odoo_base`) — sans
+elle le module s'installe mais échoue silencieusement à la validation du
+jeton.
+
+### Client Keycloak
+
+Realm `tim`, client **`odoo`** (confidentiel, flux standard seul, PKCE S256,
+`webOrigins` vide), redirect URI **`https://odoo.teleimagerie.net/auth_oauth/signin`**
+— chemin imposé par `auth_oauth`, construit à l'exécution depuis
+`request.httprequest.url_root`, donc dépendant de `proxy_mode=True` et des
+en-têtes `X-Forwarded-*` posés par le vhost de proxy-tim.
+
+Le **secret client** vit dans le gestionnaire de secrets et dans la base
+Odoo (champ `client_secret` du provider) — nulle part ailleurs. Pour le
+relire : admin de bootstrap éphémère sur le CT 203, puis
+`kcadm get clients/<uuid>/client-secret -r tim`
+(uuid `97b3b0a6-0141-4a38-956d-88789c160c65`).
+
+### Provider côté Odoo
+
+*Paramètres → Technique → Fournisseurs OAuth* (mode développeur), provider
+**`TIM SSO`** (id 6) :
+
+| Champ | Valeur |
+|---|---|
+| Auth Flow | `OpenID Connect (authorization code flow)` |
+| Client ID | `odoo` |
+| Authentication URL | `https://auth.teleimagerie.net/realms/tim/protocol/openid-connect/auth` |
+| Token URL | `…/openid-connect/token` |
+| JWKS URL | `…/openid-connect/certs` |
+| Scope | `openid email profile` |
+| Token map | `email:user_id` |
+| Body | `Se connecter avec TIM` |
+| Allowed | ✔ |
+
+> ⚠️ **`token_map = email:user_id` est le réglage central.** Sans lui,
+> `auth_oidc` retombe sur la claim `sub` (l'UUID Keycloak) et il faudrait
+> connaître cet UUID pour rapprocher chaque compte. Avec ce mapping,
+> `oauth_uid` est simplement l'adresse e-mail.
+
+### Rapprochement des comptes
+
+Sur la fiche `res.users` (mode développeur, onglet *OAuth*) :
+`oauth_provider_id` = `TIM SSO`, `oauth_uid` = **l'e-mail exact du compte
+Keycloak, en minuscules**. Le rapprochement d'Odoo est une **égalité
+stricte** (`search([("oauth_uid","=",…)])`) — contrairement à MyTIM qui
+compare sans tenir compte de la casse.
+
+Pilote du 31/08/2026 : `mcapon@teleimagerie.net` (user id 2), rapproché avec
+le compte Keycloak `matt` (`emailVerified=true`).
+
+### « Aucun provisioning » : le réglage qui le produit
+
+Sans correspondance, Odoo appelle `signup()`. Il fallait donc fermer
+l'inscription libre, **qui était ouverte** :
+`auth_signup.invitation_scope` est passé de **`b2c` (inscription libre) à
+`b2b` (sur invitation)** le 31/08/2026 — *Paramètres → Paramètres généraux →
+Compte client → Sur invitation*. Sans ce changement, tout détenteur d'un
+compte Google Workspace du domaine se serait vu créer un utilisateur portail
+Odoo au premier clic (le realm `tim` broke Google Workspace).
+
+Impact métier nul, vérifié avant bascule : **0 utilisateur portail actif**,
+dernier compte portail créé le 10/07/2025.
+
+> ⚠️ `auth_oidc` **ne vérifie pas la claim `email_verified`** (MyTIM, lui,
+> l'exige). La confiance repose sur le realm : auto-inscription fermée,
+> broker Google en `trustEmail=true` avec `hostedDomain`, comptes locaux
+> créés par un admin. À garder en tête avant d'ouvrir le realm à des
+> populations externes.
+
+### Points de vigilance
+
+- **Ne jamais supprimer les mots de passe locaux** : Keycloak est un SPOF
+  (~19 s de coupure par bascule HA). Le formulaire local reste affiché.
+- **La MFA d'Odoo est contournée** par le chemin OAuth : `auth_totp` ne
+  s'applique pas aux connexions SSO, le second facteur est porté par
+  Keycloak (TOTP du realm ou MFA Google).
+- Le provider **`Odoo.com Accounts`** (id 1) est resté **actif** — antérieur
+  à ce chantier. Il affiche un second bouton, en flux implicite vers
+  `accounts.odoo.com`. Inerte (aucun compte n'y est rapproché et le
+  provisioning est fermé), mais à désactiver si l'on veut une page de login
+  propre.
+- `web.base.url.freeze` **n'est pas positionné** : `web.base.url` est
+  réécrit à chaque connexion d'un admin. Sans effet sur le SSO (le
+  `redirect_uri` vient de `url_root`), mais contrairement à ce que laissait
+  entendre la note de migration, l'URL n'est pas réellement figée.
+
+### Rollback
+
+Décocher **Allowed** sur le provider `TIM SSO` : le bouton disparaît
+immédiatement, sans redéploiement ni redémarrage. Les connexions par mot de
+passe ne sont jamais affectées.
+
+### Vérifications faites le 31/08/2026
+
+| Contrôle | Résultat |
+|---|---|
+| Discovery Keycloak depuis la VM 101 | HTTP 200 (résolu vers `10.40.0.10`, split DNS) |
+| Installation du module | 153 modules chargés, sans erreur |
+| `python-jose` dans l'image | 3.5.0 |
+| URL d'autorisation de la page de login | `response_type=code`, `code_challenge_method=S256`, `redirect_uri` conforme |
+| JWKS joignable depuis le conteneur | HTTP 200, 2 clés, RS256 présent |
+| Secret client stocké dans Odoo | validé — code bidon rejeté en `invalid_grant` (et non `invalid_client`) |
+| **Connexion navigateur réelle** | ⬜ **reste à faire** (nécessite une session interactive) |

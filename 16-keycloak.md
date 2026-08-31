@@ -82,6 +82,7 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 | **Proxmox VE** | realm `keycloak` (openid, `username-claim username`, `autocreate 0`) | `matt@keycloak` et `brtrnd@keycloak` (27/08/2026), rôle Administrator sur `/` | `matt@pve`, `root@pam` + TOTP |
 | **PBS** | realm `keycloak` (openid, idem) | `matt@keycloak` et `brtrnd@keycloak` (27/08/2026), ACL Admin sur `/` | `root@pam` local à la VM |
 | **headscale** | section `oidc` de la config — voie d'**enrôlement supplémentaire** | users OIDC créés à la volée | users locaux + clés de pré-enrôlement inchangés |
+| **Odoo** | module OCA `auth_oidc` (flux code + PKCE S256), provider `TIM SSO` en base | aucun — rapprochement manuel par e-mail (`oauth_uid`), pilote `mcapon@teleimagerie.net` le 31/08/2026 | formulaire local mot de passe, toujours affiché |
 
 > ✅ **Connexions réelles vérifiées le 27/08/2026** : login `matt@keycloak`
 > sur Proxmox à 09:29 UTC (`successful openid auth`, journal `pvedaemon` de
@@ -110,6 +111,7 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 | `headscale` | `https://headscale.teleimagerie.net/oidc/callback` |
 | `mytim` (créé le 30/08/2026, PKCE S256 imposé) | `https://app.teleimagerie.net/oidc/callback` |
 | `mytim-staging` (créé le 30/08/2026, PKCE S256 imposé — sert staging **et** dev) | `https://app.staging.teleimagerie.net/oidc/callback`, `https://app.localhost/oidc/callback`, `http://app.localhost/oidc/callback` |
+| `odoo` (créé le 31/08/2026, PKCE S256 imposé) | `https://odoo.teleimagerie.net/auth_oauth/signin` |
 
 > ⚠️ **headscale ne démarre pas si l'issuer est injoignable** : la section
 > `oidc` est validée au démarrage (constaté le 27/08/2026, crash-loop tant que
@@ -221,7 +223,7 @@ connecté ; seuls les nouveaux logins attendent.
 | **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim` — compte de test supprimé après validation) |
 | **MyTIM** (appli interne de gestion) | OIDC | 📋 **intégration développée le 29/08/2026** côté appli (question hébergement soldée : oui, `app`/`gestion` → `51.210.24.59`, Symfony 7.4/FrankenPHP chez OVH, deux tenants `app.teleimagerie.net` + `app.isoteam.mn`). Code applicatif prêt (drenso/symfony-oidc-bundle, rapprochement par e-mail, aucun provisioning, formulaire local en repli). Clients `mytim` + `mytim-staging` du realm `tim` **créés le 30/08/2026** (tableau ci-dessus). Reste côté Keycloak : créer le **realm `isoteam`** (copie de `tim` : force brute, `browser-totp`, broker Google avec redirect URI `…/realms/isoteam/broker/google/endpoint` à ajouter au client OAuth Google) et ses **2 clients** (`mytim`, `mytim-staging`). Détail applicatif, script kcadm et phasage : `docs/technique/sso-keycloak.md` du dépôt gestion |
 | Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | 📋 accès SSH collecté le 29/08/2026 (clé, compte `ubuntu` sur le VPS `vps-41b1229b`) — raccordement à instruire après la migration vers le cluster (17-zabbix.md à venir) |
-| Odoo (`odoo.teleimagerie.net`) | OAuth/LDAP natifs | ⚠️ accès à collecter |
+| **Odoo** (`odoo.teleimagerie.net`) | OIDC | ✅ **raccordé le 31/08/2026** — module OCA `auth_oidc` (flux code + PKCE S256, signature id_token vérifiée par JWKS), client `odoo`, rapprochement par e-mail, aucun provisioning, formulaire local en repli. Détail : [18-odoo.md](18-odoo.md#sso-keycloak) |
 | CRM, e-learning, bastion, app/gestion | à déterminer | ⚠️ hors périmètre du dépôt |
 | Syngo Via (Siemens) · Vue PACS (Philips) · RIS VENUS (Softway) · TSplus | selon capacités éditeur (souvent SAML/OIDC dans les versions récentes) | 📋 cible à terme — à instruire éditeur par éditeur via la [checklist TELLIS](13-tellis.md#checklist-de-collecte) |
 | Microsoft 365 / Entra ID (brokering amont) | OIDC | 📋 possible plus tard, même mécanique que Google |

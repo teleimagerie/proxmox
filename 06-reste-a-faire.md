@@ -323,8 +323,15 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   `docs/technique/sso-keycloak.md` du dépôt gestion), puis rollout progressif
   (internes d'abord, formulaire local conservé en repli —
   [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)).
-- **Applications d'entreprise** (Zabbix en SAML/LDAP, Odoo en OAuth/LDAP,
-  CRM, e-learning, bastion) : collecter les accès, tableau des candidats dans
+- **Odoo** : ~~raccordement SSO~~ **fait le 31/08/2026** (module OCA
+  `auth_oidc`, client `odoo`, flux code + PKCE S256, aucun provisioning —
+  [18-odoo.md](18-odoo.md#sso-keycloak)). Reste : **valider la connexion
+  navigateur réelle** (pilote `mcapon@teleimagerie.net`, seul compte
+  rapproché), puis généraliser aux internes actifs. Deux points relevés au
+  passage : le provider `Odoo.com Accounts` est resté actif (second bouton
+  inutile sur la page de login) et `web.base.url.freeze` n'est pas positionné.
+- **Applications d'entreprise** (Zabbix en SAML/LDAP, CRM, e-learning,
+  bastion) : collecter les accès, tableau des candidats dans
   [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026).
 - **Applications médicales** (Syngo Via, Vue PACS, RIS VENUS, TSplus) : cible
   à terme, à instruire éditeur par éditeur via la
