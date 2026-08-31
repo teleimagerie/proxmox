@@ -112,26 +112,53 @@ injoignables. Même résultat depuis un client WireGuard.
 
 ### Nomades — `wg0`, UDP 51820, `10.90.0.0/24`
 
-Pair existant : `nomade-01` → `10.90.0.2/32`. Dernier handshake relevé le
-**13/08/2026 à 13:58** (mesure du 14/08 22:12) : le tunnel est configuré et
-fonctionnel, mais aucun client ne s'y est connecté depuis. `configctl wireguard
-show` donne l'horodatage réel — un pair déclaré n'est pas un pair actif.
+| Pair | IP | Titulaire | Clé privée générée | Remis le |
+|---|---|---|---|---|
+| `nomade-01` | `10.90.0.2/32` | Matt (poste d'admin) | sur OPNsense — conf complète dans le gestionnaire de secrets | 11/08/2026 |
+| `brtrnd` | `10.90.0.3/32` | Bertrand Leroux (thinkpad, Linux) | sur son poste — n'a jamais transité | 31/08/2026 |
+
+`configctl wireguard show` donne l'horodatage réel du dernier handshake — un
+pair déclaré n'est pas un pair actif.
+
+**Paire serveur régénérée le 31/08/2026** (l'ancienne clé privée était exposée —
+point soldé, [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)).
+Clé publique serveur actuelle : `RAkbTNfimG4Lxg8+Ul5/fXYiI6Ov/zEa494EhNISdgE=`.
+La nouvelle clé privée a été générée par script sur OPNsense même et écrite
+directement dans `config.xml`, sans jamais transiter par un terminal. Une copie
+de la config d'avant rotation reste sur OPNsense
+(`/conf/config.xml.avant-brtrnd-2026-08-31-160657`, mode 600) — à supprimer une
+fois les deux clients revus en handshake.
 
 La configuration client `/root/wg-nomade-01.conf` a bien été **retirée de pve1** :
 elle contenait une clé privée et n'existe plus que dans le gestionnaire de secrets.
 Pour en refabriquer une, recréer un pair — la clé privée d'un pair existant n'est
-pas relisible.
+pas relisible. Celle de `brtrnd` n'a jamais existé ailleurs que sur son poste :
+seule sa clé publique (`aRCJUiksr1vuER0aEh0me3dZ0rkgvZRKzSE5FBliryc=`) a circulé.
 
 Le tunnel scindé par défaut ne route que `10.40.0.0/24` et `10.90.0.0/24`.
 Pour tout faire passer par le VPN : `AllowedIPs = 0.0.0.0/0`.
 
 ### Ajouter un nomade
 
-1. Générer une paire de clés : `configctl wireguard gen_keypair`
-2. Interface web → *VPN → WireGuard → Peers* → nouvelle entrée, IP libre dans
-   `10.90.0.0/24`
+Voie préférée depuis le 31/08/2026 — la clé privée du nomade ne quitte jamais
+son poste :
+
+1. Sur le poste du nomade : `umask 077; wg genkey | tee wg.key | wg pubkey`
+   (clients graphiques : « Add empty tunnel » fait pareil). Seule la clé
+   **publique** est transmise — l'e-mail convient, rien n'est secret.
+2. Interface web → *VPN → WireGuard → Peers* → nouvelle entrée : la clé publique
+   reçue, IP libre dans `10.90.0.0/24` (tenir le tableau ci-dessus à jour),
+   champs endpoint **vides** (piège n° 21)
 3. Rattacher le pair à l'instance `wg-nomades`
 4. Appliquer : `configctl wireguard configure`
+5. Envoyer au nomade le gabarit de conf — aucun secret dedans : `Address`,
+   `MTU = 1420`, la clé publique serveur, `Endpoint = 57.130.34.121:51820`,
+   `AllowedIPs = 10.40.0.0/24, 10.90.0.0/24`, `PersistentKeepalive = 25`.
+   Le nomade y insère lui-même sa clé privée.
+
+(`configctl wireguard gen_keypair` reste possible si le poste du nomade ne sait
+pas générer la paire — la conf complète doit alors transiter par un canal sûr
+puis être détruite des serveurs, comme pour `nomade-01`.)
 
 Si le pair a été ajouté **en modifiant `config.xml` directement** plutôt que par
 l'interface web, faire précéder cette commande d'un

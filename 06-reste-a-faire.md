@@ -253,22 +253,19 @@ fait ou pas été prouvé :
 Le 13 et le 14/08/2026, lors de l'extraction des configurations, deux clés
 privées WireGuard ont transité en clair dans un historique de terminal :
 
-| Clé | Portée |
-|---|---|
-| instance `wg-nomades` (OPNsense) | notre VPN nomades |
-| tunnel `tun_wg0` (pfSense TELLIS) | **le VPN nomades du DC TELLIS, en production** |
+| Clé | Portée | État |
+|---|---|---|
+| ~~instance `wg-nomades` (OPNsense)~~ | notre VPN nomades | **réglé le 31/08/2026** : paire régénérée à l'occasion de l'ajout du pair `brtrnd` ([08-opnsense.md](08-opnsense.md#wireguard)) — nouvelle clé privée fabriquée par script sur OPNsense, jamais affichée dans un terminal |
+| tunnel `tun_wg0` (pfSense TELLIS) | **le VPN nomades du DC TELLIS, en production** | **ouvert** — pas sous notre contrôle : c'est au prestataire TELLIS d'arbitrer, et il doit en être informé |
 
-Les régénérer impose de redistribuer les profils clients des deux côtés — d'où
-le report. Tant que ce n'est pas fait, quiconque a eu accès à cet historique peut
-usurper l'un ou l'autre serveur VPN. La seconde n'est pas sous notre contrôle :
-c'est au prestataire TELLIS d'arbitrer, et il doit en être informé.
+Tant que la clé TELLIS n'est pas régénérée, quiconque a eu accès à cet
+historique peut usurper le serveur VPN nomades du DC TELLIS.
 
-> **Voie de sortie proposée depuis le 15/08/2026** : le tailnet headscale
-> ([11-headscale.md](11-headscale.md)) sait aussi faire le VPN nomades — enrôler
-> les postes itinérants dans le tailnet (user `admin`), puis **désactiver `wg0`
-> et sa clé compromise**. Le pair `nomade-01` n'a plus été vu depuis le
-> 13/08/2026 : la migration ne dérangerait personne. Réglerait la première ligne
-> du tableau ci-dessus sans redistribution de profils WireGuard.
+> L'encadré du 15/08/2026 proposait de migrer les nomades vers le tailnet
+> headscale et de **désactiver `wg0`**. Option écartée le 31/08/2026 : le
+> tailnet ne route pas le VLAN 400 (pas de subnet router —
+> [11-headscale.md](11-headscale.md)), or c'est précisément l'accès dont les
+> nomades ont besoin. `wg0` est conservé, sur une paire de clés saine.
 
 ---
 
