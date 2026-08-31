@@ -792,3 +792,30 @@ avant de rendre la main : le test structurel du piège 34 (« le sous-flux est
 bien Required ») était passé, l'ordre d'exécution, lui, avait silencieusement
 changé. Et préférer les endpoints `raise/lower-priority` à un `PUT` pour
 tout ce qui touche à l'ordre.
+
+## 36. `docker compose exec` court-circuite l'entrypoint de l'image Odoo
+
+**Symptôme** — `docker compose exec -T web odoo shell -d odoo` échoue avec
+`psycopg2.OperationalError: connection to server on socket
+"/var/run/postgresql/.s.PGSQL.5432" failed` alors que le conteneur `web`
+tourne parfaitement et sert l'application, et que `docker compose run` sur la
+même image fonctionne.
+
+**Cause** — L'image officielle `odoo` ne configure pas la base par un fichier
+mais par un **entrypoint** qui traduit les variables `HOST`/`USER`/`PASSWORD`
+en options `--db_host`/`--db_user`/`--db_password`. `docker compose run`
+passe par cet entrypoint ; **`exec` non** — il lance la commande directement
+dans le conteneur existant. Odoo ne voit alors aucun paramètre de connexion
+et retombe sur la socket PostgreSQL locale, absente du conteneur.
+
+**Résolution** — Pour toute commande Odoo (`shell`, `-u`, `-i`, scripts) :
+`sudo docker compose run --rm -T web odoo shell -d odoo`. Réserver `exec` aux
+commandes qui n'ont pas besoin de la base (ou lui passer explicitement
+`--db_host=db --db_user=odoo --db_password=…`).
+
+**Leçon** — Le symptôme désigne la base, la cause est le mode de lancement.
+Deux corollaires appris le 31/08/2026 en posant le SSO : `odoo shell` **ne
+commite pas** (il termine par un `cr.rollback()` — il faut un `env.cr.commit()`
+explicite), et il faut se garder de filtrer la sortie d'un script distant sur
+un marqueur de succès (`sed -n '/RESULTAT/,$p'`) : le filtre avale la trace
+d'erreur et un échec devient un silence indistinguable d'une réussite muette.
