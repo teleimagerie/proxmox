@@ -357,3 +357,30 @@ déclarée. Nettoyage restant :
   zone rafraîchi le 30/08 ;
 - **relève du mail entrant** : déjà à l'état `draft` sur le VPS (constat
   post-bascule, pas une régression) — à réactiver un jour depuis l'interface.
+
+---
+
+## 12. Migration MyTIM (VPS → VM 103 staging, VM 104 prod) — 🚧 en préparation
+
+Plan validé le 31/08/2026, détail et runbook dans [20-mytim.md](20-mytim.md).
+Décisions : VM + Docker Compose (comme Odoo), **base prod laissée chez OVH**
+pour cette étape, **TLS terminé sur proxy-tim**, staging d'abord. Branche
+`feature/proxmox-hosting` du dépôt gestion prête (variable d'inventaire
+`tls_upstream`, `SYMFONY_TRUSTED_PROXIES`, groupes `tim_*_vm`).
+
+- ✅ mesures du 31/08 (prod : 7 Go de RAM réels sur 62, `resources/` 68 Go ;
+  staging : base 27 Go) → gabarits 8 vCPU/16 Go/200 Go et 4 vCPU/8 Go/150 Go ;
+- ✅ scripts et configs prêts : [scripts/bascule-mytim.py](scripts/bascule-mytim.py)
+  (crée les A `*.staging`, qui n'existent que par wildcard),
+  [configs/mytim.teleimagerie.net.conf](configs/mytim.teleimagerie.net.conf),
+  [configs/mytim-staging.teleimagerie.net.conf](configs/mytim-staging.teleimagerie.net.conf),
+  hooks `deploy-mytim-{staging,prod}.sh` ;
+- **allowlist OVH Web Cloud DB** : ajouter `57.130.34.121` (manager OVH) —
+  préalable à tout test depuis le cluster ;
+- fusionner `feature/proxmox-hosting` dans `main` et `staging` du dépôt gestion ;
+- créer la VM 103, provisionner, déployer, certificat DNS-01, vhost, bascule
+  staging, HA — puis 48 h d'observation ;
+- VM 104 : déploiement **sans workers** (`-e '{"services": []}'`), tests,
+  bascule prod selon le runbook, HA, restauration testée, résiliation des VPS
+  à J+7 ;
+- ensuite : isoteam, base prod dans le cluster, image GHCR prébuild.
