@@ -268,7 +268,8 @@ dans la base : couverts par le dump 01:15 + PBS 02:00.
 **Partent en mail** : quorum perdu · API PVE injoignable · nœud hors-ligne ·
 `:8006` injoignable par nœud · VM/CT arrêté · `HEALTH_ERR` (Disaster) · OSD
 down/out · **vm-storage ≥ 85 %** (nearfull — le template officiel pré-alerte
-en Warning à 80) · mémoire nœud ≥ 90 % · mémoire invité ≥ 95 % · disque LXC
+en Warning à 80) · mémoire nœud ≥ 90 % · mémoire invité ≥ 95 % (sauf VM 100 et 102 : faux
+signal hyperviseur, voir les pièges ci-dessous) · disque LXC
 ≥ 90 % · FS des VM (`pbs` dont `/mnt/datastore/tim`, `odoo`) ≥ 90 % ·
 certificat < 14 j ou invalide · tâche vzdump en échec ou sauvegarde absente ·
 verify/GC/prune PBS en échec ou absents
@@ -298,6 +299,19 @@ problème High à 19:40:29 → **mails partis vers support@ et mcapon@** (statut
 - **VM FreeBSD sans balloon** : l'hyperviseur voit la RAM d'OPNsense toujours
   pleine → le trigger « high memory usage » de la VM 100 est **désactivé**
   (faux signal structurel) ; la mémoire réelle est suivie par l'agent interne.
+- **VM pbs : le cache disque gonfle la vue hyperviseur.** PBS garde ~7 Gio de
+  cache de pages (réellement utilisés dans la VM : ~0,5 Gio, `available`
+  ≈ 7,3 Gio) → `mem/maxmem` oscille autour de 95 % et le trigger « high memory
+  usage » **bagotait** (5 cycles problème/résolu le 31/08 après le redémarrage
+  de la VM, mails reçus). **Neutralisé le 31/08/2026** par macro contextuelle
+  `{$PVE.VM.MEMORY.PUSE.MAX.WARN:"qemu/102"}` = `100` sur `cluster-pve`
+  (expression résolue vérifiée `>100`, inatteignable — les autres VM restent
+  à 95). Préféré au « désactivé » d'OPNsense : la macro garde l'intention et
+  le seuil visibles. Les deux méthodes survivent aux migrations — la
+  découverte **renomme** ses entités sans les recréer (constaté : le trigger
+  désactivé de la VM 100 a suivi pve2 → pve3). La mémoire réelle de PBS reste
+  surveillée par l'agent interne de l'hôte `pbs` (seuil 95 %), le datastore
+  par le trigger FS ≥ 90 %.
 - La règle `tcp/10050 depuis 10.40.0.60` a été ajoutée au firewall dédié de
   la VM PBS ([configs/firewall-102-pbs.fw](configs/firewall-102-pbs.fw)) ; ufw
   d'odoo autorise la même source.
