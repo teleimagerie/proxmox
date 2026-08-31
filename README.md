@@ -72,6 +72,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [17-zabbix.md](17-zabbix.md) | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie) + supervision des sauvegardes (échec **et absence**, 30/08) |
 | [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
 | [19-carte-reseau.md](19-carte-reseau.md) | **Carte réseau régénérable** : `make carte` interroge l'API Proxmox, confronte aux intentions de `topologie.yml` et réécrit le schéma — les écarts aux règles sont peints en rouge sur la carte |
+| [20-mytim.md](20-mytim.md) | **MyTIM sur le cluster** : 📋 plan validé le 31/08 — l'app d'abord (VPS → VM 104), MySQL ensuite (clouddb OVH → VM 103), exécution non commencée |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation), `genere-carte.py` (carte réseau depuis l'API Proxmox — voir `make aide`) |
 | `topologie.yml` | Intentions d'architecture — zones, rôles, cloisonnements, règles vérifiées à chaque génération de la carte. **Seul fichier de la carte à éditer à la main** |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
