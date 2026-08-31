@@ -134,10 +134,56 @@ Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.
 | 3128 | tout Internet | proxy SPICE |
 | 5900-5999 | tout Internet | consoles noVNC |
 | tout | ipset `cluster` | Corosync, Ceph, migration, pmxcfs |
-| **tout — DROP prioritaire** | `10.40.0.0/24` (LAN VM) | la patte `10.40.0.2` de pve1 est **sortante uniquement** (27/08/2026) : une VM compromise ne joint pas un hyperviseur — [08-opnsense.md](08-opnsense.md#accès-dadministration) |
+| **8006 — ACCEPT prioritaire** | `10.40.0.60` (CT 204) | supervision Zabbix par le **chemin privé** depuis le 31/08/2026. **Doit rester au-dessus du DROP suivant**, sinon elle est avalée et la supervision s'éteint sans bruit |
+| **tout — DROP prioritaire** | `10.40.0.0/24` (LAN VM) | les pattes `10.40.0.2/.3/.4` des 3 nœuds sont **sortantes uniquement** (27/08/2026, étendu aux 3 nœuds le 31/08) : une VM compromise ne joint pas un hyperviseur — [08-opnsense.md](08-opnsense.md#accès-dadministration) |
 | ICMP echo | tout Internet | diagnostic |
 
 L'ipset `cluster` contient les 3 IP publiques et les trois sous-réseaux vRack.
+
+### Accès d'administration par VPN (31/08/2026)
+
+**Étape 1 faite** : les 3 nœuds sont désormais administrables par un **chemin
+privé**, sans passer par Internet. Chaque nœud porte une patte sur le VLAN 400
+(`10.40.0.2` pve1, `10.40.0.3` pve2, `10.40.0.4` pve3) **et** une route retour
+`10.90.0.0/24 via 10.40.0.1` — c'est cette route qui manquait, et sans elle la
+patte reste sourde (voir l'encadré de [08-opnsense.md](08-opnsense.md#filtrage)).
+Depuis le VPN nomade, `ssh root@pveN.infra.teleimagerie.net` et
+`https://pveN.infra.teleimagerie.net:8006` répondent, **certificat valide**,
+SSO Keycloak inclus. Aucune règle OPNsense n'a eu à être ajoutée : `opt1`
+laissait déjà passer vers `10.40.0.0/24`.
+
+**Les ports publics 8006 et 22 sont encore ouverts** : leur fermeture est
+l'étape 3, conditionnée au test de la console KVM et à la seconde porte VPN
+(voir [06-reste-a-faire.md](06-reste-a-faire.md)).
+
+> La source vue par le nœud est **`10.90.0.2`**, préservée (pas de NAT : le
+> trafic sort par la patte LAN d'OPNsense, pas par le WAN). Viser une **IP
+> publique** depuis le VPN serait en revanche NATé en `57.130.34.121` :
+> l'administration doit viser les noms `pveN.infra` (qui résolvent en privé) ou
+> les adresses `10.40.0.x`, jamais les IP publiques.
+
+### Console KVM/IPMI OVH — l'accès de dernier recours
+
+Filet de sécurité quand plus aucune porte réseau ne répond (pare-feu mal posé,
+quorum perdu, OPNsense qui ne redémarre pas). **Chemin** : espace client OVH →
+*Bare Metal Cloud* → *Serveurs dédiés* → `pve1`/`pve2`/`pve3` → onglet
+*IPMI / KVM* → carte « KVM à distance » → **Depuis votre navigateur (KVM)** →
+attendre le chargement → **Accéder à la console (KVM)**. Une fenêtre s'ouvre
+avec la console système.
+
+**Identifiants** : login **`root`**, mot de passe **root local du nœud**
+(conservé dans le gestionnaire de secrets de l'administrateur — jamais dans ce
+dépôt). Ce n'est ni le TOTP ni un compte de l'interface web : la console est un
+accès système, `PermitRootLogin prohibit-password` ne s'applique qu'à SSH et ne
+gêne pas ici. ⚠️ **Le mot de passe est local à chaque nœud et n'est pas
+répliqué** — il peut différer d'une machine à l'autre.
+
+Depuis cette console : `pve-firewall stop` rouvre l'accès réseau, et corriger
+`/etc/pve/firewall/cluster.fw` **sur un seul nœud suffit** (pmxcfs réplique aux
+deux autres). Si la console elle-même ne donne pas la main : mode *rescue* OVH,
+puis `systemctl disable pve-firewall` après `chroot` — ne pas tenter d'éditer
+`/etc/pve`, qui n'est pas monté en rescue (le contenu réel est dans la base
+`/var/lib/pve-cluster/config.db`).
 
 **Fermé au passage** : `rpcbind` (111) et Postfix (25) écoutaient sur l'IP
 publique. Ils ne sont plus joignables depuis Internet.

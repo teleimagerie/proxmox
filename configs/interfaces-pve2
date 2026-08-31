@@ -57,4 +57,16 @@ auto vmbr1.300
 iface vmbr1.300 inet static
 	address 10.30.0.12/24
 	mtu 1500
+auto vmbr1.400
+iface vmbr1.400 inet static
+	address 10.40.0.3/24
+	mtu 1500
+	post-up ip route add 10.90.0.0/24 via 10.40.0.1 dev vmbr1.400 || true
+	pre-down ip route del 10.90.0.0/24 via 10.40.0.1 dev vmbr1.400 || true
+# ^ patte d administration VLAN 400, posee le 31/08/2026 : chemin d acces par
+#   VPN nomade (10.90.0.0/24) vers 8006 et 22. Pas de gateway : la route par
+#   defaut reste publique. La route retour ci-dessus est indispensable, sinon
+#   les reponses partent vers 100.64.0.1 et le noeud reste sourd (piege 36).
+#   Entree depuis le VLAN 400 bloquee par cluster.fw (sortante uniquement).
+
 # <<< VRACK

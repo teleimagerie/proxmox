@@ -61,6 +61,8 @@ auto vmbr1.400
 iface vmbr1.400 inet static
 	address 10.40.0.2/24
 	mtu 1500
+	post-up ip route add 10.90.0.0/24 via 10.40.0.1 dev vmbr1.400 || true
+	pre-down ip route del 10.90.0.0/24 via 10.40.0.1 dev vmbr1.400 || true
 # ^ patte d administration VLAN 400, perennisee le 27/08/2026 (06 §7) :
 #   deploy-syngo.sh (scp -> 10.40.0.10) et backup-opnsense.sh en dependent.
 #   Entree depuis le VLAN 400 bloquee par cluster.fw (sortante uniquement).

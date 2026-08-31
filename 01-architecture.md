@@ -93,12 +93,25 @@ structure, au-delà d'OPNsense.
 Sur le VLAN 400, les machines sont allouées par dizaines : `.1` passerelle
 (OPNsense), `.10` proxy-tim (CT 201), `.20` PBS (VM 102, sortie APT), `.30`
 headscale (CT 202), `.40` pacs03 (PACS de secours, bare-metal Windows GRA3
-raccordé au vRack — [15-pacs-secours.md](15-pacs-secours.md)). S'y ajoute une
+raccordé au vRack — [15-pacs-secours.md](15-pacs-secours.md)), `.60` zabbix
+(CT 204). **Exception aux dizaines : `.2`, `.3` et `.4` sont les pattes
+d'administration des hyperviseurs** pve1, pve2 et pve3 — posées le 27/08/2026
+pour pve1 puis étendues aux trois le 31/08/2026, pour permettre
+l'administration par VPN sans passer par Internet
+([04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026)).
+Ces pattes n'ont **pas de passerelle** (la route par défaut reste publique) et
+portent une route retour `10.90.0.0/24 via 10.40.0.1` ; l'entrée depuis le
+VLAN 400 leur reste interdite par `cluster.fw`. S'y ajoute une
 plage **hors VLAN** : le tailnet headscale
 `100.72.0.0/16` ([11-headscale.md](11-headscale.md)) — choisie dans le CGNAT
 `100.64.0.0/10` mais **hors `100.64.0.0/24`**, car `100.64.0.1` est la
 passerelle publique OVH des trois nœuds : ne jamais enrôler un hyperviseur
-dans le tailnet.
+dans le tailnet **en mode noyau** — le client y installe une route
+`100.64.0.0/10` consultée avant la table principale, qui écraserait la
+passerelle par défaut et couperait le nœud d'Internet. Un enrôlement en mode
+`--tun=userspace-networking` (aucune interface, aucune route posée) échappe à
+cette objection : c'est la voie envisagée pour la seconde porte
+d'administration ([06-reste-a-faire.md](06-reste-a-faire.md)).
 
 > ⚠️ **Une carte sans `tag` sur `vmbr1` est raccordée au bloc public OVH.** Toute
 > VM de production doit porter `tag=400`. Oublier le tag expose la machine

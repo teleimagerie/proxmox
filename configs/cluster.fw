@@ -18,8 +18,15 @@ policy_out: ACCEPT
 # --- Trafic inter-noeuds : Corosync, Ceph, migration, pmxcfs ---
 IN ACCEPT -source +cluster -log nolog
 
-# --- La patte VLAN 400 de pve1 (10.40.0.2) est sortante uniquement :
-# --- rien du LAN VM ne doit joindre un hyperviseur (perennisee le 27/08/2026)
+# --- Supervision : Zabbix (CT 204) interroge l API PVE par le chemin PRIVE
+# --- depuis le 31/08/2026 (overrides Unbound : pveN.infra -> 10.40.0.x).
+# --- CETTE LIGNE DOIT RESTER AVANT LE DROP CI-DESSOUS, sinon elle est avalee
+# --- et toute la supervision du cluster s eteint en silence (17-zabbix.md).
+IN ACCEPT -source 10.40.0.60 -p tcp -dport 8006 -log nolog
+
+# --- Les pattes VLAN 400 des 3 noeuds (10.40.0.2/.3/.4) sont sortantes
+# --- uniquement : rien d autre du LAN VM ne doit joindre un hyperviseur
+# --- (perennisee le 27/08/2026, etendue aux 3 noeuds le 31/08/2026)
 IN DROP -source 10.40.0.0/24 -log nolog
 
 # --- Acces administrateur (choix retenu : ouvert + 2FA obligatoire) ---

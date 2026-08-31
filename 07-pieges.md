@@ -819,3 +819,38 @@ commite pas** (il termine par un `cr.rollback()` — il faut un `env.cr.commit()
 explicite), et il faut se garder de filtrer la sortie d'un script distant sur
 un marqueur de succès (`sed -n '/RESULTAT/,$p'`) : le filtre avale la trace
 d'erreur et un échec devient un silence indistinguable d'une réussite muette.
+
+---
+
+## 37. Une patte réseau sans route retour rend le nœud sourd, sans rien bloquer
+
+**Symptôme** — Depuis le VPN nomade, `10.40.0.2:8006` et `:22` (patte VLAN 400
+de pve1) ne répondent pas : `nc` expire. Tout accuse le pare-feu, et la doc
+elle-même l'avait conclu — « l'interface Proxmox (8006) injoignable, même
+résultat depuis un client WireGuard » ([08-opnsense.md](08-opnsense.md#filtrage)).
+
+**Cause** — Rien ne bloque. Le SYN **arrive** bien sur la patte VLAN 400 (la
+source est `10.90.0.2`, que le `IN DROP -source 10.40.0.0/24` de `cluster.fw`
+ne vise pas). Mais le nœud n'a **aucune route vers `10.90.0.0/24`** : sa route
+par défaut part sur `100.64.0.1`, la passerelle publique OVH. Le SYN-ACK s'en
+va donc par la mauvaise porte et disparaît. Routage asymétrique — jamais un
+refus, toujours un silence, ce qui le fait passer pour du filtrage.
+
+```bash
+ip route get 10.90.0.2      # via 100.64.0.1 dev vmbr0  ← le diagnostic tient ici
+```
+
+**Résolution** — Une route retour explicite, persistante, sur chaque nœud :
+
+```
+post-up ip route add 10.90.0.0/24 via 10.40.0.1 dev vmbr1.400 || true
+```
+
+**Leçon** — Une machine dont la route par défaut sort ailleurs que par le VPN a
+**toujours** besoin d'une route retour vers la plage VPN. Le piège a été payé
+deux fois : sur pacs03 le 25/08/2026 (`New-NetRoute … 10.90.0.0/24`,
+[15-pacs-secours.md](15-pacs-secours.md)) puis sur les hyperviseurs le
+31/08/2026. Le réflexe de diagnostic : avant d'accuser un pare-feu, faire
+`ip route get <IP du client>` **sur la cible**, et vérifier que le SYN arrive
+(`tcpdump`). Un pare-feu qui bloque et une réponse qui part ailleurs donnent
+exactement le même symptôme.

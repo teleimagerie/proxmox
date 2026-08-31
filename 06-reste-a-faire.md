@@ -365,3 +365,68 @@ déclarée. Nettoyage restant :
   zone rafraîchi le 30/08 ;
 - **relève du mail entrant** : déjà à l'état `draft` sur le VPS (constat
   post-bascule, pas une régression) — à réactiver un jour depuis l'interface.
+
+---
+
+## 12. Fermeture de l'exposition publique du cluster — en cours
+
+**Pourquoi** : `cluster.fw` ouvre encore `8006`, `22`, `3128` et `5900-5999` à
+tout Internet. Le journal `pveproxy` montre des scanners qui sondent l'API en
+continu (`65.49.1.38/40/47`, `204.76.203.49`…), et le verrouillage de pacs03 le
+30/08 a montré ce que devient une surface publique non filtrée. Les protections
+en place (clé seule, TOTP, fail2ban) tiennent le bruteforce ; l'objectif est de
+**retirer `pveproxy` et `sshd` de la vue d'Internet** — donc de se protéger
+d'une CVE d'authentification, que le 2FA ne couvre pas.
+
+### ✅ Étape 1 — chemin privé d'administration (31/08/2026)
+
+Les 3 nœuds ont une patte VLAN 400 (`.2`, `.3`, `.4`) **et** la route retour
+`10.90.0.0/24 via 10.40.0.1` qui manquait. Depuis le VPN nomade, SSH et 8006
+répondent sur les trois, **certificat valide** grâce aux overrides Unbound
+`pveN.infra → 10.40.0.x`. Aucune règle OPNsense n'a été nécessaire. La
+supervision Zabbix est passée au chemin privé (exception `10.40.0.60 → 8006`
+posée **avant** le DROP du VLAN 400) — ce qui supprime au passage l'épingle à
+cheveux publique et le risque de bannissement fail2ban de `57.130.34.122`
+([04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026)).
+
+### ⚠️ Étape 2 — seconde porte VPN (à faire)
+
+Enrôler les 3 nœuds dans le tailnet en **`--tun=userspace-networking`** (tag
+`tag:pve`, ACL `admin@ → tag:pve:22,8006`). Le mode userspace ne pose aucune
+route et lève donc l'objection historique du `100.64.0.0/10`
+([01-architecture.md](01-architecture.md#réseau)). Condition pour que cette
+porte soit **réellement indépendante d'OPNsense** : ouvrir `udp/41641` en
+entrée sans restriction de source, afin que le poste joigne le nœud en direct
+sur son IP publique. Contrepartie à assumer : ce trafic arrive de `127.0.0.1`,
+donc invisible de `cluster.fw` et de fail2ban — le filtrage repose entièrement
+sur l'ACL headscale. **Test d'acceptation** : arrêter la VM 100 et vérifier que
+les 3 nœuds restent joignables.
+
+### ⚠️ Étape 3 — fermeture proprement dite (à faire)
+
+Préalable **bloquant** : ouvrir la console KVM OVH sur **chacun** des 3 nœuds et
+**vérifier le mot de passe root** (il est local, non répliqué, donc
+potentiellement différent d'un nœud à l'autre — procédure et identifiants dans
+[04-securite.md](04-securite.md#console-kvmipmi-ovh--laccès-de-dernier-recours)).
+
+`cluster.fw` étant répliqué par pmxcfs, la fermeture est **atomique et
+globale** : il n'y a pas de nœud canari, la progressivité s'obtient **par
+port**, avec 24 h de recul entre deux vagues.
+
+| Vague | On ferme | Filet restant |
+|---|---|---|
+| V1 | `3128`, `5900:5999` | 8006 et 22 publics |
+| V2 | `8006` | **22 public** |
+| V3 | `22` | sessions ouvertes, timers, tailnet, console KVM |
+
+À prévoir dans la même passe : `ignoreip` fail2ban (`10.90.0.0/24`,
+`10.40.0.60`) — sinon 5 échecs bannissent la seule source d'administration
+restante ; un **second timer anti-verrouillage** `pve-firewall stop` (celui de
+[04-securite.md](04-securite.md#modifier-le-firewall-sans-se-verrouiller) écrit
+dans `/etc/pve` et **échoue en silence si le quorum est perdu**) ; et des tests
+en `-o ControlMaster=no`, faute de quoi on teste une session déjà ouverte —
+elle survit à la fermeture et donne une fausse assurance.
+
+`5900-5999` : rien n'écoute au repos (les consoles passent par le WebSocket du
+8006) — **candidats à la suppression pure** plutôt qu'à la restriction, à
+confirmer par les compteurs `iptables` sur 30 jours.

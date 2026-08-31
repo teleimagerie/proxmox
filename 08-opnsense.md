@@ -104,7 +104,18 @@ site-à-site. Vérifiable par `pfctl -sn`.
 La segmentation a été **vérifiée depuis un vrai client**, pas déduite : un conteneur
 sur le VLAN 400 atteignait Internet et sortait bien en `57.130.34.121`, tandis que
 Corosync, Ceph, l'infrastructure et l'interface Proxmox (8006) étaient tous
-injoignables. Même résultat depuis un client WireGuard.
+injoignables.
+
+> ⚠️ **Correction du 31/08/2026** : la phrase « même résultat depuis un client
+> WireGuard » figurait ici, et elle **confondait deux causes distinctes**.
+> Depuis un conteneur du VLAN 400, c'est bien le `IN DROP -source 10.40.0.0/24`
+> de `cluster.fw` qui bloque. Depuis un client **WireGuard**, la source est
+> `10.90.0.x` : le paquet n'était pas filtré du tout, il **arrivait** — mais la
+> réponse partait vers la passerelle publique, faute de route retour sur le
+> nœud. Routage asymétrique, pas filtrage. Corrigé le 31/08 par la route
+> `10.90.0.0/24 via 10.40.0.1` posée sur les 3 nœuds
+> ([04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026)) —
+> même leçon que sur pacs03 ([15-pacs-secours.md](15-pacs-secours.md#la-patte-vrack-posée-le-25082026)).
 
 ---
 
@@ -248,6 +259,15 @@ des **host overrides** :
 |---|---|---|
 | `auth.teleimagerie.net` (27/08/2026) | `10.40.0.10` (proxy-tim) | joindre la VIP `.122` depuis l'intérieur aboutit sur la GUI d'OPNsense — [piège n° 32](07-pieges.md#32-joindre-la-vip-122-depuis-lintérieur-aboutit-sur-la-gui-dopnsense) |
 | `zabbix.teleimagerie.net` (29/08/2026) | `10.40.0.10` (proxy-tim) | même raison — ne couvre que le web : un client interne du trapper 10051 viserait `10.40.0.60` en direct ([17-zabbix.md](17-zabbix.md)) |
+| **`pve1.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.2`** | administration des hyperviseurs par le chemin privé — [04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026) |
+| **`pve2.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.3`** | idem |
+| **`pve3.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.4`** | idem |
+
+Les trois overrides `pve*` ne sont **pas un confort** : garder le *nom* plutôt
+que l'IP privée conserve un **certificat Let's Encrypt valide** et laisse
+intactes les URI de redirection Keycloak `https://pve{1,2,3}…:8006/*`
+([16-keycloak.md](16-keycloak.md)). Vérifié le 31/08 depuis le VPN :
+`curl` → `200`, `ssl_verify_result=0`.
 
 Les overrides sont inscrits dans `config.xml` (`unboundplus/hosts`) : ils
 survivent à une reconstruction depuis l'export hebdomadaire, et la GUI les
@@ -255,7 +275,22 @@ montre dans *Services → Unbound DNS → Overrides*. Sauvegardes préalables au
 éditions : `/conf/config.xml.bak-keycloak-20260827`,
 `/conf/config.xml.bak-zabbix-20260829` (celle-ci posée en éditant
 `config.xml` en direct puis `configctl unbound restart` + `configctl filter
-reload` — même effet que la GUI) et `/conf/config.xml.bak-zabbixagent-20260829`.
+reload` — même effet que la GUI), `/conf/config.xml.bak-zabbixagent-20260829`
+et `/conf/config.xml.bak-pve-overrides-20260831`.
+
+> ⚠️ **Piège rencontré le 31/08** : après édition directe de `config.xml`,
+> `configctl unbound reload` **ne régénère pas** `/var/unbound/host_entries.conf`
+> — Unbound continue de servir l'ancienne réponse (ici les IP publiques) sans
+> la moindre erreur. Il faut `configctl unbound restart`, puis **vérifier le
+> fichier généré**, jamais le code retour :
+> `grep pve1.infra /var/unbound/host_entries.conf`.
+
+> ⚠️ **Couplage à connaître** : ces overrides ont un effet immédiat sur
+> **Zabbix**, dont le CT 204 résout par `10.40.0.1`. Le 31/08, dès leur mise en
+> service, la supervision du cluster est passée du chemin public au chemin
+> privé `10.40.0.x` — et s'est **coupée sur-le-champ**, le temps d'ajouter
+> l'exception `10.40.0.60 → 8006` dans `cluster.fw`, **avant** le `DROP` du
+> VLAN 400. Modifier l'un sans l'autre éteint la supervision en silence.
 
 > **Plugin `os-zabbix7-agent` depuis le 29/08/2026** : agent Zabbix 7.0
 > (`zabbix_agentd`) en écoute sur `10.40.0.1:10050` **uniquement**, interrogé
