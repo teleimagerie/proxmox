@@ -424,9 +424,14 @@ port**, avec 24 h de recul entre deux vagues.
 | V2 | `8006` | **22 public** |
 | V3 | `22` | sessions ouvertes, timers, tailnet, console KVM |
 
-À prévoir dans la même passe : `ignoreip` fail2ban (`10.90.0.0/24`,
-`10.40.0.60`) — sinon 5 échecs bannissent la seule source d'administration
-restante ; un **second timer anti-verrouillage** `pve-firewall stop` (celui de
+✅ **`ignoreip` fail2ban déjà posé** sur les 3 nœuds le 31/08
+(`configs/fail2ban-proxmox.local`) : `10.90.0.0/24`, `10.40.0.60` et les
+réseaux vRack ne peuvent plus être bannis — sinon 5 échecs enfermeraient
+dehors la seule source d'administration restante. Le tailnet n'a pas besoin
+d'y figurer : il livre depuis `127.0.0.1`.
+
+Restent à prévoir dans la passe de fermeture : un **second timer
+anti-verrouillage** `pve-firewall stop` (celui de
 [04-securite.md](04-securite.md#modifier-le-firewall-sans-se-verrouiller) écrit
 dans `/etc/pve` et **échoue en silence si le quorum est perdu**) ; et des tests
 en `-o ControlMaster=no`, faute de quoi on teste une session déjà ouverte —

@@ -1,4 +1,11 @@
 [DEFAULT]
+# Sources d administration a ne JAMAIS bannir : apres la fermeture des
+# ports publics elles sont les seules voies d entree, et 5 echecs
+# suffiraient a enfermer tout le monde dehors pour une heure.
+# 10.90.0.0/24 = VPN nomade wg0, 10.40.0.60 = Zabbix (API 8006),
+# 10.100/10.200/10.30 = reseaux vRack du cluster. Le tailnet n a pas
+# besoin d y figurer : il livre depuis 127.0.0.1 (mode userspace).
+ignoreip = 127.0.0.1/8 ::1 10.90.0.0/24 10.40.0.60 10.100.0.0/24 10.200.0.0/24 10.30.0.0/24
 backend  = systemd
 bantime  = 3600
 findtime = 600
