@@ -418,11 +418,38 @@ potentiellement différent d'un nœud à l'autre — procédure et identifiants 
 globale** : il n'y a pas de nœud canari, la progressivité s'obtient **par
 port**, avec 24 h de recul entre deux vagues.
 
-| Vague | On ferme | Filet restant |
-|---|---|---|
-| V1 | `3128`, `5900:5999` | 8006 et 22 publics |
-| V2 | `8006` | **22 public** |
-| V3 | `22` | sessions ouvertes, timers, tailnet, console KVM |
+| Vague | On ferme | Filet restant | État |
+|---|---|---|---|
+| V1 | `3128`, `5900:5999` | 8006 et 22 publics | ✅ **31/08/2026** |
+| V2 | `8006` | **22 public** | ⛔ **bloquée** — voir ci-dessous |
+| V3 | `22` | sessions ouvertes, timers, tailnet, console KVM | à faire |
+
+**V1 faite le 31/08** : `[IPSET admin]` créé (`10.90.0.0/24`), `3128` restreint,
+`5900-5999` **supprimé** (rien n'y écoutait). Vérifié depuis l'extérieur : les
+deux ports expirent sur les 3 IP publiques, le ping répond, les deux portes
+VPN fonctionnent, quorum/Ceph/supervision intacts.
+
+### ⛔ V2 bloquée : un second administrateur utilise le chemin public
+
+L'inventaire des sources de l'API (préalable P2) a évité une coupure : outre
+Zabbix et les scanners, **`82.127.36.38` totalise ~24 000 requêtes sur pve1 et
+pve2 — c'est `brtrnd@keycloak`**, l'interface web de Bertrand Leroux, avec un
+tableau de bord ouvert qui interroge `/cluster/resources` et `/cluster/tasks`
+toutes les 2 secondes. Fermer le 8006 le couperait **en pleine session**.
+
+Son pair VPN existe (`brtrnd`, `10.90.0.3/32`, créé le 31/08) et **le tunnel
+est monté** — handshake mesuré à 1 min 35 — mais le trafic y est résiduel
+(13 Ko reçus) : le tunnel est au repos, **le navigateur passe par l'IP
+publique**. Vraisemblablement parce que son client n'utilise pas Unbound
+(`10.40.0.1`) comme résolveur : sans cela `pveN.infra` continue de résoudre en
+IP publique, même VPN monté.
+
+**Avant V2**, il faut donc que Bertrand : VPN monté, ait `DNS = 10.40.0.1` dans
+sa configuration WireGuard (ou vise `10.40.0.2/.3/.4`), et confirme que
+`https://pve1.infra.teleimagerie.net:8006` s'ouvre bien **par le VPN** — la
+preuve étant une source `10.90.0.3` dans `/var/log/pveproxy/access.log`, et
+non plus `82.127.36.38`. Le contrôle est le même pour tout autre accès qui
+apparaîtrait dans cet inventaire.
 
 ✅ **`ignoreip` fail2ban déjà posé** sur les 3 nœuds le 31/08
 (`configs/fail2ban-proxmox.local`) : `10.90.0.0/24`, `10.40.0.60` et les

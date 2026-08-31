@@ -129,10 +129,10 @@ Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.
 
 | Port | Source | Usage |
 |---|---|---|
-| 8006 | tout Internet | interface web |
-| 22 | tout Internet | SSH (clé uniquement) |
-| 3128 | tout Internet | proxy SPICE |
-| 5900-5999 | tout Internet | consoles noVNC |
+| 8006 | tout Internet ⚠️ | interface web — **fermeture prévue (V2)**, bloquée tant qu'un second administrateur y accède par l'IP publique ([06-reste-a-faire.md](06-reste-a-faire.md)) |
+| 22 | tout Internet ⚠️ | SSH (clé uniquement) — **fermeture prévue (V3)** |
+| 3128 | **ipset `admin`** (31/08/2026) | proxy SPICE — VPN uniquement |
+| ~~5900-5999~~ | — | **supprimé le 31/08/2026** : rien n'y écoutait au repos, les consoles de l'interface web passent par le WebSocket du 8006 |
 | tout | ipset `cluster` | Corosync, Ceph, migration, pmxcfs |
 | **8006 — ACCEPT prioritaire** | `10.40.0.60` (CT 204) | supervision Zabbix par le **chemin privé** depuis le 31/08/2026. **Doit rester au-dessus du DROP suivant**, sinon elle est avalée et la supervision s'éteint sans bruit |
 | **tout — DROP prioritaire** | `10.40.0.0/24` (LAN VM) | les pattes `10.40.0.2/.3/.4` des 3 nœuds sont **sortantes uniquement** (27/08/2026, étendu aux 3 nœuds le 31/08) : une VM compromise ne joint pas un hyperviseur — [08-opnsense.md](08-opnsense.md#accès-dadministration) |

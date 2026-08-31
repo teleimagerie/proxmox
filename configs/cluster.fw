@@ -13,6 +13,17 @@ policy_out: ACCEPT
 10.200.0.0/24
 10.30.0.0/24
 
+[IPSET admin] # Portes d administration - SOURCE REELLEMENT VUE PAR LE NOEUD
+# 10.90.0.0/24 = VPN nomade wg0, vu tel quel car le trafic sort par la patte
+# LAN d OPNsense (pas de NAT) vers les pattes 10.40.0.2/.3/.4 : verifie le
+# 31/08/2026. Viser une IP PUBLIQUE depuis le VPN serait NATe en .121 et ne
+# matcherait pas -> l administration passe par les noms pveN.infra (overrides
+# Unbound) ou par 10.40.0.x, jamais par les IP publiques.
+# La porte tailnet n a pas a figurer ici : en mode userspace elle livre
+# depuis 127.0.0.1 et echappe a ce pare-feu (filtrage par l ACL headscale).
+
+10.90.0.0/24
+
 [RULES]
 
 # --- Trafic inter-noeuds : Corosync, Ceph, migration, pmxcfs ---
@@ -32,8 +43,10 @@ IN DROP -source 10.40.0.0/24 -log nolog
 # --- Acces administrateur (choix retenu : ouvert + 2FA obligatoire) ---
 IN ACCEPT -p tcp -dport 8006 -log nolog       # interface web Proxmox
 IN ACCEPT -p tcp -dport 22 -log nolog         # SSH (par cle uniquement)
-IN ACCEPT -p tcp -dport 3128 -log nolog       # proxy SPICE
-IN ACCEPT -p tcp -dport 5900:5999 -log nolog  # consoles noVNC
+IN ACCEPT -source +admin -p tcp -dport 3128 -log nolog  # proxy SPICE - VPN seul (V1, 31/08/2026)
+# 5900-5999 (VNC/SPICE direct) SUPPRIME le 31/08/2026 : rien n y ecoutait au
+# repos, les consoles de l interface web passent par le WebSocket du 8006.
+# Si une console directe cassait un jour, remettre la ligne restreinte a +admin.
 
 # --- Seconde porte d administration : tailnet headscale (tag:pve).
 # --- Les 3 noeuds tournent tailscale en --tun=userspace-networking : aucune
