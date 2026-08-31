@@ -1,0 +1,233 @@
+# Intentions d'architecture du cluster tim-cluster.
+#
+# Ce fichier est écrit À LA MAIN. Il porte ce qu'aucune API ne dira jamais :
+# pourquoi un cloisonnement existe, ce qu'une machine est censée être, quelles
+# règles doivent tenir. L'inventaire (VM, conteneurs, IP, VLAN) est découvert
+# par scripts/genere-carte.py via l'API Proxmox et n'a pas à figurer ici.
+#
+# La carte carte-reseau.svg est produite par la fusion des deux :
+#   inventaire découvert  +  intentions déclarées  ->  carte-reseau.svg
+#
+# Quand le réel s'écarte des règles ci-dessous, le script le signale dans la
+# carte au lieu d'échouer : voir la section « anomalies » du SVG produit.
+#
+# Références : 01-architecture.md (réseau, VLAN), 08-opnsense.md (filtrage).
+
+meta:
+  cluster: tim-cluster
+  datacenter: OVHcloud GRA4
+  vrack: pn-1165892
+  entree_unique: pve1        # seul nœud raccordé au VLAN 400 (vmbr1.400)
+
+# ── Zones réseau ─────────────────────────────────────────────────────────────
+# L'ordre définit l'empilement vertical de la carte, du public vers l'interne.
+
+zones:
+  - id: public
+    titre: Bloc public OVH
+    reseau: 57.130.34.120/29
+    sous_titre: vmbr1 sans tag
+    couleur: wan
+    note: >
+      Rattaché au vRack et non à un serveur : c'est ce qui rend la haute
+      disponibilité réelle. Après migration de la VM OPNsense sur un autre
+      nœud, la sortie reste en 57.130.34.121 sans action côté OVH.
+
+  - id: vlan400
+    titre: VLAN 400
+    reseau: 10.40.0.0/24
+    sous_titre: LAN des machines
+    tag: 400
+    passerelle: 10.40.0.1
+    couleur: accent
+    note: >
+      Adressage par dizaines : .1 passerelle, puis un service tous les dix.
+      Toute machine de production doit porter tag=400.
+
+  - id: vlan300
+    titre: VLAN 300
+    reseau: 10.30.0.0/24
+    sous_titre: Infrastructure
+    tag: 300
+    couleur: neutre
+    note: Porte le serveur de sauvegarde, délibérément fermé au LAN.
+
+  - id: vlan200_100
+    titre: VLAN 200 / 100
+    reseau: 10.200.0.0/24 · 10.100.0.0/24
+    sous_titre: Ceph · Corosync
+    tags: [200, 100]
+    couleur: neutre
+    note: >
+      VLAN 200 en MTU 9000 (jumbo frames validés par ping -M do -s 8972).
+      Ne pas relever le MTU du VLAN 100 : Corosync veut de la latence basse.
+
+# ── Adresses publiques ───────────────────────────────────────────────────────
+
+adresses_publiques:
+  - ip: 57.130.34.121
+    libelle: WAN OPNsense
+    role: wan
+    ports: 51820/udp · 51822/udp
+    commentaire: WireGuard nomades et site-à-site
+
+  - ip: 57.130.34.122
+    libelle: VIP proxy-tim
+    role: vip
+    cible: 10.40.0.10
+    ports: 80 · 443 · 10051
+    commentaire: Entrée de tous les services web publiés
+
+  - ip: 57.130.34.123
+    libelle: VIP headscale
+    role: vip
+    cible: 10.40.0.30
+    ports: 443 · 3478/udp
+    commentaire: Coordination du tailnet, réflexion NAT en purenat
+
+  - ip: 57.130.34.124
+    libelle: libre
+    role: libre
+  - ip: 57.130.34.125
+    libelle: libre
+    role: libre
+
+# ── Rôles des machines ───────────────────────────────────────────────────────
+# Clé = nom de la VM ou du conteneur tel que Proxmox le connaît.
+# « attendu » sert aux contrôles ; ce qui n'est pas déclaré n'est pas vérifié.
+
+machines:
+  opnsense:
+    role: Pare-feu, NAT, redirections, DNS Unbound
+    zone: public
+    # Proxmox ne connaît pas ses adresses : OPNsense les configure lui-même,
+    # sans cloud-init. Déclarée ici pour que la carte l'affiche.
+    adresse: 57.130.34.121 · 10.40.0.1          # sa carte WAN est sur le bloc public, pas sur le LAN
+    pare_feu: true
+    attendu:
+      sans_tag: true      # SEULE machine légitimement sans tag du cluster
+      ha: true
+    note: >
+      Console de secours : qm terminal 100 depuis le nœud porteur.
+      Interface web sur 10.40.0.1, joignable par WireGuard uniquement.
+
+  proxy-tim:
+    role: Reverse proxy nginx — point d'entrée unique des services web
+    zone: vlan400
+    pivot: true           # mis en évidence sur la carte
+    attendu:
+      tag: 400
+      ip: 10.40.0.10
+
+  headscale:
+    role: Plan de contrôle du tailnet 100.72.0.0/16
+    zone: vlan400
+    attendu:
+      tag: 400
+      ip: 10.40.0.30
+    note: >
+      Le tailnet est choisi dans le CGNAT 100.64.0.0/10 mais HORS
+      100.64.0.0/24 : cette adresse est la passerelle publique OVH des trois
+      nœuds. Ne jamais enrôler un hyperviseur dans le tailnet.
+
+  keycloak:
+    role: Authentification centralisée (SSO OpenID Connect)
+    zone: vlan400
+    attendu:
+      tag: 400
+      ip: 10.40.0.50
+    note: Écoute sur 10.40.0.50:8080 et non 0.0.0.0 — pas d'exposition directe.
+
+  zabbix:
+    role: Supervision du cluster et des sites distants
+    zone: vlan400
+    attendu:
+      tag: 400
+      ip: 10.40.0.60
+
+  odoo:
+    role: ERP
+    zone: vlan400
+    attendu:
+      tag: 400
+      ip: 10.40.0.70
+
+  pbs:
+    role: Serveur de sauvegarde
+    zone: vlan300
+    attendu:
+      tag: 300
+      ip: 10.30.0.20
+    note: >
+      Deux pattes : 10.30.0.20 (VLAN 300, SSH et interface 8007) et
+      10.40.0.20 (VLAN 400, sortie APT). SSH n'écoute que sur le VLAN 300.
+
+# ── Machines hors cluster présentes sur la carte ─────────────────────────────
+
+externes:
+  - nom: pacs03
+    ip: 10.40.0.40
+    zone: vlan400
+    type: physique
+    role: PACS de secours — serveur Windows bare-metal à GRA3, raccordé au vRack
+    ports: "80"
+
+  - nom: TELLIS
+    ip: 37.61.243.246
+    zone: externe
+    type: site
+    role: Site distant, production imagerie — joint par le tunnel wg2
+
+# ── Cloisonnements voulus ────────────────────────────────────────────────────
+# Tracés en rouge sur la carte. Ce sont des décisions, pas des effets de bord.
+
+cloisonnements:
+  - depuis: vlan400
+    vers: vlan300
+    libelle: LAN → 10.30.0.0/24
+    pourquoi: >
+      Protège le serveur de sauvegarde : une machine compromise sur le LAN ne
+      peut pas atteindre PBS. L'interface s'ouvre par tunnel SSH.
+    ref: 10-sauvegardes.md
+
+  - depuis: vlan400
+    vers: vlan200_100
+    libelle: LAN → Ceph et Corosync
+    pourquoi: >
+      Le filtrage VLAN par port empêche une machine d'émettre sur un VLAN qui
+      ne lui est pas assigné. Une VM compromise ne peut injecter ni dans
+      Corosync ni dans Ceph — motif du choix du bridge VLAN-aware.
+    ref: 01-architecture.md
+
+# ── Règles vérifiées à chaque génération ─────────────────────────────────────
+# Un écart n'interrompt pas la génération : il est reporté dans la carte.
+
+regles:
+  - id: tag-400-obligatoire
+    enonce: Toute machine de production porte tag=400
+    exceptions: [opnsense, pbs]
+    gravite: critique
+    pourquoi: >
+      Une carte sans tag sur vmbr1 est raccordée au bloc public OVH. Oublier
+      le tag expose la machine directement sur Internet.
+
+  - id: onboot
+    enonce: Les machines de production démarrent avec l'hôte
+    exceptions: [odoo]
+    gravite: avertissement
+    pourquoi: Sans onboot, un redémarrage de nœud laisse le service à l'arrêt.
+
+  - id: ha-pare-feu
+    enonce: Le pare-feu est une ressource haute disponibilité
+    porte_sur: [opnsense]
+    gravite: critique
+    pourquoi: Sa perte coupe tout le VLAN 400 de l'extérieur.
+
+# ── Avertissements affichés sur la carte ─────────────────────────────────────
+
+avertissements:
+  - titre: Une carte sans tag est raccordée au bloc public OVH
+    texte: >
+      Toute machine de production doit porter tag=400. La carte WAN d'OPNsense
+      (net0 de la VM 100) est la seule carte légitimement sans tag du cluster —
+      oublier le tag ailleurs expose la machine directement sur Internet.
