@@ -136,6 +136,7 @@ Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.
 | tout | ipset `cluster` | Corosync, Ceph, migration, pmxcfs |
 | **8006 — ACCEPT prioritaire** | `10.40.0.60` (CT 204) | supervision Zabbix par le **chemin privé** depuis le 31/08/2026. **Doit rester au-dessus du DROP suivant**, sinon elle est avalée et la supervision s'éteint sans bruit |
 | **tout — DROP prioritaire** | `10.40.0.0/24` (LAN VM) | les pattes `10.40.0.2/.3/.4` des 3 nœuds sont **sortantes uniquement** (27/08/2026, étendu aux 3 nœuds le 31/08) : une VM compromise ne joint pas un hyperviseur — [08-opnsense.md](08-opnsense.md#accès-dadministration) |
+| **udp/41641** | tout Internet | **tailnet headscale** — seconde porte d'administration (31/08/2026). Sans restriction de source **à dessein** : c'est ce qui permet au poste de rejoindre le nœud **en direct sur son IP publique** quand OPNsense (donc le DERP et le plan de contrôle) est mort. WireGuard ne répond rien à un paquet non authentifié |
 | ICMP echo | tout Internet | diagnostic |
 
 L'ipset `cluster` contient les 3 IP publiques et les trois sous-réseaux vRack.
@@ -152,8 +153,16 @@ Depuis le VPN nomade, `ssh root@pveN.infra.teleimagerie.net` et
 SSO Keycloak inclus. Aucune règle OPNsense n'a eu à être ajoutée : `opt1`
 laissait déjà passer vers `10.40.0.0/24`.
 
+**Étape 2 faite le même jour** : les 3 nœuds sont aussi joignables par le
+**tailnet headscale** (`tag:pve` — `100.72.0.6`, `.5`, `.7`), en mode
+`--tun=userspace-networking` pour ne poser aucune route et laisser intacte la
+passerelle OVH `100.64.0.1`. Chemin **direct sur l'IP publique du nœud**, donc
+indépendant d'OPNsense ([11-headscale.md](11-headscale.md#les-hyperviseurs--seconde-porte-dadministration-31082026)).
+On a donc **deux portes aux modes de défaillance disjoints** : wg0 (VM 100) et
+le tailnet (chemin direct, plan de contrôle CT 202).
+
 **Les ports publics 8006 et 22 sont encore ouverts** : leur fermeture est
-l'étape 3, conditionnée au test de la console KVM et à la seconde porte VPN
+l'étape 3, conditionnée au test de la console KVM sur les 3 nœuds
 (voir [06-reste-a-faire.md](06-reste-a-faire.md)).
 
 > La source vue par le nœud est **`10.90.0.2`**, préservée (pas de NAT : le

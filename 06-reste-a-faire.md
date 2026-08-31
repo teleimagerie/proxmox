@@ -389,18 +389,23 @@ posée **avant** le DROP du VLAN 400) — ce qui supprime au passage l'épingle 
 cheveux publique et le risque de bannissement fail2ban de `57.130.34.122`
 ([04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026)).
 
-### ⚠️ Étape 2 — seconde porte VPN (à faire)
+### ✅ Étape 2 — seconde porte VPN (31/08/2026)
 
-Enrôler les 3 nœuds dans le tailnet en **`--tun=userspace-networking`** (tag
-`tag:pve`, ACL `admin@ → tag:pve:22,8006`). Le mode userspace ne pose aucune
-route et lève donc l'objection historique du `100.64.0.0/10`
-([01-architecture.md](01-architecture.md#réseau)). Condition pour que cette
-porte soit **réellement indépendante d'OPNsense** : ouvrir `udp/41641` en
-entrée sans restriction de source, afin que le poste joigne le nœud en direct
-sur son IP publique. Contrepartie à assumer : ce trafic arrive de `127.0.0.1`,
-donc invisible de `cluster.fw` et de fail2ban — le filtrage repose entièrement
-sur l'ACL headscale. **Test d'acceptation** : arrêter la VM 100 et vérifier que
-les 3 nœuds restent joignables.
+Les 3 nœuds sont enrôlés dans le tailnet (`tag:pve` — `pve1` `100.72.0.6`,
+`pve2` `100.72.0.5`, `pve3` `100.72.0.7`) en **`--tun=userspace-networking`** :
+routes vérifiées **identiques** avant/après, aucune interface créée, passerelle
+OVH `100.64.0.1` intacte. `udp/41641` ouvert dans `cluster.fw` sans restriction
+de source, ce qui donne un chemin **direct sur l'IP publique du nœud** —
+mesuré : `direct 91.134.84.222:41641`, sans traverser OPNsense
+([11-headscale.md](11-headscale.md#les-hyperviseurs--seconde-porte-dadministration-31082026)).
+
+⚠️ **Test d'acceptation restant** : arrêter la VM 100 et vérifier que les 3
+nœuds restent joignables par le tailnet. **Non joué le 31/08 à dessein** — il
+coupe le réseau de toutes les VM de production (Odoo, pacs-secours, Keycloak,
+Zabbix) : à programmer dans une fenêtre de maintenance. Tant qu'il n'est pas
+fait, l'indépendance de la seconde porte est **démontrée par construction**
+(chemin direct constaté) mais **pas mesurée de bout en bout** : le plan de
+contrôle headscale (CT 202) est lui aussi derrière OPNsense.
 
 ### ⚠️ Étape 3 — fermeture proprement dite (à faire)
 

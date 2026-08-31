@@ -7,6 +7,7 @@
   "tagOwners": {
     "tag:gateway": ["admin@"],   // passerelles DICOM des sites distants
     "tag:pacs":    ["admin@"],   // serveurs heberges sur le cluster
+    "tag:pve":     ["admin@"],   // hyperviseurs : 2e porte d administration
   },
 
   "acls": [
@@ -17,5 +18,13 @@
 
     // Administration : les postes du user admin joignent tout (SSH, web, DICOM).
     { "action": "accept", "src": ["admin@"], "dst": ["tag:gateway:*", "tag:pacs:*"] },
+
+    // Hyperviseurs : seconde porte d administration, independante d OPNsense.
+    // Volontairement PAS de joker ici — SSH et interface web uniquement — et
+    // tag:pve n est source d aucune regle : un hyperviseur n initie rien dans
+    // le tailnet. Le filtrage de cette porte repose ENTIEREMENT sur cette ACL :
+    // les noeuds tournent en --tun=userspace-networking, le trafic leur arrive
+    // depuis 127.0.0.1 et echappe donc a cluster.fw comme a fail2ban.
+    { "action": "accept", "src": ["admin@"], "dst": ["tag:pve:22,8006"] },
   ],
 }

@@ -35,5 +35,16 @@ IN ACCEPT -p tcp -dport 22 -log nolog         # SSH (par cle uniquement)
 IN ACCEPT -p tcp -dport 3128 -log nolog       # proxy SPICE
 IN ACCEPT -p tcp -dport 5900:5999 -log nolog  # consoles noVNC
 
+# --- Seconde porte d administration : tailnet headscale (tag:pve).
+# --- Les 3 noeuds tournent tailscale en --tun=userspace-networking : aucune
+# --- route posee, la passerelle OVH 100.64.0.1 reste intacte. Ce port doit
+# --- rester ouvert SANS restriction de source pour que le poste rejoigne le
+# --- noeud EN DIRECT sur son IP publique, y compris quand OPNsense (donc le
+# --- DERP et le plan de controle) est mort. WireGuard ne repond rien a un
+# --- paquet non authentifie : la surface est sans commune mesure avec 22/8006.
+# --- ATTENTION : ce trafic est livre depuis 127.0.0.1, donc invisible de ce
+# --- pare-feu comme de fail2ban -> le filtrage repose sur l ACL headscale.
+IN ACCEPT -p udp -dport 41641 -log nolog
+
 # --- Diagnostic reseau ---
 IN Ping(ACCEPT) -log nolog

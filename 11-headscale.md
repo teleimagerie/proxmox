@@ -50,7 +50,15 @@ hébergés ici (PACS à venir), et être administrées depuis ici.
 - **La plage `100.72.0.0/16`** est prise dans `100.64.0.0/10` (imposé par les
   clients Tailscale) mais évite délibérément `100.64.0.0/24` : **`100.64.0.1`
   est la passerelle publique OVH des trois hyperviseurs** (CGNAT). Corollaire :
-  **ne jamais enrôler un nœud Proxmox dans le tailnet.** Elle évite aussi
+  **ne jamais enrôler un nœud Proxmox dans le tailnet en mode noyau** — le
+  client y installe une route `100.64.0.0/10` consultée avant la table
+  principale, qui écraserait la passerelle par défaut et couperait le nœud
+  d'Internet. ⚠️ **Nuance apportée le 31/08/2026** : l'interdit vise le *mode*,
+  pas l'enrôlement. Les 3 nœuds **sont enrôlés depuis cette date** en
+  `--tun=userspace-networking`, qui ne crée aucune interface et ne pose aucune
+  route — vérifié par comparaison stricte de `ip route show table all` et
+  `ip rule show` avant/après (voir [Hyperviseurs](#les-hyperviseurs--seconde-porte-dadministration-31082026)).
+  Elle évite aussi
   `100.100.100.100` (résolveur MagicDNS des clients) et ne croise aucune plage
   du cluster ni des sites (10.40/10.90/10.30/10.100/10.200, 172.33,
   192.168.101/111 — TELLIS, [13-tellis.md](13-tellis.md)).
@@ -90,6 +98,7 @@ et [configs/headscale-acl.hujson](configs/headscale-acl.hujson).
 | user `tagged-devices` (synthétique) | créé par headscale | propriétaire de tous les nœuds tagués — le tag remplace le user comme identité (constaté le 25/08/2026) |
 | `tag:gateway` | passerelles DICOM | n'atteint que `tag:pacs:104,11112` |
 | `tag:pacs` | serveurs DICOM hébergés | n'initie rien |
+| **`tag:pve`** (31/08/2026) | **les 3 hyperviseurs** — `pve1` `100.72.0.6`, `pve2` `100.72.0.5`, `pve3` `100.72.0.7` | seconde porte d'administration : joignables par `admin@` sur **22 et 8006 seulement**, n'initient rien |
 
 L'ACL est en **deny par défaut** : aucune règle n'autorise le trafic
 passerelle ↔ passerelle, et c'est voulu. Matrice **vérifiée le 15/08/2026** avec
@@ -105,6 +114,66 @@ deux CT jetables enrôlés (`tag:gateway` et `tag:pacs`) :
 
 Les ports 104/11112 sont les ports DICOM usuels — **à resserrer au port réel
 quand le PACS existera**.
+
+### Les hyperviseurs — seconde porte d'administration (31/08/2026)
+
+Les 3 nœuds sont enrôlés **en mode userspace**, pour servir de porte
+d'administration indépendante d'OPNsense (la première porte, le VPN nomade
+wg0, est portée par la VM 100 : si elle ne redémarre pas, il faut un autre
+chemin pour la réparer). Procédure, identique sur chaque nœud :
+
+```bash
+# 1. relever l état AVANT (c est le controle qui compte)
+ip route show table all > /root/routes-avant-tailscale.txt; ip rule show >> /root/routes-avant-tailscale.txt
+
+# 2. depot officiel puis installation
+curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg > /usr/share/keyrings/tailscale-archive-keyring.gpg
+curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.tailscale-keyring.list > /etc/apt/sources.list.d/tailscale.list
+apt-get update && apt-get install -y tailscale
+
+# 3. MODE USERSPACE AVANT TOUT DEMARRAGE UTILE — c est ce qui protege 100.64.0.1
+systemctl stop tailscaled
+sed -i 's|^FLAGS=.*|FLAGS="--tun=userspace-networking"|' /etc/default/tailscaled
+systemctl start tailscaled
+
+# 4. enrolement par cle pre-auth taguee (creee avec --user 2, l ID de infra :
+#    headscale n accepte pas le nom d utilisateur sur ce flag)
+tailscale up --login-server=https://headscale.teleimagerie.net \
+  --auth-key=<cle tag:pve> --hostname=$(hostname) \
+  --accept-routes=false --accept-dns=false
+
+# 5. CONTROLE D ACCEPTATION : les routes doivent etre INCHANGEES
+ip route show table all > /root/routes-apres-tailscale.txt; ip rule show >> /root/routes-apres-tailscale.txt
+diff /root/routes-avant-tailscale.txt /root/routes-apres-tailscale.txt   # doit etre vide
+ip -br a | grep -c tailscale   # doit rendre 0
+ping -c1 100.64.0.1            # la passerelle OVH doit repondre
+```
+
+Résultat mesuré le 31/08 sur les 3 nœuds : **routes identiques**, aucune
+interface `tailscale0`, passerelle OVH intacte, `corosync-cfgtool -n` toujours
+à 4 liens. Chemin **`direct` vers l'IP publique du nœud** (`tailscale status` :
+`direct 91.134.84.222:41641`), donc **sans traverser OPNsense** — c'est
+précisément ce qu'on cherchait. Expirer la clé pré-auth une fois les 3 nœuds
+enrôlés : `headscale preauthkeys expire --id <n>`.
+
+> **`udp/41641` est ouvert dans `cluster.fw`, sans restriction de source** —
+> volontaire : sans cela le chemin direct ne peut se rétablir qu'à l'initiative
+> du nœud, ce qui suppose un plan de contrôle vivant. Or il est justement mort
+> dans le scénario où l'on a besoin de cette porte. WireGuard ne répond rien à
+> un paquet non authentifié : la surface est sans commune mesure avec 22/8006.
+
+> ⚠️ **Contrepartie du mode userspace** : le trafic est livré aux services
+> **depuis `127.0.0.1`**. Cette porte est donc **invisible de `cluster.fw` et de
+> fail2ban** — son filtrage repose **entièrement** sur l'ACL headscale
+> (`admin@ → tag:pve:22,8006`, volontairement sans joker). Les journaux
+> `pveproxy` perdent aussi la source réelle sur ce chemin.
+
+⚠️ **Test d'acceptation restant à programmer** : arrêter la VM 100 et vérifier
+que les 3 nœuds restent joignables par le tailnet — c'est la mesure qui
+prouverait l'indépendance de bout en bout (le plan de contrôle headscale est
+lui-même derrière OPNsense). Test volontairement **non joué** le 31/08 : il
+coupe le réseau de toutes les VM de production
+([05-tests-ha.md](05-tests-ha.md)), il doit être planifié.
 
 ---
 
@@ -344,8 +413,12 @@ tailscale ping <ip-100.72.x>        # affiche le chemin réellement emprunté
 - **Renouvellement TLS** : le 443 public doit rester joignable (TLS-ALPN).
   Ne jamais boucler sur un échec d'émission — rate-limits Let's Encrypt
   (5 échecs de validation/heure). Le cache de certs est persistant et sauvegardé.
-- **Ne jamais enrôler un hyperviseur** (passerelle OVH `100.64.0.1` dans la
-  plage Tailscale ; la route du tailnet l'écraserait).
+- **Ne jamais enrôler un hyperviseur en mode noyau** (passerelle OVH
+  `100.64.0.1` dans la plage Tailscale ; la route du tailnet l'écraserait).
+  Le mode `--tun=userspace-networking` échappe à cette objection et **est en
+  service sur les 3 nœuds depuis le 31/08/2026** — vérifier systématiquement
+  l'absence d'effet de bord par un `diff` avant/après de
+  `ip route show table all` + `ip rule show`.
 - **Le paquet .deb démarre headscale dès l'installation avec sa config
   d'exemple** (constaté le 15/08/2026) : après avoir posé la vraie config,
   `systemctl restart headscale` — un `enable --now` ne redémarre pas un service
