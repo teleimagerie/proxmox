@@ -231,6 +231,17 @@ entre chaque phase.
 > nom, a été aveugle 3 min 20 s pour la même raison). En cas de panne réelle,
 > **diagnostiquer par IP publiques directes**, jamais par les noms depuis le
 > VPN — sous peine de conclure à une panne totale qui n'existe pas.
+>
+> ⚠️ **Cette consigne est périmée depuis le 01/09/2026** : les IP publiques ne
+> répondent plus (8006 et 22 fermés, [04-securite.md](04-securite.md#firewall)),
+> le ping seul subsiste. **Nouvel ordre de diagnostic** quand OPNsense est
+> mort : (1) le **tailnet** — `ssh root@100.72.0.{6,5,7}` pour pve1/pve2/pve3,
+> chemin direct qui ne dépend ni d'OPNsense ni du DNS ; (2) depuis le nœud,
+> `qm terminal 100` pour reprendre la main sur OPNsense ; (3) en dernier
+> recours, la **console KVM OVH**
+> ([04-securite.md](04-securite.md#console-kvmipmi-ovh--laccès-de-dernier-recours)).
+> Le ping sur les IP publiques reste l'outil qui distingue « nœud mort » de
+> « nœud vivant mais injoignable ».
 
 ### Ce que le test prouve
 

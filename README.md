@@ -38,7 +38,8 @@ Détail complet (NIC, OSD, ID Corosync) dans
 
 | | |
 |---|---|
-| Interface web | `https://pve{1,2,3}.infra.teleimagerie.net:8006` |
+| **VPN obligatoire** | depuis le 01/09/2026, l'administration n'est plus joignable depuis Internet. Deux portes : **VPN nomade wg0** (le nom `pveN.infra` résout alors en `10.40.0.2/.3/.4`) ou **tailnet** (`100.72.0.6` pve1, `.5` pve2, `.7` pve3) — [04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026) |
+| Interface web | `https://pve{1,2,3}.infra.teleimagerie.net:8006` (VPN monté) |
 | Compte | `matt` / realm *Proxmox VE authentication server* (**pas** `matt@pve` dans le champ nom) |
 | Second facteur | TOTP obligatoire sur `matt@pve` et `root@pam`, 10 clés de secours chacun |
 | SSH | `ssh root@pve1.infra.teleimagerie.net` (clé `~/.ssh/id_ed25519` uniquement) |
@@ -98,6 +99,8 @@ Réseau                   vRack 25 Gb/s · bridge VLAN-aware · jumbo MTU 9000 v
 HA                       7 ressources : vm:100 à vm:102 · ct:201 à ct:204
                          watchdog softdog · fencing testé en conditions réelles
 Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
+                         admin VPN-only depuis le 01/09 (8006/22/3128 fermés
+                         à Internet) · 2 portes : wg0 + tailnet · KVM OVH testé
 Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
                          WireGuard wg0 nomades · wg2 site-à-site TELLIS (51822)
 Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
@@ -142,6 +145,10 @@ Voir [01-architecture.md](01-architecture.md#dimensionnement).
    en `HEALTH_WARN` dégradé — les VM tournent, mais aucune 3ᵉ réplique n'est recréée
    faute d'un 4ᵉ hôte. C'est normal, pas une avarie.
 
-3. **La clé SSH `~/.ssh/id_ed25519` est l'issue de secours ultime.** Elle seule permet
-   de désactiver un TOTP perdu ou de réparer un firewall mal configuré. Ne la perdez pas,
-   et gardez la console KVM/IPMI OVH comme dernier recours.
+3. **La clé SSH `~/.ssh/id_ed25519` ne suffit plus seule.** Elle reste
+   indispensable (désactiver un TOTP perdu, réparer un firewall), mais depuis la
+   fermeture du 01/09/2026 il faut **une porte VPN pour l'utiliser** : wg0, ou
+   le tailnet (`ssh root@100.72.0.6`), qui a l'avantage de ne pas dépendre
+   d'OPNsense. **L'issue de secours ultime est désormais la console KVM/IPMI
+   OVH** — testée et validée le 31/08/2026, procédure et identifiants dans
+   [04-securite.md](04-securite.md#console-kvmipmi-ovh--laccès-de-dernier-recours).

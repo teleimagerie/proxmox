@@ -314,12 +314,20 @@ drill @127.0.0.1 auth.teleimagerie.net A
 
 **Interface web** : WireGuard, puis `https://10.40.0.1`.
 
-**SSH depuis le poste d'administration**, en rebondissant par un hyperviseur —
-fonctionne sans VPN :
+**SSH depuis le poste d'administration**, en rebondissant par un hyperviseur.
+⚠️ **Ne « fonctionne plus sans VPN » depuis le 01/09/2026** : le port 22 des
+nœuds est fermé à Internet ([04-securite.md](04-securite.md#firewall)). Le
+rebond suppose donc d'atteindre d'abord un nœud par l'une des deux portes :
 
 ```bash
-ssh -J root@pve1.infra.teleimagerie.net root@10.40.0.1
+ssh -J root@pve1.infra.teleimagerie.net root@10.40.0.1   # VPN nomade monté
+ssh -J root@100.72.0.6 root@10.40.0.1                    # par le tailnet
 ```
+
+**Quand OPNsense est mort, le rebond par le tailnet est la bonne voie** : il ne
+dépend ni d'OPNsense (chemin direct sur l'IP publique du nœud) ni de son DNS —
+puis `qm terminal 100` depuis le nœud, qui ne dépend d'aucune configuration
+réseau.
 
 Clés autorisées sur le compte root d'OPNsense : celle du poste d'administration
 (`matt@LENOVO-MCA2`) et celle de root sur pve1 (nécessaire aux scripts).

@@ -1,9 +1,20 @@
 # Sécurité
 
-Posture retenue avec l'utilisateur : **interface web ouverte sur Internet, second
-facteur obligatoire**. Le choix assume une surface d'exposition plus large en
-échange de la souplesse d'accès ; il n'a de sens que si le TOTP est réellement en
-place sur tous les comptes.
+Posture depuis le **1er septembre 2026** : **administration accessible par VPN
+uniquement**, second facteur toujours obligatoire. Les ports `8006`, `22` et
+`3128` ne répondent plus depuis Internet ; seuls subsistent en public l'ICMP
+(diagnostic) et `udp/41641` (WireGuard du tailnet, muet sans authentification).
+
+> **Posture précédente, et pourquoi elle a changé** : jusqu'au 31/08/2026,
+> l'interface web était **ouverte sur Internet avec 2FA obligatoire** — choix
+> assumé, échangeant de la surface contre de la souplesse. Deux constats l'ont
+> renversé : le verrouillage de pacs03 le 30/08 (pare-feu Windows entièrement
+> désactivé, bruteforce actif, > 5 000 échecs/24 h) et, sur le cluster même, des
+> scanners qui sondaient l'API dans le journal `pveproxy`. Le 2FA protège
+> l'**authentification** ; il ne protège pas la **surface applicative** de
+> `pveproxy` — une CVE d'authentification n'aurait rien eu à contourner.
+> Deux portes VPN indépendantes ont été construites d'abord (chemin privé
+> VLAN 400, puis tailnet), la fermeture n'est venue qu'ensuite.
 
 ## Comptes
 
@@ -129,8 +140,8 @@ Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.
 
 | Port | Source | Usage |
 |---|---|---|
-| 8006 | tout Internet ⚠️ | interface web — **fermeture prévue (V2)**, bloquée tant qu'un second administrateur y accède par l'IP publique ([06-reste-a-faire.md](06-reste-a-faire.md)) |
-| 22 | tout Internet ⚠️ | SSH (clé uniquement) — **fermeture prévue (V3)** |
+| 8006 | **ipset `admin`** (01/09/2026) | interface web — **VPN uniquement** |
+| 22 | **ipset `admin`** (01/09/2026) | SSH (clé uniquement) — **VPN uniquement** |
 | 3128 | **ipset `admin`** (31/08/2026) | proxy SPICE — VPN uniquement |
 | ~~5900-5999~~ | — | **supprimé le 31/08/2026** : rien n'y écoutait au repos, les consoles de l'interface web passent par le WebSocket du 8006 |
 | tout | ipset `cluster` | Corosync, Ceph, migration, pmxcfs |
@@ -161,9 +172,25 @@ indépendant d'OPNsense ([11-headscale.md](11-headscale.md#les-hyperviseurs--sec
 On a donc **deux portes aux modes de défaillance disjoints** : wg0 (VM 100) et
 le tailnet (chemin direct, plan de contrôle CT 202).
 
-**Les ports publics 8006 et 22 sont encore ouverts** : leur fermeture est
-l'étape 3, conditionnée au test de la console KVM sur les 3 nœuds
-(voir [06-reste-a-faire.md](06-reste-a-faire.md)).
+**Étape 3 — fermeture faite le 01/09/2026.** `8006`, `22` et `3128` sont
+restreints à l'ipset `admin` ; `5900-5999` supprimé. Vérifié depuis Internet :
+les trois ports expirent sur les 3 IP publiques, **le ping répond toujours**
+(c'est la signature d'une fermeture réussie — tout muet signalerait un
+incident). Vérifié côté accès : les 6 chemins (3 nœuds × 2 portes) répondent en
+SSH et 8006 sur des connexions neuves, quorum 3/3, corosync **4 liens**
+(le ring1 sur IP publiques passe par `+cluster`, non affecté), Ceph
+`HEALTH_OK`, 7 ressources HA, NAS monté, supervision Zabbix verte.
+Les compteurs `iptables` confirment que les règles `+admin` sont bien
+empruntées — la preuve, pas la déduction.
+
+> **Deux administrateurs étaient concernés.** L'inventaire des sources
+> (`access.log` et `journalctl -u ssh`) a montré, en plus des scanners :
+> `82.127.36.38` (IP partagée du bureau — clés `matt@LENOVO-MCA2`,
+> `matt@LENOVO-MCA2-windows` et `brtrnd@thinkpad`) et `88.171.147.68`
+> (Bertrand ailleurs). Fermer sans les avoir basculés au VPN les aurait coupés
+> en pleine session : la fermeture du 8006 a été **retardée d'un jour** pour
+> cela. **Faire cet inventaire avant toute fermeture** — c'est la meilleure
+> assurance qui soit, et elle a servi.
 
 > La source vue par le nœud est **`10.90.0.2`**, préservée (pas de NAT : le
 > trafic sort par la patte LAN d'OPNsense, pas par le WAN). Viser une **IP

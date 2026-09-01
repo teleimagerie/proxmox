@@ -226,10 +226,21 @@ ha-manager status | grep 204   # (après ajout HA)
 ## Supervision du cluster — depuis le 29/08/2026
 
 Le point 3 de [06 §4](06-reste-a-faire.md#4-supervision) est traité : Zabbix
-supervise le cluster qui l'héberge. **Aucun changement réseau** — contrairement
-à l'hypothèse « 2ᵉ carte VLAN 300 » de la doc, tout passe par **l'API PVE en
-HTTPS sur le chemin public existant** (NAT `.121` → `:8006`, déjà ouvert),
-avec un token **lecture seule** :
+supervise le cluster qui l'héberge, par **l'API PVE en HTTPS**, avec un token
+**lecture seule** :
+
+> ⚠️ **Le chemin a changé le 31/08/2026.** À la mise en service, tout passait
+> par le **chemin public** (le CT sortait en NAT `57.130.34.122` vers `:8006`,
+> alors ouvert à tous). Depuis les overrides Unbound `pveN.infra → 10.40.0.x`,
+> le CT 204 résout en privé et interroge les nœuds **directement sur le VLAN
+> 400** — meilleur (plus d'épingle à cheveux publique, plus de risque de
+> bannissement fail2ban de `.122`), mais **conditionné à une règle explicite** :
+> `IN ACCEPT -source 10.40.0.60 -p tcp -dport 8006`, placée **avant** le
+> `IN DROP -source 10.40.0.0/24` de `cluster.fw`, sinon elle est avalée et
+> **toute la supervision du cluster s'éteint en silence**. Constaté le 31/08 :
+> la supervision est tombée à la seconde où les overrides ont pris effet.
+> Depuis la fermeture publique du 01/09, c'est la **seule** voie d'accès de
+> Zabbix à l'API.
 
 - principal `zabbix@pve`, rôle `PVEAuditor` sur `/`, token
   `zabbix@pve!monitoring` (privsep 0). Le secret ne vit **que** dans la macro

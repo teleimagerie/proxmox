@@ -421,8 +421,40 @@ port**, avec 24 h de recul entre deux vagues.
 | Vague | On ferme | Filet restant | État |
 |---|---|---|---|
 | V1 | `3128`, `5900:5999` | 8006 et 22 publics | ✅ **31/08/2026** |
-| V2 | `8006` | **22 public** | ⛔ **bloquée** — voir ci-dessous |
-| V3 | `22` | sessions ouvertes, timers, tailnet, console KVM | à faire |
+| V2 | `8006` | 22 public | ✅ **01/09/2026** |
+| V3 | `22` | tailnet, timers, console KVM | ✅ **01/09/2026** |
+
+## ✅ 12 bis. Fermeture terminée le 01/09/2026
+
+`8006`, `22` et `3128` sont restreints à l'ipset `admin` ; `5900-5999` supprimé.
+Depuis Internet, les trois ports expirent sur les 3 IP publiques et **seul le
+ping répond**. Les 6 chemins d'administration (3 nœuds × 2 portes) ont été
+vérifiés sur connexions neuves, et les compteurs `iptables` confirment que les
+règles sont réellement empruntées. Quorum 3/3, corosync **4 liens** (le ring1
+sur IP publiques passe par `+cluster`), Ceph `HEALTH_OK`, 7 ressources HA, NAS
+monté, SSH inter-nœuds opérationnel, supervision Zabbix verte par le chemin
+privé — `57.130.34.122` a disparu des journaux, la bascule est complète.
+
+**Ce que la fermeture a failli casser, et comment on l'a vu** : l'inventaire des
+sources (P2) a révélé deux administrateurs sur le chemin public —
+`82.127.36.38` (IP partagée du bureau, portant les clés `matt@LENOVO-MCA2`,
+`matt@LENOVO-MCA2-windows` et `brtrnd@thinkpad`) et `88.171.147.68` (Bertrand
+depuis un autre site), avec 570 connexions SSH sur pve1 pour la première. V2 a
+été **retardée d'une journée** le temps que Bertrand bascule sur son pair VPN
+`10.90.0.3`. Sans cet inventaire, la fermeture coupait un collègue en pleine
+session. **À refaire avant toute fermeture du même genre.**
+
+### Reste ouvert sur ce chantier
+
+- ⚠️ **Test d'acceptation de la 2ᵉ porte** (arrêt de la VM 100) toujours à
+  programmer : c'est la seule mesure qui prouverait l'indépendance de bout en
+  bout, le plan de contrôle headscale étant lui aussi derrière OPNsense.
+- 📋 **Relire `/var/log/pve-firewall.log`** dans quelques jours pour attraper un
+  flux légitime rare que l'ipset `admin` aurait manqué.
+- 📋 **`3128` (SPICE)** : compteur à 0 depuis la fermeture — candidat à la
+  suppression pure comme `5900-5999`, à confirmer sur 30 jours.
+- 📋 Sonde externe de disponibilité : depuis Internet il ne reste que l'ICMP —
+  la supervision de l'API se fait désormais **depuis l'intérieur**.
 
 **V1 faite le 31/08** : `[IPSET admin]` créé (`10.90.0.0/24`), `3128` restreint,
 `5900-5999` **supprimé** (rien n'y écoutait). Vérifié depuis l'extérieur : les
