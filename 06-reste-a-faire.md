@@ -318,11 +318,10 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   appli~~ (fait le 29/08/2026, branche `feature/sso` du dépôt gestion, mergée).
   ~~Clients `mytim` + `mytim-staging` du realm `tim`~~ (créés le 30/08/2026).
   ~~Prod TIM : audit du client `mytim`, secret vaulté dans l'Ansible du dépôt
-  gestion~~ (fait le 01/09/2026, branche `chore/sso-prod-tim`). Reste :
-  **merge + `make deploy-tim-prod`** (au 01/09 la clé `local+sso` est déjà
-  posée mais le `.env` prod a un secret vide → callback en échec —
-  [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)),
-  puis **validation pilotes** et communication à tout l'interne TIM
+  gestion, déploiement prod, mode `local+sso`~~ (**fait le 01/09/2026**,
+  secret déployé vérifié par hash —
+  [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)).
+  Reste : **validation pilotes** puis communication à tout l'interne TIM
   (phase 3 du runbook `docs/technique/sso-keycloak.md` du dépôt gestion) ;
   **realm `isoteam`** (copie de `tim`) + ses 2 clients + redirect URI
   `…/realms/isoteam/broker/google/endpoint` dans la console Google Cloud, pour

@@ -83,7 +83,7 @@ Le flux proxy → Keycloak est en HTTP clair **sur le VLAN 400 uniquement**
 | **PBS** | realm `keycloak` (openid, idem) | `matt@keycloak` et `brtrnd@keycloak` (27/08/2026), ACL Admin sur `/` | `root@pam` local à la VM |
 | **headscale** | section `oidc` de la config — voie d'**enrôlement supplémentaire** | users OIDC créés à la volée | users locaux + clés de pré-enrôlement inchangés |
 | **Odoo** | module OCA `auth_oidc` (flux code + PKCE S256), provider `TIM SSO` en base | aucun — rapprochement manuel par e-mail (`oauth_uid`), pilote `mcapon@teleimagerie.net` le 31/08/2026 | formulaire local mot de passe, toujours affiché |
-| **MyTIM** (`app.teleimagerie.net`) | drenso/symfony-oidc-bundle (flux code + PKCE S256, claims lus dans l'id_token, JWKS en cache 1 h), client `mytim` du realm `tim` | aucun — rapprochement par e-mail (claim `email`, `emailVerified` exigé), aucun provisioning ; mode piloté par la clé AppConfig `sso_login_mode` (`local+sso` posée sur tim-prod le 01/09/2026 — ⚠️ callback en échec tant que la prod n'est pas redéployée avec le secret vaulté, voir *Risques et limites*) | formulaire local, toujours affiché en V1 (mode `disabled` = rollback instantané sans redéploiement) |
+| **MyTIM** (`app.teleimagerie.net`) | drenso/symfony-oidc-bundle (flux code + PKCE S256, claims lus dans l'id_token, JWKS en cache 1 h), client `mytim` du realm `tim` | aucun — rapprochement par e-mail (claim `email`, `emailVerified` exigé), aucun provisioning ; mode piloté par la clé AppConfig `sso_login_mode` (`local+sso` sur tim-prod, secret déployé et vérifié le 01/09/2026) | formulaire local, toujours affiché en V1 (mode `disabled` = rollback instantané sans redéploiement) |
 
 > ✅ **Connexions réelles vérifiées le 27/08/2026** : login `matt@keycloak`
 > sur Proxmox à 09:29 UTC (`successful openid auth`, journal `pvedaemon` de
@@ -222,7 +222,7 @@ connecté ; seuls les nouveaux logins attendent.
 |---|---|---|
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
 | **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim` — compte de test supprimé après validation) |
-| **MyTIM** (appli interne de gestion) | OIDC | 🔶 **prod TIM en cours de raccordement (01/09/2026)** : tenant `app.teleimagerie.net`, realm `tim`, client `mytim` audité et secret vaulté le 01/09/2026, clé `local+sso` posée (bouton SSO + formulaire local en repli, internes `@teleimagerie.net` d'abord) — **reste le redéploiement prod avec le secret** (le `.env` prod porte encore `OIDC_CLIENT_SECRET=` vide) puis la validation pilotes. Intégration développée le 29/08/2026 (Symfony 7.4/FrankenPHP chez OVH, `app`/`gestion` → `51.210.24.59`, drenso/symfony-oidc-bundle, rapprochement par e-mail, aucun provisioning), clients `mytim` + `mytim-staging` créés le 30/08/2026 (tableau ci-dessus). 📋 **Reste** : tenant **Isoteam** (`app.isoteam.mn`) — créer le **realm `isoteam`** (copie de `tim` : force brute, `browser-totp`, broker Google avec redirect URI `…/realms/isoteam/broker/google/endpoint` à ajouter au client OAuth Google) et ses **2 clients** (`mytim`, `mytim-staging`) ; puis mode `sso-default` + médecins (phase ultérieure). Ce dépôt = relevé de ce qui est en place ; **runbook** (script kcadm, vaultage du secret, matrice de validation, phasage) : `docs/technique/sso-keycloak.md` du dépôt gestion |
+| **MyTIM** (appli interne de gestion) | OIDC | ✅ **prod TIM raccordée le 01/09/2026** : tenant `app.teleimagerie.net`, realm `tim`, client `mytim` audité, secret vaulté puis déployé (vérifié : `.env` prod = secret Keycloak par comparaison de hash, `/oidc/start` → 302 Keycloak), clé `local+sso` (bouton SSO + formulaire local en repli, internes `@teleimagerie.net` d'abord). 📋 Validation pilotes en cours. Intégration développée le 29/08/2026 (Symfony 7.4/FrankenPHP chez OVH, `app`/`gestion` → `51.210.24.59`, drenso/symfony-oidc-bundle, rapprochement par e-mail, aucun provisioning), clients `mytim` + `mytim-staging` créés le 30/08/2026 (tableau ci-dessus). 📋 **Reste** : tenant **Isoteam** (`app.isoteam.mn`) — créer le **realm `isoteam`** (copie de `tim` : force brute, `browser-totp`, broker Google avec redirect URI `…/realms/isoteam/broker/google/endpoint` à ajouter au client OAuth Google) et ses **2 clients** (`mytim`, `mytim-staging`) ; puis mode `sso-default` + médecins (phase ultérieure). Ce dépôt = relevé de ce qui est en place ; **runbook** (script kcadm, vaultage du secret, matrice de validation, phasage) : `docs/technique/sso-keycloak.md` du dépôt gestion |
 | Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | 📋 accès SSH collecté le 29/08/2026 (clé, compte `ubuntu` sur le VPS `vps-41b1229b`) — raccordement à instruire après la migration vers le cluster (17-zabbix.md à venir) |
 | **Odoo** (`odoo.teleimagerie.net`) | OIDC | ✅ **raccordé le 31/08/2026** — module OCA `auth_oidc` (flux code + PKCE S256, signature id_token vérifiée par JWKS), client `odoo`, rapprochement par e-mail, aucun provisioning, formulaire local en repli. Détail : [18-odoo.md](18-odoo.md#sso-keycloak) |
 | CRM, e-learning, bastion, app/gestion | à déterminer | ⚠️ hors périmètre du dépôt |
@@ -448,17 +448,18 @@ pct exec 203 -- ls -la /var/backups/keycloak/
 - **Périmètre HDS** : un IdP qui porte l'authentification d'accès aux données
   de santé entre dans le périmètre — question contractuelle à trancher, voir
   [12-architecture-hds.md](12-architecture-hds.md#où-lire-le-détail).
-- **MyTIM dépendra de l'IdP pour ses nouveaux logins SSO** (prod TIM,
-  raccordement en cours au 01/09/2026) : un Keycloak mort = bouton SSO en erreur (flash,
+- **MyTIM dépend de l'IdP pour ses nouveaux logins SSO** (prod TIM depuis
+  le 01/09/2026) : un Keycloak mort = bouton SSO en erreur (flash,
   jamais de 500), formulaire local intact, sessions ouvertes non affectées.
   Pas de dépendance circulaire (l'app est chez OVH, hors cluster) — et le jour
   où elle rejoindra le cluster ([20-mytim.md](20-mytim.md#risques-et-limites)),
   le formulaire local reste la porte de secours. Le secret du client vit
   **uniquement** dans le vault Ansible du dépôt gestion (relisible par
   `kcadm get clients/<id>/client-secret -r tim`) : un secret vide passe le
-  déploiement sans erreur et ne casse qu'au retour du callback — c'est
-  l'état de tim-prod au 01/09/2026 (clé `local+sso` posée avant le vaultage) :
-  vérifier `OIDC_CLIENT_SECRET` non vide dans le `.env` déployé.
+  déploiement sans erreur et ne casse qu'au retour du callback — vécu le
+  01/09/2026 sur tim-prod (clé `local+sso` posée quelques heures **avant** le
+  vaultage) : toujours vérifier `OIDC_CLIENT_SECRET` non vide dans le `.env`
+  déployé **avant** d'activer la clé.
 - **Les utilisateurs finaux (radiologues) sont côté TELLIS** : leur
   raccordement suppose de compléter la collecte
   [13-tellis.md](13-tellis.md#checklist-de-collecte), hors de ce chantier.
