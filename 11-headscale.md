@@ -168,12 +168,36 @@ enrôlés : `headscale preauthkeys expire --id <n>`.
 > (`admin@ → tag:pve:22,8006`, volontairement sans joker). Les journaux
 > `pveproxy` perdent aussi la source réelle sur ce chemin.
 
-⚠️ **Test d'acceptation restant à programmer** : arrêter la VM 100 et vérifier
-que les 3 nœuds restent joignables par le tailnet — c'est la mesure qui
-prouverait l'indépendance de bout en bout (le plan de contrôle headscale est
-lui-même derrière OPNsense). Test volontairement **non joué** le 31/08 : il
-coupe le réseau de toutes les VM de production
-([05-tests-ha.md](05-tests-ha.md)), il doit être planifié.
+### ✅ Test « porte 2 seule » — 01/09/2026
+
+**Protocole** : VPN wg0 coupé sur le poste d'administration, seul le client
+tailscale actif. Effets constatés, conformes au scénario de panne d'OPNsense :
+`10.40.0.2/.3/.4` deviennent injoignables, et **les noms `pveN.infra` résolvent
+de nouveau en IP publique** (Unbound `10.40.0.1` est hors d'atteinte) — donc
+`ssh root@pve1.infra…` tombe sur un port désormais fermé.
+
+**Résultat** : les 3 nœuds restent joignables par le tailnet, en SSH **et** en
+8006 (`100.72.0.6/.5/.7`, connexions neuves, HTTP 200). Chaîne de dépannage
+vérifiée de bout en bout : `ssh root@100.72.0.7` → `qm status 100` → socket
+`/var/run/qemu-server/100.serial0` présent, donc `qm terminal 100` disponible
+pour reprendre la main sur OPNsense.
+
+> **Le chemin direct s'est négocié en IPv6** (`[2001:41d0:34b:de00::]:41641`)
+> une fois wg0 coupé. Ce n'est pas un hasard exploitable : la règle
+> `IN ACCEPT -p udp -dport 41641` de `cluster.fw` est **sans adresse source**,
+> Proxmox la génère donc en `iptables` **et** en `ip6tables` — compteurs actifs
+> des deux côtés, vérifié. Une règle qu'on restreindrait un jour à des sources
+> IPv4 casserait cette porte **sans que rien ne le signale**, jusqu'au jour où
+> l'on en aurait besoin.
+
+⚠️ **Reste le test complet** : arrêter réellement la VM 100. Le test ci-dessus
+prouve que la porte 2 ne dépend ni de wg0, ni d'Unbound, ni du chemin par
+OPNsense — mais le plan de contrôle headscale (CT 202) sort lui aussi par
+OPNsense. Les pairs déjà établis continuent de dialoguer en direct sans lui ;
+ce qui reste à mesurer, c'est le **rétablissement** (poste redémarré, endpoint
+changé) plan de contrôle éteint. À programmer en fenêtre de maintenance : ce
+test coupe le réseau de toutes les VM de production
+([05-tests-ha.md](05-tests-ha.md)).
 
 ---
 

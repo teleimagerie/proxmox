@@ -446,9 +446,16 @@ session. **À refaire avant toute fermeture du même genre.**
 
 ### Reste ouvert sur ce chantier
 
-- ⚠️ **Test d'acceptation de la 2ᵉ porte** (arrêt de la VM 100) toujours à
-  programmer : c'est la seule mesure qui prouverait l'indépendance de bout en
-  bout, le plan de contrôle headscale étant lui aussi derrière OPNsense.
+- ✅ **Test « porte 2 seule » réussi le 01/09/2026** : wg0 coupé sur le poste,
+  les 3 nœuds restent joignables par le tailnet en SSH et 8006, chaîne
+  `tailnet → nœud → qm terminal 100` vérifiée
+  ([11-headscale.md](11-headscale.md#-test--porte-2-seule--01092026)). Au
+  passage : le chemin direct bascule en **IPv6**, couvert parce que la règle
+  `udp/41641` est sans source — ne jamais la restreindre à de l'IPv4.
+- ⚠️ **Test complet restant** (arrêt réel de la VM 100) : ce qui reste à
+  mesurer est le **rétablissement** d'un pair, plan de contrôle headscale
+  éteint (poste redémarré, endpoint changé) — les pairs déjà établis, eux,
+  dialoguent en direct sans lui. À programmer en fenêtre de maintenance.
 - 📋 **Relire `/var/log/pve-firewall.log`** dans quelques jours pour attraper un
   flux légitime rare que l'ipset `admin` aurait manqué.
 - 📋 **`3128` (SPICE)** : compteur à 0 depuis la fermeture — candidat à la
