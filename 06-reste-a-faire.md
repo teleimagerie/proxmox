@@ -314,12 +314,21 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   [16-keycloak.md](16-keycloak.md#e-mail-sortant--smtp-mailjet-en-place-depuis-le-30082026).
 - **MyTIM** (application interne de gestion) : ~~documenter hébergement et
   technologie~~ (fait le 29/08/2026 : `app`/`gestion` → `51.210.24.59`,
-  Symfony 7.4/FrankenPHP chez OVH, deux tenants). **Intégration OIDC développée
-  côté appli le 29/08/2026** (branche `feature/sso` du dépôt gestion) — reste :
-  créer le realm `isoteam` + 4 clients (script kcadm et phasage dans
-  `docs/technique/sso-keycloak.md` du dépôt gestion), puis rollout progressif
-  (internes d'abord, formulaire local conservé en repli —
-  [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)).
+  Symfony 7.4/FrankenPHP chez OVH, deux tenants). ~~Intégration OIDC côté
+  appli~~ (fait le 29/08/2026, branche `feature/sso` du dépôt gestion, mergée).
+  ~~Clients `mytim` + `mytim-staging` du realm `tim`~~ (créés le 30/08/2026).
+  ~~Prod TIM : audit du client `mytim`, secret vaulté dans l'Ansible du dépôt
+  gestion~~ (fait le 01/09/2026, branche `chore/sso-prod-tim`). Reste :
+  **merge + `make deploy-tim-prod`** (au 01/09 la clé `local+sso` est déjà
+  posée mais le `.env` prod a un secret vide → callback en échec —
+  [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)),
+  puis **validation pilotes** et communication à tout l'interne TIM
+  (phase 3 du runbook `docs/technique/sso-keycloak.md` du dépôt gestion) ;
+  **realm `isoteam`** (copie de `tim`) + ses 2 clients + redirect URI
+  `…/realms/isoteam/broker/google/endpoint` dans la console Google Cloud, pour
+  le tenant `app.isoteam.mn` ; secret de `mytim-staging` à vaulter
+  (`group_vars/default/secrets/`) ; plus tard `sso-default`, médecins,
+  back-channel logout.
 - **Odoo** : ~~raccordement SSO~~ **fait le 31/08/2026** (module OCA
   `auth_oidc`, client `odoo`, flux code + PKCE S256, aucun provisioning —
   [18-odoo.md](18-odoo.md#sso-keycloak)). Reste : **valider la connexion

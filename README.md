@@ -60,7 +60,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
 | [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
 | [06-reste-a-faire.md](06-reste-a-faire.md) | Abonnement, supervision, IP publiques VM, points ouverts du VPN |
-| [07-pieges.md](07-pieges.md) | **Les 30 pièges rencontrés et leur résolution** |
+| [07-pieges.md](07-pieges.md) | **Les 37 pièges rencontrés et leur résolution** |
 | [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
 | [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
 | [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
@@ -69,7 +69,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [13-tellis.md](13-tellis.md) | **DC TELLIS (site distant)** : inventaire, pfSense, tunnels WireGuard, checklist de collecte |
 | [14-noms-de-domaine.md](14-noms-de-domaine.md) | **Les 6 zones DNS** : registrars, échéances, serveurs autoritaires, inventaire des noms, reverse, résolution interne |
 | [15-pacs-secours.md](15-pacs-secours.md) | PACS de secours `pacs03` : bare-metal Windows GRA3, patte vRack `10.40.0.40`, tunnel direct TELLIS |
-| [16-keycloak.md](16-keycloak.md) | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale), split-horizon `auth.*`, candidats SSO |
+| [16-keycloak.md](16-keycloak.md) | **Authentification centralisée Keycloak** : realm `tim`, raccordements OIDC (PVE, PBS, headscale, Odoo, MyTIM prod TIM en cours au 01/09), brokering Google Workspace, SMTP Mailjet, split-horizon `auth.*`, identités par application, candidats SSO |
 | [17-zabbix.md](17-zabbix.md) | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie) + supervision des sauvegardes (échec **et absence**, 30/08) |
 | [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
 | [19-carte-reseau.md](19-carte-reseau.md) | **Carte réseau régénérable** : `make carte` interroge l'API Proxmox, confronte aux intentions de `topologie.yml` et réécrit le schéma — les écarts aux règles sont peints en rouge sur la carte |
@@ -113,7 +113,8 @@ Sauvegardes              PBS 4.2.5 (VM 102) · NAS-HA zpool-130899 à Roubaix
                          quotidien 02:00 sauf VM 102 · rétention 7j/4s/6m
                          restauration testée et mesurée
 Authentification         Keycloak 26.7.2 (CT 203) · auth.teleimagerie.net
-                         realm tim · TOTP obligatoire · OIDC : PVE, PBS, headscale
+                         realm tim · TOTP obligatoire · broker Google Workspace
+                         OIDC : PVE, PBS, headscale, Odoo, MyTIM (prod TIM en cours)
 Supervision              Zabbix 7.0 (CT 204) · zabbix.teleimagerie.net
                          migré du VPS le 29/08 · supervise aussi le cluster :
                          quorum, Ceph, nearfull 85 %, 7 invités (API + agents),
