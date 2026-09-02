@@ -76,7 +76,9 @@ le SPF, la configuration voyage dans le dump).
 | `pacs03.teleimagerie.net` | **passif** (197 items) | 188.165.77.137 | ⚠️ corrigé le 30/08 : rejetait la source `.121` (whitelist = le nom → VIP) — **réparé par le NAT sortant `.122`**. **Seuils disque `IMAGE(F:)` (4,6 To, ~80 %) personnalisés le 30/08** : Warning 90 % (macro contextuelle `"IMAGE(F:)"`), **High 95 %** et **Disaster 98 %** (déclencheurs dédiés, mail ; le High se tait quand le Disaster est actif), CRIT template neutralisé à 100 |
 | `gestion.teleimagerie.net` | **passif** (137 items) | 51.210.24.59 | ✝ serveur décommissionné (mort depuis le 27/08) — **hôte supprimé de Zabbix le 30/08** |
 | `prod01.teleimagerie.net` | **actif** (62 items) | 37.61.243.245 | ✝ **hôte supprimé de Zabbix le 30/08** sur instruction (agent muet depuis le 27/08) |
-| `WIN-SRV-TSPLUS` | **actif** (156 items) | 37.61.243.246 (TSplus, TELLIS) | ✅ a suivi le DNS (< 4 min) |
+| `WIN-SRV-TSPLUS` | **actif** (156 items) | 37.61.243.246 (TSplus, TELLIS) | ✅ a suivi le DNS (< 4 min) ; récupération automatique du service armée le 02/09/2026 (comme pacs03) |
+| `SYNGOVIA-135104` | **SNMP v2c + ICMP + sondes TCP** (Windows by SNMP), depuis le **02/09/2026** | `192.168.101.98` par `wg2` | ✅ **agent impossible** : WDAC Siemens refuse le MSI (code 1625) — supervision sans agent, voir [§ Syngo Via](#serveurs-syngo-via-de-tellis--sans-agent-02092026) |
+| `SYNGOVIA-135113` | idem | `192.168.101.100` par `wg2` | ✅ idem |
 | `TIMWFMCORE` | **actif Windows** | IP non capturée (agent actif) | ✅ **rétabli le 30/08** : muet depuis la bascule (agent accroché à l'ancienne résolution DNS), reparti après **redémarrage de l'agent sur la machine** — 63/77 items frais en 2 min. Épisode du 30/08 au matin : cru à tort Linux à cause de `162.19.25.107` (voir ligne suivante), re-templaté ~1 h puis rétabli. **Seuils disque `Database(F:)` personnalisés le 30/08** : Warning à 90 % (macro `{$VFS.FS.PUSED.MAX.WARN:"Database(F:)"}` — ⚠️ le contexte est `{#FSLABEL}({#FSNAME})`, pas la lettre seule), palier template neutralisé (CRIT à 100) et remplacé par un déclencheur **High ≥ 95 %** qui part en mail |
 | ~~`162.19.25.107`~~ (`vps-2e178199.vps.ovh.net`) | — | 162.19.25.107 | **ancien serveur MYTIM** : ne sert plus mais toujours allumé, agent Zabbix 7.4 actif et whitelist ouverte sur zabbix — **pas de supervision souhaitée** (décidé le 30/08). Candidat à l'extinction/résiliation : une machine oubliée allumée est une surface d'attaque |
 | `CMSI-LES-HERBIERS` | 1 item, quasi mort | pas vu en 3 min | toujours muet — à trancher (supprimer ?) |
@@ -202,6 +204,42 @@ perte : ce que le CT a collecté entre-temps.
   sur pacs03 et TSplus) : ces conditions persistantes **re-déclencheront** —
   c'est voulu, elles reviendront datées d'aujourd'hui ; les traiter sur les
   machines ([15-pacs-secours.md](15-pacs-secours.md#reste-à-faire)).
+
+---
+
+## Serveurs Syngo Via de TELLIS — sans agent (02/09/2026)
+
+Les deux serveurs syngo.via (`syngovia-135104` `.98` et `syngovia-135113`
+`.100`, inventoriés dans [13-tellis.md](13-tellis.md#syngo-via)) n'avaient
+aucune supervision. **L'agent Zabbix ne peut pas y être installé** : Siemens
+verrouille ces machines par Device Guard / WDAC en mode appliqué (noyau et
+utilisateur), et le MSI officiel `zabbix_agent2-7.0.30-windows-amd64-openssl.msi`
+(signé « Zabbix SIA », signature vérifiée sur place) est refusé par `msiexec`
+avec le code **1625, « installation interdite par la stratégie système »**,
+avant même de copier un fichier — journal MSI : `SOFTWARE RESTRICTION POLICY:
+Verifying package … MainEngineThread is returning 1625`. Aucun contournement
+tenté (désactiver WDAC sur un dispositif médical n'est pas notre décision),
+fichiers déposés supprimés, hôtes Zabbix conservés mais reconfigurés **sans
+agent** :
+
+| | |
+|---|---|
+| Chemin | le CT 204 (`10.40.0.60`) joint le LAN TELLIS **par `wg2`** (route via `10.40.0.1`) : ping, TCP et SNMP passent — les deux syngo sortent par le pfSense principal `.110`, aucune route retour à poser (contrairement à TIMWFMCORE) |
+| Gabarit | **Windows by SNMP** (SNMP v2c, `bulk`), qui inclut déjà ICMP (« Unavailable by ICMP ping » en High) — le gabarit *ICMP Ping* est **incompatible** en plus (clé `icmpping` en double), ne pas l'ajouter |
+| Côté serveur syngo | le service SNMP Windows tournait déjà (communauté `public` lecture seule, managers = `localhost`, pare-feu UDP 161 limité au sous-réseau local — l'usage Siemens/HPE local n'est pas touché). Ajouté sur chacun : une **communauté dédiée, lecture seule** (24 caractères aléatoires), `10.40.0.60` dans `PermittedManagers`, une règle pare-feu `SNMP - Zabbix TIM (UDP 161 depuis 10.40.0.60)`, puis redémarrage du service SNMP (quelques secondes, sans effet sur syngo). Réversible : supprimer la valeur de registre `ValidCommunities`, l'entrée `PermittedManagers` et la règle |
+| Secret | la communauté vit **dans le registre SNMP des deux serveurs** (`HKLM\SYSTEM\CurrentControlSet\Services\SNMP\Parameters\ValidCommunities`), dans la macro **secrète** `{$SNMP_COMMUNITY}` de chaque hôte et dans `/root/.snmp-community-syngo` du CT 204 (mode 600, à côté du jeton API). Elle ne figure pas dans ce dépôt |
+| Sondes TCP | items *simple check* à la minute, déclencheurs `max(…,3m)=0` : **SCP DICOM tcp/104** (High → mail), **web syngo/IIS tcp/443** (High → mail), RDP tcp/3389 (Average) |
+| Ce qu'on voit | CPU, mémoire, **tous les volumes** (dont `N:` System_Backup, déjà à plus de 90 % : le déclencheur Average du gabarit sonne, c'est voulu), interfaces réseau, uptime, ICMP ; ce qu'on **ne voit pas** sans agent : services Windows, journaux d'événements, compteurs de performance |
+| Vérifié | 02/09/2026 14:34 UTC : `enabling SNMP agent checks on host "SYNGOVIA-1351xx": interface became available` sur les deux ; systèmes de fichiers C:, D:, E:, M:, N:, S: découverts ; sondes TCP à 1 |
+
+Pour obtenir un jour l'agent (services, journaux) : demander à Siemens
+l'ajout de l'agent Zabbix à la liste blanche WDAC — point porté dans la
+[checklist TELLIS](13-tellis.md#checklist-de-collecte).
+
+Au passage, **TSplus** (`WIN-SRV-TSPLUS`, agent actif 7.4.3, 156 items frais)
+n'a rien eu à installer ; son service a reçu la **même récupération
+automatique que pacs03** (`sc failure … restart/60000 ×3`, `reset= 86400`),
+qu'il n'avait pas.
 
 ---
 

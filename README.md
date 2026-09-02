@@ -105,7 +105,8 @@ Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
                          WireGuard wg0 nomades · wg2 site-à-site TELLIS (51822)
 Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
                          wg2 · relais TLS syngo-via → TSplus · Syngo Via ×2 et
-                         TSplus inventoriés le 02/09 (TSplus : ni correctif ni
+                         TSplus inventoriés et supervisés le 02/09 (syngo en
+                         SNMP, agent refusé par WDAC ; TSplus : ni correctif ni
                          sauvegarde depuis 2025, pas de 2FA)
 PACS de secours          pacs03 (bare-metal Windows, GRA3) · vRack VLAN 400
                          10.40.0.40 · backend pacs-secours servi en privé

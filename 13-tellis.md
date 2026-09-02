@@ -215,7 +215,7 @@ Les statistiques d'ouverture de session sont identiques sur les deux
 | Stockage | C: 140 Go System · D: 100 Go DB_Data · **E: 16 644 Go Image_Data (4,8 To libres, ~71 % occupés)** · M: 200 Go DB_Backup · N: 200 Go System_Backup (**16,7 Go libres sur `.98`, 8 Go sur `.100`**) · S: 200 Go Service · un second volume « System 2 » de 140 Go, vide |
 | Applicatif | **syngo.via VB80** : serveur et client 10.6, `syngo.Sphere.Server` 13.15, modules 11.x (installés le 17/06/2025), options CT/MR/MI (packs `SiemensH_OH_CT_VB80_*`, Breast Care, MM Breast Reading, CT Liver Analysis, LungCAD, modèles AiM deep-learning, OncoBoard…), Organ Processing, SceniumRE, FHIR/FHIRCast ; **SQL Server 2022** instance nommée `MSSQLSERVER_SYDS` liée à `127.0.0.1` (bases `Patient` ≈ 5,4 Go, `Patient_Data` ≈ 13 Go, `Patient_InstanceData` ≈ 32 Go) ; **AD LDS** `SyngoConfiguration` (ADWS 9389) ; licences **FLEXlm** (`lmgrd` 27000, `SAG_med_daemon` 27010) ; **SCP DICOM sur 104** (`syngo.Common.Container`), récepteur HL7 9974/9975, IIS 80/443, serveur d'autorisation 47101, Tomcat 9 (8090), MSMQ, SNMP ; **Docker + WSL 2** (rôle Hyper-V, `dockerd` sert le DNS du vSwitch `nat`) — vraisemblablement les conteneurs d'algorithmes IA de Siemens (📋 présumé) ; **TSplus for Siemens 19.40.8.11** (`C:\Siemens\svcmain.exe`, mis à jour le 15/08/2026, cinq versions précédentes conservées) : chaque serveur peut aussi publier son client directement |
 | Télémaintenance Siemens | canal **SRS** (*Smart Remote Services*) : `syngo RemoteConnectionSupport Service`, TeamViewer « Siemens Repack » (ModeratorGateway, TeamConnector), VNC Viewer, agents **Micro Focus Operations (HP OpenView)** 12.23 et **RCA/Radia** (`radexecd` 8226, `Radstgms` 3460 — distribution logicielle Siemens), Sentient Application Manager, `SystemStatusMonitoringRSC` (5555/9995/9996) ; journaux de visites `C:\Siemens\SupportLog*` datés 17/06/2025, 18/10/2025, 12/02/2026, 18/07/2026, 15/08/2026 |
-| Supervision | **aucune de notre côté** (pas d'agent Zabbix, contrairement à TSplus) ; SNMP et HPE AMS (iLO) actifs, `hponcfg` absent — adresse iLO ⚠️ inconnue |
+| Supervision | **Zabbix depuis le 02/09/2026, sans agent** : SNMP v2c (gabarit *Windows by SNMP*, communauté dédiée lecture seule, manager `10.40.0.60` seul) + ICMP + sondes TCP 104/443/3389 depuis le CT 204 par `wg2` — l'agent est **refusé par WDAC** (MSI signé Zabbix SIA, code 1625), détail dans [17-zabbix.md](17-zabbix.md#serveurs-syngo-via-de-tellis--sans-agent-02092026) ; HPE AMS (iLO) actif, `hponcfg` absent — adresse iLO ⚠️ inconnue |
 | Sauvegarde | tâche **`\Siemens\Backup_syngo.via`** (base → `M:`, partition système → `N:`) + **Windows Server Backup quotidien à 03:00** (7 versions, dernier ✅ 02/09/2026 03:00) — **tout sur disques locaux**, `N:` quasi plein ; **`E:` (16,6 To d'images) n'est pas sauvegardé**, cohérent si syngo.via ne fait que du post-traitement (l'archive reste le PACS) ⚠️ à confirmer ; copie hors-machine par TELLIS ⚠️ inconnue |
 | Correctifs | **à jour** : KB5120241/5120242/5120705 posés le 27/08 (`.98`) et le 31/08/2026 (`.100`), lot précédent du 11/12/2025 ; Windows Update en « télécharger et notifier », service à l'arrêt : les correctifs sont posés par lots lors d'interventions (Siemens ? TELLIS ? ⚠️), suivis d'un redémarrage (31/08 04:33 et 01/09 01:06). Le `Setup` SQL Server de `.100` est passé en 16.0.1190 le 31/08, `.98` est resté en 16.0.1000 |
 | Sécurité | pare-feu Windows **actif** sur les trois profils (≈ 700 règles) ; **Defender : protection temps réel DÉSACTIVÉE sur les deux** (service actif, signatures à jour) — WDAC compense en partie, mais reste à confirmer comme exigence Siemens ⚠️ ; RDP, WinRM (5985) et SMB (partages Siemens `Activity Settings`, `WorkflowTemplates`) ouverts |
@@ -223,8 +223,8 @@ Les statistiques d'ouverture de session sont identiques sur les deux
 
 > ⚠️ **Points de vigilance** : Defender temps réel coupé sur les deux serveurs ;
 > `N:` (System_Backup) presque plein sur les deux — la sauvegarde système
-> finira par échouer ; aucune sauvegarde hors-machine visible ; aucune
-> supervision de notre côté ; 630 comptes locaux à mot de passe, non fédérés
+> finira par échouer (désormais visible dans Zabbix) ; aucune sauvegarde
+> hors-machine visible ; 630 comptes locaux à mot de passe, non fédérés
 > ([candidats SSO](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)) ;
 > masques réseau incohérents entre jumeaux.
 
@@ -245,7 +245,7 @@ serveurs syngo.via.
 | Applicatif | **TS2log 18.2026.5.12** (précédent 17.2025.6.10) : portail HTML5 sur **80/443** (`HTML5service`, lié à `.102` ; ports de repli 81/444), RDP 3389, ports `http.sys` 7443/8501/19955/19956/26551 (passerelle et RemoteApp TS2log — 19955/19956 sont ceux que relayait l'ancien VPS, [09-proxy-tim.md](09-proxy-tim.md)) ; application publiée **« SyngoVIA EC »** = `PatientBrowser.exe launch-via-browser` (Enterprise Browser Siemens) + panneau flottant, pour le groupe local **`GG-SIEMENS-REMAPP` (618 membres)** ; « Microsoft Remote Desktop » publié à un seul compte d'administration ; 218 profils d'applications utilisateur ; **client syngo.via 10.6 + Enterprise Launcher 2.5.0** (serveur par défaut `.100`, caches de configuration des deux serveurs) ; impression universelle (novaPDF / Universal Printer), Virtual Printer, redirection USB FabulaTech ; IIS installé mais **arrêté** (TS2log tient 80/443 lui-même) ; mode RDS « administration » (pas de rôle RDS : TS2log fait le multi-session) |
 | Certificat | Let's Encrypt `CN=syngo-via.teleimagerie.net`, SAN `syngo-via.isoteam.mn`, **valide du 05/08 au 03/11/2026**, renouvelé par le gestionnaire ACME intégré de TS2log (`FreeCertificateManager.ini`) — même certificat vu depuis Internet sur `37.61.243.246:443`, et même redirection `302` sur le 80 : **le NAT 443 et 80 → `.102` est confirmé** |
 | Accès distants | **Datto RMM** (agent CentraStage, UDP 13300) + **Splashtop Streamer** (07/06/2026, 6783) — un RMM opéré par quelqu'un (TELLIS ? ⚠️) ; TeamViewer 15.81 + repack Siemens ; SSH depuis le 02/09 ; WinRM 5985 |
-| Supervision | **Zabbix Agent 2 7.4.3** → hôte `WIN-SRV-TSPLUS` ✅ ([17-zabbix.md](17-zabbix.md)) ; HPE AMS |
+| Supervision | **Zabbix Agent 2 7.4.3** → hôte `WIN-SRV-TSPLUS` ✅ ([17-zabbix.md](17-zabbix.md)), récupération automatique du service armée le 02/09 (comme pacs03) ; HPE AMS |
 | Sauvegarde | **Windows Server Backup : dernière sauvegarde réussie le 09/09/2025**, 1 version — **rien depuis un an** ⚠️ ; aucune tâche de sauvegarde planifiée ; `D:` « Backup » n'héberge que cette vieille image |
 | Correctifs | **figés depuis le 11/12/2025** (KB5071547) — 9 mois sans correctif sur un serveur **exposé à Internet** ⚠️ ; Windows Update à l'arrêt, sans stratégie |
 | Sécurité | Defender temps réel actif, signatures du 01/09 ; pare-feu actif (4 350 règles, TS2log en ajoute par application) ; **pas de second facteur** : l'add-on 2FA de TS2log n'a jamais été activé (essai expiré le 10/07/2025) — **622 comptes locaux à mot de passe** derrière un portail ouvert sur Internet ⚠️ |
@@ -469,8 +469,12 @@ canal des secrets et ne rejoignent jamais ce dépôt.
       documentée, ou oubli ?
 - [ ] `N:` System_Backup presque plein sur les deux — qui purge ? et la
       sauvegarde `M:`/`N:` est-elle copiée hors machine par TELLIS ?
-- [ ] raccorder les deux serveurs à Zabbix (agent absent) — après accord
-      Siemens (WDAC)
+- [x] ~~raccorder les deux serveurs à Zabbix~~ — **fait le 02/09/2026 sans
+      agent** (SNMP + ICMP + sondes TCP par `wg2`,
+      [17-zabbix.md](17-zabbix.md#serveurs-syngo-via-de-tellis--sans-agent-02092026)) ;
+      l'agent est **refusé par WDAC** (MSI signé Zabbix SIA, code 1625)
+- [ ] demander à Siemens l'ajout de l'agent Zabbix à la liste blanche WDAC
+      (services et journaux Windows restent invisibles en SNMP)
 - [ ] adresse iLO des deux DL380 (et du DL360 TSplus)
 - [ ] harmoniser les masques (`.98` en /28, `.100` en /24)
 - [ ] `.100` : supprimer le compte administrateur en doublon `Matthieu CAPON`
