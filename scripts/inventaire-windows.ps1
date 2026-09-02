@@ -9,6 +9,15 @@ place), puis en PowerShell ADMINISTRATEUR :
     powershell -ExecutionPolicy Bypass -File .\inventaire-windows.ps1
 
 Produit inventaire-<hostname>-<date>.md dans le dossier courant (ou -OutDir).
+
+Par SSH (OpenSSH Windows, shell cmd.exe), depuis le poste d'admin, sans rien
+laisser sur la machine :
+
+    scp scripts/inventaire-windows.ps1 <user>@<ip>:inventaire-windows.ps1
+    ssh <user>@<ip> "powershell -ExecutionPolicy Bypass -NoProfile -File inventaire-windows.ps1"
+    scp "<user>@<ip>:inventaire-*.md" configs/
+    ssh <user>@<ip> "del inventaire-windows.ps1 inventaire-*.md"
+
 Fonctionne sans module externe (PowerShell 5.1 natif de Windows Server).
 Chaque section est isolee : une classe WMI absente ou un droit manquant
 n'empeche pas le reste du releve.
@@ -19,6 +28,13 @@ Pieges connus, expliques ici pour ne pas etre "simplifies" plus tard :
   modifier l'etat du serveur). On lit le registre Uninstall (x64 + x86).
 - wmic est deprecie (retire des builds recents) : tout passe par
   Get-CimInstance.
+- les serveurs sous Device Guard / WDAC (syngo.via de Siemens, par exemple)
+  executent PowerShell en mode ConstrainedLanguage : pas de ::new() ni de
+  types .NET hors du noyau (List[string], WindowsPrincipal, SecurityIdentifier).
+  D'ou le tableau PowerShell, le repli sur whoami pour le test admin, le
+  groupe Administrateurs cherche par SID en comparaison de chaines, et les
+  arrondis par cast [int] (meme regle bancaire que [math]::Round, refuse dans
+  ce mode).
 #>
 param(
     # Dossier de sortie du .md (defaut : dossier courant)
@@ -26,9 +42,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$md = [System.Collections.Generic.List[string]]::new()
+$md = @()
 
-function Ajoute { param([string]$Ligne) $script:md.Add($Ligne) }
+function Ajoute { param([string]$Ligne) $script:md += $Ligne }
 
 # Une cellule de tableau Markdown ne doit contenir ni pipe ni retour ligne
 function Esc {
@@ -36,7 +52,7 @@ function Esc {
     (("$Valeur" -replace '\|', '\|') -replace "[`r`n]+", ' ').Trim()
 }
 
-function Go { param($Octets) [math]::Round($Octets / 1GB, 1) }
+function Go { param($Octets) ([int]($Octets / 1GB * 10)) / 10 }
 
 function Section {
     param([string]$Titre, [scriptblock]$Bloc)
@@ -48,8 +64,13 @@ function Section {
     catch { Ajoute "_Section indisponible : $(Esc $_.Exception.Message)_" }
 }
 
-$estAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-            ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+try {
+    $estAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+                ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+} catch {
+    # ConstrainedLanguage : le jeton eleve porte le niveau d'integrite High
+    $estAdmin = [bool]((whoami /groups) -match 'S-1-16-12288')
+}
 
 $hostname = $env:COMPUTERNAME.ToLower()
 Write-Host "Inventaire de $hostname..."
@@ -97,7 +118,7 @@ Section 'CPU' {
     Ajoute '| Socket | Modele | Coeurs / threads | Frequence |'
     Ajoute '|---|---|---|---|'
     Get-CimInstance Win32_Processor | ForEach-Object {
-        $ghz = [math]::Round($_.MaxClockSpeed / 1000, 1)
+        $ghz = ([int]($_.MaxClockSpeed / 100)) / 10
         Ajoute "| $($_.SocketDesignation) | $(Esc $_.Name) | $($_.NumberOfCores)c/$($_.NumberOfLogicalProcessors)t | $ghz GHz |"
     }
 }
@@ -112,8 +133,8 @@ Section 'RAM' {
     $enTete = "**$(Go $total) Go** en $($barrettes.Count) barrette(s)"
     try {
         $baie = Get-CimInstance Win32_PhysicalMemoryArray | Select-Object -First 1
-        $maxGo = if ($baie.MaxCapacityEx) { [math]::Round($baie.MaxCapacityEx / 1MB) }
-                 else { [math]::Round($baie.MaxCapacity / 1MB) }
+        $maxGo = if ($baie.MaxCapacityEx) { [int]($baie.MaxCapacityEx / 1MB) }
+                 else { [int]($baie.MaxCapacity / 1MB) }
         $enTete += " sur $($baie.MemoryDevices) slot(s)"
         # certains firmwares (laptops surtout) annoncent une capacite max
         # fantaisiste : on ne l'affiche que si elle est vraisemblable
@@ -141,6 +162,19 @@ Section 'Carte mere / BIOS' {
     Ajoute "| Numero de serie | $(Esc $prod.IdentifyingNumber) |"
     $dateBios = if ($bios.ReleaseDate) { " du $($bios.ReleaseDate.ToString('dd/MM/yyyy'))" } else { '' }
     Ajoute "| BIOS | $(Esc $bios.SMBIOSBIOSVersion)$dateBios |"
+}
+
+Section 'GPU' {
+    # Cartes graphiques : decisif pour le rendu (Syngo Via, RDS/TSplus), vide ailleurs.
+    # AdapterRAM est un uint32 : plafonne a 4 Go, on l'annonce comme tel.
+    $cartes = @(Get-CimInstance Win32_VideoController)
+    Ajoute '| Carte | Pilote | VRAM annoncee |'
+    Ajoute '|---|---|---|'
+    foreach ($g in $cartes) {
+        $vram = if ($g.AdapterRAM) { "$(Go $g.AdapterRAM) Go" } else { '-' }
+        $date = if ($g.DriverDate) { " du $($g.DriverDate.ToString('dd/MM/yyyy'))" } else { '' }
+        Ajoute "| $(Esc $g.Name) | $(Esc $g.DriverVersion)$date | $vram |"
+    }
 }
 
 Section 'Disques physiques' {
@@ -290,6 +324,39 @@ Section 'Correctifs recents' {
         $date = if ($_.InstalledOn) { $_.InstalledOn.ToString('dd/MM/yyyy') } else { '?' }
         Ajoute "| $($_.HotFixID) | $($_.Description) | $date |"
     }
+}
+
+Section 'Securite locale' {
+    # Etat Defender et profils du pare-feu Windows : un temps reel coupe ou un
+    # profil desactive se voit ici, pas dans la liste des services.
+    try {
+        $mp = Get-MpComputerStatus -ErrorAction Stop
+        $tr = if ($mp.RealTimeProtectionEnabled) { 'active' } else { '**DESACTIVEE**' }
+        $sig = if ($mp.AntivirusSignatureLastUpdated) { $mp.AntivirusSignatureLastUpdated.ToString('dd/MM/yyyy') } else { '?' }
+        Ajoute "Microsoft Defender : service $(if ($mp.AMServiceEnabled) { 'actif' } else { '**inactif**' }), protection temps reel $tr, signatures du $sig, moteur $($mp.AMEngineVersion)"
+    } catch { Ajoute "Microsoft Defender : etat illisible ($(Esc $_.Exception.Message))" }
+    Ajoute ''
+    Ajoute '| Profil pare-feu | Actif | Entrant par defaut | Sortant par defaut |'
+    Ajoute '|---|---|---|---|'
+    Get-NetFirewallProfile | ForEach-Object {
+        $actif = if ($_.Enabled) { 'oui' } else { '**NON**' }
+        Ajoute "| $($_.Name) | $actif | $($_.DefaultInboundAction) | $($_.DefaultOutboundAction) |"
+    }
+}
+
+Section 'Comptes locaux' {
+    # Effectifs seulement : la liste nominative (parfois des centaines de vrais
+    # utilisateurs) n'a rien a faire dans un depot. Les administrateurs, si.
+    $comptes = @(Get-LocalUser)
+    $actifs = @($comptes | Where-Object Enabled).Count
+    Ajoute "**$($comptes.Count) comptes locaux** : $actifs actifs, $($comptes.Count - $actifs) desactives."
+    Ajoute ''
+    # SID du groupe Administrateurs plutot que son nom, qui depend de la langue
+    $admins = @(Get-LocalGroup | Where-Object { "$($_.SID)" -eq 'S-1-5-32-544' } |
+        Get-LocalGroupMember -ErrorAction SilentlyContinue |
+        ForEach-Object { "``$(Esc $_.Name)`` ($($_.ObjectClass), $($_.PrincipalSource))" })
+    if ($admins) { Ajoute "Membres du groupe Administrateurs : $($admins -join ', ')" }
+    else { Ajoute 'Groupe Administrateurs illisible.' }
 }
 
 $fichier = Join-Path $OutDir ("inventaire-{0}-{1}.md" -f $hostname, (Get-Date -Format 'yyyy-MM-dd'))

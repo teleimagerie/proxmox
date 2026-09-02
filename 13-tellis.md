@@ -32,7 +32,7 @@ le tunnel à ce jour. Chaque information porte donc son statut :
 | Sous-réseau | Hôtes | Logique | Passerelle par défaut |
 |---|---|---|---|
 | `192.168.101.48/28` | `.49` → `.62` | bloc imagerie et production (PACS, IA, passerelles, équipements réseau) | ✅ **`.62`** (second pfSense) — constaté sur prod01 (25/08) et TIMWFMCORE (29/08), distribué par DHCP ; le `.59` ne sert que les routes vers nos réseaux |
-| `192.168.101.96/28` | `.97` → `.110` | bloc Syngo Via (serveurs, TSplus, ProxyVia) | ⚠️ `.110` probable, à confirmer |
+| `192.168.101.96/28` | `.97` → `.110` | bloc Syngo Via (serveurs, TSplus, ProxyVia) | ✅ **`.110`** (pfSense principal) — constaté le 02/09/2026 sur les trois serveurs inventoriés ; ⚠️ **masques incohérents** : `.98` est en /28 mais `.100` et `.102` sont en **/24** (voir [Syngo Via](#syngo-via)) |
 | `192.168.111.0/24` | `.1` → `.254` | RIS VENUS | ⚠️ `.254` (patte pfSense) probable, à confirmer |
 | `192.168.171.0/24` | `.1` = TIMWFMCORE (2ᵉ patte) | ⚠️ **découvert le 29/08/2026** dans l'inventaire du PACS — réseau sans passerelle, rôle inconnu (réseau d'imagerie/stockage ? lié au volume `Images02` ?) | — |
 
@@ -171,19 +171,109 @@ Deux passerelles locales envoient les examens aux services d'analyse de leur
 Syngo Via est la plateforme de post-traitement et de visualisation avancée de
 Siemens Healthineers. Les utilisateurs y accèdent au travers de **TSplus**
 (publication d'applications Windows en RemoteApp) — c'est la cible du relais
-TLS `syngo-via.*` décrit dans [09-proxy-tim.md](09-proxy-tim.md).
+TLS `syngo-via.*` décrit dans [09-proxy-tim.md](09-proxy-tim.md). **Les trois
+serveurs ont été inventoriés le 02/09/2026** par SSH avec droits admin (relevés
+bruts dans `configs/`, synthèses ci-dessous).
 
 | IP | Machine | Rôle | Éditeur | Statut |
 |---|---|---|---|---|
-| `192.168.101.98` | Syngo Via serveur 1 | plateforme Syngo Via — répartition des rôles entre les deux serveurs ⚠️ | Siemens Healthineers | 📋 |
-| `192.168.101.100` | Syngo Via serveur 2 | idem | Siemens Healthineers | 📋 |
-| `192.168.101.102` | TSplus | publication des applications Syngo Via (portail web + RemoteApp, multiplexés sur le 443) ; joint depuis Internet par le NAT du pfSense, le WAN `37.61.243.246` étant « son » adresse publique | TSplus | 📋 ; le service répond bien en `37.61.243.246:443` ✅, le NAT 443 → `.102` reste à confirmer ⚠️ |
+| `192.168.101.98` | **`syngovia-135104`** — Syngo Via serveur 1 | **instance syngo.via VB80 complète** (serveur 10.6, SQL Server 2022 locale, AD LDS, licences FLEXlm, SCP DICOM 104, 16,6 To d'images) — **jumelle** du serveur 2, les deux étant fédérées par l'*Enterprise Browser* | Siemens Healthineers | ✅ **inventorié le 02/09/2026** (voir ci-dessous) |
+| `192.168.101.100` | **`syngovia-135113`** — Syngo Via serveur 2 | idem : même matériel, même logiciel, même base d'utilisateurs ; c'est le **serveur par défaut** du client publié par TSplus | Siemens Healthineers | ✅ **inventorié le 02/09/2026** |
+| `192.168.101.102` | **`win-srv-tsplus`** — TSplus | publication de l'*Enterprise Browser* Siemens (« SyngoVIA EC ») à 618 comptes par le portail web + RemoteApp de **TS2log 18** (marque blanche TSplus), multiplexés sur le 443 ; joint depuis Internet par le NAT du pfSense, le WAN `37.61.243.246` étant « son » adresse publique | TSplus | ✅ **inventorié le 02/09/2026** ; ✅ **NAT 443 → `.102` confirmé** (même certificat, même numéro de série, vu depuis Internet et depuis le LAN) |
 | `192.168.101.103` | ProxyVia | routage DICOM vers Syngo Via | — | 📋 |
 
 > **ProxyVia est double-attaché** : `192.168.101.103` dans ce bloc **et**
 > `192.168.101.58` dans le bloc imagerie — `.58` n'est donc pas une adresse
 > libre. Vraisemblablement le pont DICOM entre les deux sous-réseaux
 > (modalités/PACS → Syngo Via), ⚠️ à confirmer.
+
+#### `syngovia-135104` (`.98`) et `syngovia-135113` (`.100`) — deux syngo.via jumeaux, inventoriés le 02/09/2026
+
+Relevés : [`configs/inventaire-syngovia-135104-2026-09-02.md`](configs/inventaire-syngovia-135104-2026-09-02.md)
+et [`configs/inventaire-syngovia-135113-2026-09-02.md`](configs/inventaire-syngovia-135113-2026-09-02.md)
+(`scripts/inventaire-windows.ps1` par SSH, droits admin — voir
+[Accès SSH](#accès-ssh-aux-serveurs-syngo-et-tsplus-02092026)).
+
+La question « répartition des rôles entre les deux serveurs » est tranchée :
+**il n'y a pas de répartition de rôles**. Ce sont deux installations syngo.via
+complètes et indépendantes, identiques au matériel et au logiciel près (le
+`diff` des deux relevés ne montre que les MAC, les numéros de série et l'espace
+libre), chacune avec sa base SQL, son annuaire AD LDS, sa licence et ses
+16,6 To d'images. Elles se connaissent (le cache de configuration de l'autre
+serveur est présent sur chacune) et l'*Enterprise Browser* publié par TSplus
+interroge les deux : un utilisateur voit les examens des deux serveurs et ouvre
+chacun sur celui qui le détient. **Ce qui décide qu'un examen va sur l'un ou
+l'autre est en amont, dans le routage DICOM de ProxyVia** (⚠️ à documenter).
+Les statistiques d'ouverture de session sont identiques sur les deux
+(38 comptes distincts sur 7 jours, 70 sur 30 jours) : les deux servent.
+
+| | |
+|---|---|
+| Machine | **HPE ProLiant DL380 Gen11** physique (numéros de série dans les relevés) — 2 × Xeon Gold 6426Y (32 c / 64 t), **384 Go** DDR5-4800 ECC (12 × 32 Go, 16 slots), **NVIDIA RTX A4000**, Smart Array : 2 volumes logiques SAS SSD de 640 Go et **17,2 To** ; carte 25 GbE OCP (port 1 en lien 10 Gbps, port 2 déconnecté), carte 4 × 1 GbE non câblée |
+| OS | Windows Server 2022 **Standard** 21H2 (build 20348), OEM, installé le **27/01/2025** sur les deux, workgroup, locale en-US, fuseau Paris ; **Device Guard / WDAC actif** (catalogues Siemens) — PowerShell tourne en *ConstrainedLanguage*, ce qui a demandé d'adapter le script d'inventaire |
+| Réseau | `.98/28` et `.100/24` (⚠️ masques différents pour deux jumeaux), passerelle **`.110`** (pfSense principal), DNS `8.8.8.8` (+ `1.1.1.1` sur `.98`) ; commutateurs virtuels Hyper-V `nat` et `WSL` en `172.x` (voir Docker ci-dessous) |
+| Stockage | C: 140 Go System · D: 100 Go DB_Data · **E: 16 644 Go Image_Data (4,8 To libres, ~71 % occupés)** · M: 200 Go DB_Backup · N: 200 Go System_Backup (**16,7 Go libres sur `.98`, 8 Go sur `.100`**) · S: 200 Go Service · un second volume « System 2 » de 140 Go, vide |
+| Applicatif | **syngo.via VB80** : serveur et client 10.6, `syngo.Sphere.Server` 13.15, modules 11.x (installés le 17/06/2025), options CT/MR/MI (packs `SiemensH_OH_CT_VB80_*`, Breast Care, MM Breast Reading, CT Liver Analysis, LungCAD, modèles AiM deep-learning, OncoBoard…), Organ Processing, SceniumRE, FHIR/FHIRCast ; **SQL Server 2022** instance nommée `MSSQLSERVER_SYDS` liée à `127.0.0.1` (bases `Patient` ≈ 5,4 Go, `Patient_Data` ≈ 13 Go, `Patient_InstanceData` ≈ 32 Go) ; **AD LDS** `SyngoConfiguration` (ADWS 9389) ; licences **FLEXlm** (`lmgrd` 27000, `SAG_med_daemon` 27010) ; **SCP DICOM sur 104** (`syngo.Common.Container`), récepteur HL7 9974/9975, IIS 80/443, serveur d'autorisation 47101, Tomcat 9 (8090), MSMQ, SNMP ; **Docker + WSL 2** (rôle Hyper-V, `dockerd` sert le DNS du vSwitch `nat`) — vraisemblablement les conteneurs d'algorithmes IA de Siemens (📋 présumé) ; **TSplus for Siemens 19.40.8.11** (`C:\Siemens\svcmain.exe`, mis à jour le 15/08/2026, cinq versions précédentes conservées) : chaque serveur peut aussi publier son client directement |
+| Télémaintenance Siemens | canal **SRS** (*Smart Remote Services*) : `syngo RemoteConnectionSupport Service`, TeamViewer « Siemens Repack » (ModeratorGateway, TeamConnector), VNC Viewer, agents **Micro Focus Operations (HP OpenView)** 12.23 et **RCA/Radia** (`radexecd` 8226, `Radstgms` 3460 — distribution logicielle Siemens), Sentient Application Manager, `SystemStatusMonitoringRSC` (5555/9995/9996) ; journaux de visites `C:\Siemens\SupportLog*` datés 17/06/2025, 18/10/2025, 12/02/2026, 18/07/2026, 15/08/2026 |
+| Supervision | **aucune de notre côté** (pas d'agent Zabbix, contrairement à TSplus) ; SNMP et HPE AMS (iLO) actifs, `hponcfg` absent — adresse iLO ⚠️ inconnue |
+| Sauvegarde | tâche **`\Siemens\Backup_syngo.via`** (base → `M:`, partition système → `N:`) + **Windows Server Backup quotidien à 03:00** (7 versions, dernier ✅ 02/09/2026 03:00) — **tout sur disques locaux**, `N:` quasi plein ; **`E:` (16,6 To d'images) n'est pas sauvegardé**, cohérent si syngo.via ne fait que du post-traitement (l'archive reste le PACS) ⚠️ à confirmer ; copie hors-machine par TELLIS ⚠️ inconnue |
+| Correctifs | **à jour** : KB5120241/5120242/5120705 posés le 27/08 (`.98`) et le 31/08/2026 (`.100`), lot précédent du 11/12/2025 ; Windows Update en « télécharger et notifier », service à l'arrêt : les correctifs sont posés par lots lors d'interventions (Siemens ? TELLIS ? ⚠️), suivis d'un redémarrage (31/08 04:33 et 01/09 01:06). Le `Setup` SQL Server de `.100` est passé en 16.0.1190 le 31/08, `.98` est resté en 16.0.1000 |
+| Sécurité | pare-feu Windows **actif** sur les trois profils (≈ 700 règles) ; **Defender : protection temps réel DÉSACTIVÉE sur les deux** (service actif, signatures à jour) — WDAC compense en partie, mais reste à confirmer comme exigence Siemens ⚠️ ; RDP, WinRM (5985) et SMB (partages Siemens `Activity Settings`, `WorkflowTemplates`) ouverts |
+| Comptes | **634 / 635 comptes locaux** (629 / 630 actifs) — la même base d'utilisateurs que TSplus, recréée sur chaque serveur ; 9 et 10 administrateurs : `adminUser`, `alocal`, `aremote`, `jbouteiller`, `MedAdmin`, `RemoteAdmin`, `siemens_apps`, `SyngoCmd0`, plus `mcapon` (`.98`) et `matthieu` **et** `Matthieu CAPON` (`.100`, doublon à nettoyer) |
+
+> ⚠️ **Points de vigilance** : Defender temps réel coupé sur les deux serveurs ;
+> `N:` (System_Backup) presque plein sur les deux — la sauvegarde système
+> finira par échouer ; aucune sauvegarde hors-machine visible ; aucune
+> supervision de notre côté ; 630 comptes locaux à mot de passe, non fédérés
+> ([candidats SSO](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)) ;
+> masques réseau incohérents entre jumeaux.
+
+#### `win-srv-tsplus` (`.102`) — la porte d'entrée des utilisateurs, inventorié le 02/09/2026
+
+Relevé : [`configs/inventaire-win-srv-tsplus-2026-09-02.md`](configs/inventaire-win-srv-tsplus-2026-09-02.md).
+C'est la machine que voit Internet derrière `syngo-via.*` : le portail web et
+les sessions RemoteApp de **TS2log** (marque blanche de TSplus) y publient
+l'*Enterprise Browser* Siemens, qui ouvre ensuite les examens sur l'un des deux
+serveurs syngo.via.
+
+| | |
+|---|---|
+| Machine | **HPE ProLiant DL360 Gen11** physique — 1 × Xeon Silver 4510 (12 c / 24 t), **32 Go** DDR5-4400 ECC (2 × 16 Go, 16 slots), **NVIDIA T1000 4 Go** (rendu des sessions, `prefer-hardware-gpu=yes`), contrôleur **HPE MR408i-o** : 1 volume RAID SSD de 447 Go ; 1 GbE en service (slot 15 port 4), carte 2 × 10GBASE-T non câblée |
+| OS | Windows Server 2022 **Standard** 21H2, OEM, installé le **14/05/2025**, workgroup, en-US, fuseau Paris ; dernier redémarrage le **06/06/2026** (jour de la mise à jour TS2log 17 → 18) |
+| Réseau | `.102/24` (⚠️ le plan dit /28), passerelle `.110`, DNS `8.8.8.8` |
+| Stockage | C: 202 Go (52 Go libres) · **D: 244 Go « Backup »** (195 Go libres) |
+| Applicatif | **TS2log 18.2026.5.12** (précédent 17.2025.6.10) : portail HTML5 sur **80/443** (`HTML5service`, lié à `.102` ; ports de repli 81/444), RDP 3389, ports `http.sys` 7443/8501/19955/19956/26551 (passerelle et RemoteApp TS2log — 19955/19956 sont ceux que relayait l'ancien VPS, [09-proxy-tim.md](09-proxy-tim.md)) ; application publiée **« SyngoVIA EC »** = `PatientBrowser.exe launch-via-browser` (Enterprise Browser Siemens) + panneau flottant, pour le groupe local **`GG-SIEMENS-REMAPP` (618 membres)** ; « Microsoft Remote Desktop » publié à un seul compte d'administration ; 218 profils d'applications utilisateur ; **client syngo.via 10.6 + Enterprise Launcher 2.5.0** (serveur par défaut `.100`, caches de configuration des deux serveurs) ; impression universelle (novaPDF / Universal Printer), Virtual Printer, redirection USB FabulaTech ; IIS installé mais **arrêté** (TS2log tient 80/443 lui-même) ; mode RDS « administration » (pas de rôle RDS : TS2log fait le multi-session) |
+| Certificat | Let's Encrypt `CN=syngo-via.teleimagerie.net`, SAN `syngo-via.isoteam.mn`, **valide du 05/08 au 03/11/2026**, renouvelé par le gestionnaire ACME intégré de TS2log (`FreeCertificateManager.ini`) — même certificat vu depuis Internet sur `37.61.243.246:443`, et même redirection `302` sur le 80 : **le NAT 443 et 80 → `.102` est confirmé** |
+| Accès distants | **Datto RMM** (agent CentraStage, UDP 13300) + **Splashtop Streamer** (07/06/2026, 6783) — un RMM opéré par quelqu'un (TELLIS ? ⚠️) ; TeamViewer 15.81 + repack Siemens ; SSH depuis le 02/09 ; WinRM 5985 |
+| Supervision | **Zabbix Agent 2 7.4.3** → hôte `WIN-SRV-TSPLUS` ✅ ([17-zabbix.md](17-zabbix.md)) ; HPE AMS |
+| Sauvegarde | **Windows Server Backup : dernière sauvegarde réussie le 09/09/2025**, 1 version — **rien depuis un an** ⚠️ ; aucune tâche de sauvegarde planifiée ; `D:` « Backup » n'héberge que cette vieille image |
+| Correctifs | **figés depuis le 11/12/2025** (KB5071547) — 9 mois sans correctif sur un serveur **exposé à Internet** ⚠️ ; Windows Update à l'arrêt, sans stratégie |
+| Sécurité | Defender temps réel actif, signatures du 01/09 ; pare-feu actif (4 350 règles, TS2log en ajoute par application) ; **pas de second facteur** : l'add-on 2FA de TS2log n'a jamais été activé (essai expiré le 10/07/2025) — **622 comptes locaux à mot de passe** derrière un portail ouvert sur Internet ⚠️ |
+| Comptes | **627 comptes locaux** (622 actifs, 5 désactivés), 6 administrateurs : `Administrator`, `Info100T`, `matthieu`, `remoteadmin`, `sebastien`, `siemens_apps` ; 4 sessions RemoteApp actives au moment du relevé (16 h) |
+
+> ⚠️ **Points de vigilance** — les trois plus sérieux du site à ce jour :
+> (1) serveur exposé à Internet **sans correctif depuis 9 mois**, (2) **sans
+> sauvegarde depuis un an**, (3) **sans second facteur** devant 622 comptes. À
+> porter au prestataire et à Siemens (le TS2log est-il dans leur périmètre ?).
+> Le raccordement SSO ([16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026))
+> ou au moins l'activation du 2FA TS2log traiterait le point 3.
+
+##### Accès SSH aux serveurs Syngo et TSplus (02/09/2026)
+
+OpenSSH serveur (10.0) **installé le 02/09/2026** sur les trois machines, clé
+`id_ed25519` du poste d'admin dans `administrators_authorized_keys` ; comptes
+**`remoteadmin`** sur les deux syngo.via et **`matthieu`** sur TSplus, shell
+`cmd.exe`, PowerShell 5.1 (en *ConstrainedLanguage* sur les syngo). Alias
+`syngovia1`, `syngovia2` et `tsplus` dans le `~/.ssh/config` du poste.
+**Contrairement à TIMWFMCORE, la connexion directe poste → serveur par le VPN
+nomade fonctionne, sans rebond par pacs03** : scp et sessions longues passent.
+La différence tient vraisemblablement au chemin retour — ces trois serveurs
+sortent par le pfSense principal (`.110`), TIMWFMCORE par le second pfSense
+(`.62`) — ⚠️ hypothèse, non vérifiée.
+
+Le script d'inventaire est copié, exécuté puis supprimé : **rien n'est laissé
+sur les serveurs** (mode d'emploi en tête de
+[scripts/inventaire-windows.ps1](scripts/inventaire-windows.ps1)).
 
 ### RIS VENUS (Softway Medical)
 
@@ -307,9 +397,11 @@ présomptions d'architecture, pas des flux constatés :
 | modalités / sites d'acquisition | `.52` Vue PACS | DICOM | envoi des examens | ⚠️ chemin d'arrivée à documenter |
 | `.52` Vue PACS | `.55` Gleamer, `.56` Avicenna | DICOM | envoi à l'analyse IA, retour des résultats | 📋 présumé |
 | `.51` DLMBOX | PACS / RIS / Internet | DICOM, HL7 | échanges téléradiologie IMADIS | 📋 présumé |
-| `.58`/`.103` ProxyVia | `.98`, `.100` Syngo Via | DICOM | routage des examens vers Syngo Via | 📋 présumé |
+| `.58`/`.103` ProxyVia | `.98`, `.100` Syngo Via | DICOM **104** | routage des examens vers Syngo Via | ✅ SCP DICOM 104 en écoute sur les deux serveurs (02/09) ; la source ProxyVia et la règle de répartition entre les deux restent 📋 |
 | `.53` Vue Motion | `.52` Vue PACS | — | lecture des images pour le visualiseur web | 📋 présumé |
-| `.102` TSplus | `.98`, `.100` Syngo Via | — | publication des applications aux utilisateurs | 📋 présumé |
+| `.102` TSplus | `.98`, `.100` Syngo Via | client syngo.via (47101, 80/443, 32912…) | l'Enterprise Browser publié par TSplus interroge **les deux** serveurs | ✅ constaté le 02/09 (caches de configuration des deux serveurs sur TSplus, mêmes statistiques de connexion sur les deux) |
+| `.98` ↔ `.100` Syngo Via | — | syngo (fédération) | chaque serveur connaît l'autre (Enterprise Browser) | ✅ constaté le 02/09 |
+| Internet | `.102` TSplus | TCP 443 (+ 80 : redirection et défis ACME) | NAT du pfSense principal, WAN `37.61.243.246` | ✅ confirmé le 02/09 (même certificat et même redirection des deux côtés) |
 | `192.168.111.64` VENUS-IF | ? | HL7 | interopérabilité RIS (demandes, comptes rendus) | ⚠️ correspondants à documenter |
 | `.57` SRSA | Internet (Philips) | — | télémaintenance Philips | 📋 présumé |
 
@@ -327,7 +419,7 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 - [ ] version de pfSense, matériel ou VM
 - [ ] liste des interfaces et de leurs adresses (confirmer les trois pattes)
 - [ ] règles de filtrage, interface par interface
-- [ ] port forwards NAT — confirmer `443` et `80` → `192.168.101.102` (TSplus)
+- [x] ~~port forwards NAT — confirmer `443` et `80` → `192.168.101.102` (TSplus)~~ — **confirmés le 02/09/2026** de l'extérieur (même certificat sur 443, même redirection sur 80 depuis Internet et depuis le LAN) ; la règle elle-même reste à lire dans l'export
 - [ ] table de routage (qui route entre les trois sous-réseaux ?)
 - [ ] baux DHCP statiques, s'il est serveur DHCP
 - [ ] pairs des tunnels `tun_wg0` et `tun_wg2` (noms et `AllowedIPs`, pas les clés)
@@ -362,6 +454,38 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 - [ ] qui utilise AnyDesk / TeamViewer / Octopus Deploy sur cette machine ?
 - [ ] politique de correctifs — figés depuis mars 2025, arbitrage éditeur
       Philips à clarifier
+
+**Syngo Via `syngovia-135104` `.98` et `syngovia-135113` `.100`** — inventoriés le 02/09/2026
+([relevé `.98`](configs/inventaire-syngovia-135104-2026-09-02.md),
+[relevé `.100`](configs/inventaire-syngovia-135113-2026-09-02.md)) ; reste :
+
+- [x] ~~répartition des rôles entre les deux serveurs~~ — **pas de
+      répartition : deux instances jumelles fédérées** (02/09/2026)
+- [ ] règle de routage DICOM de ProxyVia : quels examens vont sur `.98`,
+      lesquels sur `.100` ?
+- [ ] qui pose les correctifs Windows (lots du 11/12/2025, 27/08 et
+      31/08/2026) — Siemens par SRS, ou TELLIS ?
+- [ ] Defender temps réel désactivé sur les deux : exigence Siemens
+      documentée, ou oubli ?
+- [ ] `N:` System_Backup presque plein sur les deux — qui purge ? et la
+      sauvegarde `M:`/`N:` est-elle copiée hors machine par TELLIS ?
+- [ ] raccorder les deux serveurs à Zabbix (agent absent) — après accord
+      Siemens (WDAC)
+- [ ] adresse iLO des deux DL380 (et du DL360 TSplus)
+- [ ] harmoniser les masques (`.98` en /28, `.100` en /24)
+- [ ] `.100` : supprimer le compte administrateur en doublon `Matthieu CAPON`
+
+**TSplus `win-srv-tsplus` `.102`** — inventorié le 02/09/2026
+([relevé](configs/inventaire-win-srv-tsplus-2026-09-02.md)) ; reste :
+
+- [ ] **correctifs Windows figés depuis le 11/12/2025** sur un serveur exposé
+      à Internet : qui en a la charge ?
+- [ ] **aucune sauvegarde depuis le 09/09/2025** : décider quoi sauvegarder
+      (configuration TS2log, profils) et où
+- [ ] **second facteur** : activer l'add-on 2FA de TS2log ou raccorder au SSO
+      ([16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026))
+- [ ] qui opère le Datto RMM / Splashtop installé dessus ?
+- [ ] masque `/24` alors que le plan d'adressage dit `/28`
 
 **VM `prod01` `192.168.101.54`** :
 
