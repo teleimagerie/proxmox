@@ -5,15 +5,20 @@ tel quel apres reinstallation (PowerShell administrateur, ou par SSH :
 scp + powershell -ExecutionPolicy Bypass -File).
 
 Ce que fait ce script, dans l'ordre :
- 1. pose la liste blanche des flux de production (6 regles, voir la fiche
-    15-pacs-secours.md section "Acces SSH et pare-feu") ;
+ 1. pose la liste blanche des flux de production (7 regles, voir la fiche
+    15-pacs-secours.md section "Acces SSH et pare-feu"), puis une regle de
+    BLOCAGE explicite du DICOM 11113 sur la patte publique (03/09/2026) ;
  2. desactive TOUTES les regles entrantes actives a portee "Any" qui
     court-circuiteraient le blocage par defaut (regles heritees : Bureau a
     distance, partage de fichiers, RPC, regles applicatives Any/Any...),
     en preservant les CoreNet-* — l'IP publique est en DHCP OVH, couper
     CoreNet-DHCP-In tuerait le renouvellement du bail ;
  3. allume les trois profils en blocage entrant par defaut, journal des
-    rejets actif (%systemroot%\system32\LogFiles\Firewall\pfirewall.log).
+    rejets actif dans %systemroot%\system32\LogFiles\Firewall\pfirewall-pacs03.log
+    (nom NON par defaut, volontairement : avec le nom par defaut pfirewall.log
+    le service n'a jamais rien ecrit du 30/08 au 03/09/2026, fichier a 0 octet
+    sans aucune erreur ; pointer la journalisation vers un nouveau nom lui a
+    fait ouvrir un descripteur neuf et les rejets sont apparus dans la minute).
 
 Prerequis pour ne pas se verrouiller dehors : arriver par le VPN nomade
 (source 10.90.0.x) en SSH ou RDP — ces deux chemins sont dans la liste
@@ -45,6 +50,16 @@ foreach ($r in $regles) {
     'regle posee : {0}' -f $r.Name
 }
 
+# --- 1b. blocage explicite : DICOM 11113 jamais depuis la patte publique -----
+# Deja couvert par le blocage entrant par defaut, mais un Block prime sur tout
+# Allow : si une regle applicative "Any" revient un jour pour dicom-agent.exe
+# (TeamViewer l'a fait le 02/09/2026), le port reste ferme cote Internet.
+# Liee a l'interface publique "Ethernet" (188.165.77.137) plutot qu'a l'IP.
+Remove-NetFirewallRule -Name 'dicom-tim-bloc-public' -ErrorAction SilentlyContinue
+New-NetFirewallRule -Name 'dicom-tim-bloc-public' -DisplayName 'DICOM 11113 bloque sur la patte publique' `
+    -Direction Inbound -Action Block -Protocol TCP -LocalPort 11113 -InterfaceAlias 'Ethernet' | Out-Null
+'regle posee : dicom-tim-bloc-public (Block)'
+
 # --- 2. purge des regles heritees a portee Any ------------------------------
 # tunnel-tellis est remote=Any mais liee a l'interface du tunnel : on la garde.
 $gardees = 'tunnel-tellis'
@@ -55,8 +70,13 @@ $aDesactiver = Get-NetFirewallRule -Direction Inbound -Enabled True -Action Allo
 $aDesactiver | Disable-NetFirewallRule
 
 # --- 3. allumage ------------------------------------------------------------
+# Journal des rejets : droit d'ecriture explicite pour le service (le dossier
+# ne le portait pas ; n'a PAS suffi seul le 03/09/2026) et surtout un nom de
+# fichier autre que pfirewall.log, seul geste qui a debloque l'ecriture.
+& icacls "$env:SystemRoot\System32\LogFiles\Firewall" /grant 'NT SERVICE\mpssvc:(OI)(CI)F' | Out-Null
 Set-NetFirewallProfile -All -DefaultInboundAction Block -DefaultOutboundAction Allow `
-    -LogBlocked True -LogMaxSizeKilobytes 16384
+    -LogBlocked True -LogMaxSizeKilobytes 16384 `
+    -LogFileName '%systemroot%\system32\LogFiles\Firewall\pfirewall-pacs03.log'
 Set-NetFirewallProfile -All -Enabled True
 
 '--- profils :'

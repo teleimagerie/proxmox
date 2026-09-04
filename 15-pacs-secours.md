@@ -148,10 +148,17 @@ port 104** ; `XnXPLOREVIEWWEB` est le viewer web, `XnPUSH` (8005) et
 `XnTELEMEDGATEWAY` (109) les échanges télémédecine — six services
 `XnTELEMEDCLOUD_TLMTIM723x` sont à l'arrêt.
 
-S'y ajoutent trois **agents DICOM « MyTIM »** hors gamme EDL :
-`DicomAgent-isoteam` (**11112**), `DicomAgent-tim` (**11113**) et
-`isoteam-sender`. Les ports 104 et 11112 sont précisément ceux prévus par les
-ACL du tailnet pour `tag:pacs` ([11-headscale.md](11-headscale.md)) :
+S'y ajoutent trois **agents DICOM « MyTIM »** hors gamme EDL (`dicom-agent.exe`,
+un `config.yaml` à côté de chaque binaire, clé API hors dépôt) :
+`DicomAgent-isoteam` (**11112**, AET `ISOTEAM_RECEIVER`, dépôt
+`D:\dicom-agent-isoteam\received`) et `DicomAgent-tim` (**11113**, AET
+`TIM_RECEIVER`, dépôt `D:\dicom-agent-tim\received`) **reçoivent les images clés**
+envoyées par les syngo.via de TELLIS — **par le tunnel direct, sur `172.32.0.2`**
+(constaté le 03/09/2026 : `.100` → `172.32.0.2:11112`) — et les remontent à l'API
+MyTIM (`app.teleimagerie.net`, `app.isoteam.mn`) ; `isoteam-sender` fait le chemin
+inverse (mode *sender*, `key_image.enabled: true`, destination DICOM fournie par
+l'API — `remote_config: true`). Les ports 104 et 11112 sont précisément ceux prévus
+par les ACL du tailnet pour `tag:pacs` ([11-headscale.md](11-headscale.md)) :
 l'enrôlement futur collera au trafic déjà en place.
 
 Les tâches planifiées « Sauvegarde de la base de données »
@@ -261,7 +268,8 @@ l'utilisateur) — fenêtre couverte ≈ 24 h (plafond de 5 000 événements),
 un audit plus profond reste possible.
 
 **Allumage le 30/08 vers 15 h 15** : `DefaultInboundAction Block` sur les trois
-profils, journal des rejets activé (`pfirewall.log`, 16 Mo), et purge de
+profils, journal des rejets activé (`pfirewall.log`, 16 Mo — resté muet jusqu'au
+03/09, voir le contrôle du 03/09 : le journal vivant est `pfirewall-pacs03.log`), et purge de
 ~60 règles d'autorisation héritées à portée « Any » (Bureau à distance, partage
 de fichiers 445/139/137, RPC, une règle 80/443, les règles applicatives
 `Any/Any` des services Xn/TeamViewer/iperf, un reliquat 10051…). Les règles
@@ -277,6 +285,7 @@ de fichiers 445/139/137, RPC, une règle 80/443, les règles applicatives
 | `tunnel-tellis` | **tout** flux entrant arrivant par l'interface `DC-TELLIS-PARTENAIRES` (même confiance qu'avant, réplication comprise) |
 | `wg-endpoint` | UDP 51736 depuis `37.61.243.246` (ceinture-bretelles : pacs03 initie le tunnel, keepalive 25 s) |
 | `icmp-prive` | ICMPv4 depuis `10/8`, `172.16/12`, `192.168/16` |
+| `dicom-tim-bloc-public` (**Block**, 03/09/2026) | TCP 11113 **refusé** sur l'interface publique « Ethernet » (`188.165.77.137`) — redondant avec le blocage par défaut, mais un Block prime sur tout Allow futur (cf. règles TeamViewer revenues le 02/09) ; boucle locale et tunnel TELLIS non concernés |
 
 **Vérifications après bascule** : 22/80/135/445/3389/5985/11112 injoignables
 depuis Internet ✅ ; flux proxy→80 vivant ✅ ; Zabbix interroge toujours
@@ -285,7 +294,35 @@ hostiles coupées par la bascule, connexions SMB restantes tuées à la main ✅
 TeamViewer (sortant vers son cloud) n'est **pas** affecté par le pare-feu — le
 « statuer » du reste-à-faire garde tout son sens. Retour arrière si un flux
 légitime imprévu casse : `Set-NetFirewallProfile -All -Enabled False` par SSH,
-puis lire `%systemroot%\system32\LogFiles\Firewall\pfirewall.log`.
+puis lire `%systemroot%\system32\LogFiles\Firewall\pfirewall-pacs03.log`.
+
+**Contrôle du 03/09/2026 — port 11113 (images clés).** Question : le port est-il
+bien ouvert pour ses deux émetteurs, TELLIS et un service local ? **✅ des deux
+côtés, sans règle dédiée.** Le pare-feu Windows **ne filtre pas la boucle
+locale** (connexion TCP réussie depuis la machine elle-même vers `127.0.0.1`,
+`10.40.0.40` et `188.165.77.137` sur 11113 — pas vers `172.32.0.2`, l'adresse du
+tunnel ne se rebouclant pas, sans conséquence), et TELLIS entre par
+`tunnel-tellis` (`Test-NetConnection 172.32.0.2 -Port 11113` réussi depuis `.52`
+et `.98`). Contre-épreuves : 11113/11112/104 filtrés depuis le VPN nomade
+(`10.90.0.x`) et depuis Internet (`tim-prod` → `188.165.77.137`). Deux défauts
+trouvés en chemin : **le journal des rejets était resté à 0 octet depuis le
+30/08** — journalisation bien activée, rejets bien effectués par le pare-feu
+lui-même (filtre WFP « Query User » du fournisseur MPSSVC, vérifié par `netsh
+wfp show netevents`), mais rien d'écrit et aucune erreur. Ni le droit `NT
+SERVICE\mpssvc` sur le dossier (posé par `icacls`, il manquait mais le fichier
+l'avait déjà), ni la suppression/recréation du fichier n'ont suffi ; **ce qui a
+débloqué : pointer la journalisation vers un autre nom de fichier** — les rejets
+sont apparus dans la minute. Le journal est donc désormais
+**`pfirewall-pacs03.log`** (même dossier, 16 Mo), repris dans le script ;
+`pfirewall.log` reste à côté avec un simple en-tête — et **TeamViewer avait
+recréé quatre règles entrantes Any/Any** (`{GUID}`, profil Public, TCP+UDP,
+liées à `TeamViewer.exe` et `TeamViewer_Service.exe`) **le 02/09 à 16 h 46**
+(journal du pare-feu : quatre suppressions puis quatre ajouts, signature d'une
+mise à jour ou d'un redémarrage de TeamViewer) : exposition limitée (il n'écoute
+qu'en `127.0.0.1:5939`), mais la liste blanche n'est plus exhaustive (voir
+reste-à-faire). Signal métier : **aucune image reçue sur 11113 depuis le 29/08
+23 h 35** alors que le flux était quasi quotidien du 21/07 au 28/08 ; le chemin
+réseau étant ouvert, la cause est en amont (syngo.via / ProxyVia).
 
 L'ensemble (liste blanche + purge des règles « Any » + allumage) est rejouable
 tel quel après réinstallation : [`scripts/parefeu-pacs03.ps1`](scripts/parefeu-pacs03.ps1)
@@ -308,7 +345,21 @@ tel quel après réinstallation : [`scripts/parefeu-pacs03.ps1`](scripts/parefeu
   journaux plus en profondeur si le cœur nous en dit.
 - 📋 **Relire `pfirewall.log` d'ici quelques jours** (rejets journalisés) pour
   attraper un éventuel flux légitime rare que la liste blanche du 30/08 aurait
-  manqué — un client DICOM direct oublié, par exemple.
+  manqué — un client DICOM direct oublié, par exemple. **Le journal n'a rien
+  écrit du 30/08 au 03/09 18 h** (0 octet ; débloqué le 03/09 en changeant le nom
+  du fichier) : lire **`pfirewall-pacs03.log`**, la fenêtre utile commence le
+  03/09 à 18 h.
+- ⚠️ **Flux images clés TIM (11113) silencieux depuis le 29/08 23 h 35**, alors
+  qu'il était quasi quotidien du 21/07 au 28/08 (week-ends compris). Chemin réseau
+  vérifié ouvert le 03/09 : chercher côté émetteur (nœud DICOM `TIM_RECEIVER` sur
+  syngo.via, routage ProxyVia) ou confirmer qu'aucune image clé TIM n'a été
+  produite. À regarder aussi : 791 fichiers restent dans
+  `D:\dicom-agent-tim\received` malgré `delete_after_send: true`.
+- ⚠️ **Règles TeamViewer revenues** : quatre règles entrantes `{GUID}` Any/Any
+  (profil Public, TCP+UDP, `TeamViewer.exe` et `TeamViewer_Service.exe`)
+  recréées par TeamViewer le 02/09 à 16 h 46, trois jours après la purge du 30/08.
+  Les désactiver ne tient pas (il les recrée) : la réponse est le point « statuer
+  sur TeamViewer » ci-dessous.
 - ⚠️ **Désactiver NetBIOS sur « Ethernet 2 »** (propriétés IPv4 → WINS, ou clé
   `NetbiosOptions=2` de l'interface) — confirmé encore actif au 29/08/2026
   (ports 137/139 liés aux trois pattes). Exposition **bloquée** par le pare-feu
