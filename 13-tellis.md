@@ -98,7 +98,11 @@ la sauvegarde applicative, voir [Accès SSH](#accès-ssh-30082026) plus bas). L'
 Deux indices convergents sur l'hyperviseur du site : la MAC `BC:24:11:…` de la
 2ᵉ carte est **le préfixe des MAC générées par Proxmox VE** — le PACS principal
 tourne vraisemblablement sur un Proxmox chez TELLIS (lequel ? où ? ⚠️ ajouté à
-la [checklist](#checklist-de-collecte)).
+la [checklist](#checklist-de-collecte)). **Confirmé le 04/09/2026 par les trois
+VENUS** : MAC `BC:24:11:…` toutes les trois, matériel QEMU (i440FX et Q35),
+`QEMU Guest Agent`, pilotes VirtIO et agent Spice — **le site fait bien tourner
+un Proxmox VE**, et VENUS1/VENUS2 y ont été *migrés depuis VMware* (VMware Tools
+10.3 encore installé mais à l'arrêt, cartes toujours nommées `vmxnet3`).
 
 > ⚠️ **Points de vigilance relevés** : correctifs Windows **figés depuis mars
 > 2025** (aucun KB depuis — 17 mois au moment du relevé) sur un Windows Server
@@ -286,16 +290,117 @@ sur les serveurs** (mode d'emploi en tête de
 
 Le RIS (*Radiology Information System*) gère le versant administratif et
 organisationnel de l'imagerie : demandes d'examens, planning, comptes rendus,
-facturation. Déploiement classique en trois tiers.
+facturation. Déploiement classique en trois tiers — **inventorié le 04/09/2026**,
+ce qui en précise la réalité : les deux premiers serveurs portent **le même socle
+applicatif** (IIS + PHP 7.2, Mirth Connect 3.9.1, JasperReports, MariaDB 10.6
+locale), `.64` y ajoute le **SFTP de dépôt des sites** et les démons d'import,
+et **`.65` est la base partagée** que les deux interrogent (base `isotim`).
+Les trois sont des **VM Proxmox** du site, en Windows Server 2022 Standard,
+workgroup, DNS publics `8.8.8.8`/`8.8.4.4`, passerelle `.254`, avec
+**TeamViewer 15.81.5 actif** sur chacune.
 
 | IP | Machine | Rôle | Éditeur | Statut |
 |---|---|---|---|---|
-| `192.168.111.63` | `TIM-VENUS1-AP` | serveur application | Softway Medical | ✅ machine et OS constatés le 04/09/2026 (Windows Server 2022, `nicesoft_appli`) ; applicatif ⚠️ |
-| `192.168.111.64` | `TIM-VENUS2-IF` | serveur interfaces — interopérabilité (HL7) avec les autres systèmes | Softway Medical | ✅ machine et OS le 04/09/2026 ; **flux HL7 identifié** (SFTP `2222`, voir [Accès SSH](#accès-ssh-aux-serveurs-venus-04092026)) ; ⚠️ sens et contenu des échanges |
-| `192.168.111.65` | `TIM-VENUS3-DB` | base de données | Softway Medical | ✅ machine et OS le 04/09/2026 ; moteur de base et sauvegarde ⚠️ |
+| `192.168.111.63` | `TIM-VENUS1-AP` | serveur application (IIS/PHP, Mirth, JasperReports) | Softway Medical | ✅ **inventorié le 04/09/2026** |
+| `192.168.111.64` | `TIM-VENUS2-IF` | serveur interfaces — **SFTP de dépôt des sites** + démons d'import, Mirth | Softway Medical | ✅ **inventorié le 04/09/2026** ; ⚠️ contenu des échanges et chemin de publication |
+| `192.168.111.65` | `TIM-VENUS3-DB` | base de données **partagée** (MariaDB 11.8, base `isotim`) | Softway Medical | ✅ **inventorié le 04/09/2026** ; ⚠️ **aucune sauvegarde** |
 
 > L'autre RIS utilisé, **Xplore (EDL)**, est hébergé directement chez EDL :
 > **hors périmètre** de cette documentation.
+
+#### `TIM-VENUS1-AP` (`.63`) — le serveur applicatif, inventorié le 04/09/2026
+
+Relevé : [`configs/inventaire-tim-venus1-ap-2026-09-04.md`](configs/inventaire-tim-venus1-ap-2026-09-04.md).
+
+| | |
+|---|---|
+| Machine | **VM Proxmox** (QEMU i440FX, MAC `BC:24:11:CC:9D:F6`) — 8 vCPU, **16 Go**, 3 disques SATA virtuels (100 + 200 + 1024 Go) ; **migrée depuis VMware** (VMware Tools 10.3 à l'arrêt, carte encore nommée `vmxnet3`), QEMU Guest Agent et VirtIO actifs |
+| OS | Windows Server 2022 **Standard** 21H2 (build 20348), installé le **29/12/2022**, workgroup, fuseau Paris ; dernier démarrage le 24/04/2026 (**uptime 133 j**) ; ⚠️ **licence Retail NON activée** (statut 5) |
+| Réseau | `.63/24`, passerelle `.254`, **DNS `8.8.8.8`/`8.8.4.4`** (publics) |
+| Stockage | C: 99 Go (39 libres) · **D: « VENUS » 200 Go — 4,8 Go libres** (`_VENUS` pèse 181 Go, `MariaDB` 1 Go) ⚠️ · E: « ARCHIVES » 1 To **vide** (1023,8 Go libres) |
+| Applicatif | **IIS + PHP 7.2** (Windows Cache Extension, Composer, URL Rewrite) servant l'applicatif `D:\_VENUS\VENUS_PHP` ; **Mirth Connect 3.9.1.b263** (NextGen) sur **8080/8443** ; **MariaDB 10.6** locale (`--defaults-file=D:\MariaDB\data\my.ini`) — bases `venus` **485 Mo** et `mirthdb` 11 Mo ; **JasperReports Server 8.1.1 *et* 8.2.0** + Jaspersoft Studio (édition des comptes rendus), Java 8u481 ; service `Venus_Clean_Daemon` (via `srvany.exe`) ; QuickViewHL7, Git/TortoiseGit, Agent Ransack |
+| Partages SMB | `deployment$` (`D:\nicesoft\02_deployment`), `VENUS_ARCHIVES`, `VENUS_DOCS` |
+| Ports ouverts | 22 (notre sshd), 135, 139, **443**, 445, **3306**, 3389, 5357, 5985, **8080/8443** (Mirth) |
+| Correctifs | ⚠️ **derniers KB d'avril 2023** (KB5025230/KB5022507/KB5025314) — plus rien depuis 3 ans |
+| Sécurité | pare-feu **actif sur les 3 profils** ✅ ; Defender temps réel **actif**, signatures du 03/09/2026 ✅ ; **TeamViewer 15.81.5 en service** ⚠️ ; **Microsoft Office 2021 et OneDrive installés** sur un serveur de production ⚠️ |
+| Comptes | 6 comptes locaux (2 actifs) ; administrateurs : `Administrateur`, `nicesoft_appli` |
+
+> ⚠️ **`D:` est à 4,8 Go libres sur 200** — c'est le volume qui porte
+> l'applicatif, la base et les archives de production. C'est le point le plus
+> urgent des trois serveurs avec la sauvegarde de `.65` : `E:` (1 To) est
+> pourtant vide et disponible.
+
+#### `TIM-VENUS2-IF` (`.64`) — interfaces, SFTP des sites, inventorié le 04/09/2026
+
+Relevé : [`configs/inventaire-tim-venus2-if-2026-09-04.md`](configs/inventaire-tim-venus2-if-2026-09-04.md).
+Jumeau applicatif de `.63`, auquel s'ajoutent **le SFTP de dépôt des sites** et
+**12 démons d'interface**.
+
+| | |
+|---|---|
+| Machine | **VM Proxmox** (QEMU i440FX, MAC `BC:24:11:F1:C6:B7`) — 8 vCPU, **16 Go**, 2 disques (100 + 200 Go) ; migrée depuis VMware comme `.63` |
+| OS | Windows Server 2022 **Standard** 21H2, installé le **29/12/2022** ; dernier démarrage le **03/09/2025 — uptime 366 jours** ⚠️ |
+| Réseau | `.64/24`, passerelle `.254`, DNS publics |
+| Stockage | C: 99 Go (22 libres) · D: « VENUS » 200 Go (88 libres) |
+| Applicatif | même socle que `.63` : IIS/PHP 7.2, **Mirth Connect 3.9.1** (8080/8443), **MariaDB 10.6** locale, **JasperReports 8.1.1/8.2.0** (Tomcat 9 sur **8081**, **PostgreSQL** local sur 5432) ; Java 8u201, WinSCP 6.5.3, QuickViewHL7 |
+| Démons d'interface | **12 services `Venus_*_Daemon`** lancés par `srvany.exe` depuis `D:\_VENUS\VENUS_PHP\services` : `Import_` Agen, Angers, Niort, Quimper, RouenCHB, Valence, Yon · `Capture_` Agen, Niort, Quimper · `Export` · `Clean`. ⚠️ Plusieurs tournent sous le **compte local `Nicesoft_Appli`** (mot de passe stocké dans le service), les autres en `LocalSystem` |
+| SFTP des sites | **OpenSSH 9.8p2 de l'éditeur** (`C:\OpenSSH-Win64`, 18/04/2025) sur **`2222`**, `PubkeyAuthentication no`, mot de passe, **8 comptes `isoteam<site>` chrootés** vers `D:\_VENUS\VENUS_ITF\<SITE>`, algorithmes anciens activés « pour JSch/Mirth » (`ssh-rsa`, `dh-group1-sha1`, `aes*-cbc`, `hmac-sha1`) |
+| Dépôts au 04/09/2026 | **7 sites actifs, tous écrits le jour même** : Agen 21 613 fichiers · Angers CH 17 217 · Rouen CHB 16 078 · Valence 10 123 · Quimper 9 772 · Yon 4 535 · Niort 2 597. Le 8ᵉ dossier est `POITIERSGIE-NE PAS UTILISE` (vide) — et ⚠️ **le chroot `…\VENUS_ITF\POITIERS` du compte `isoteampoitiers` n'existe pas** : ce compte ne peut pas se connecter |
+| Ports ouverts | **2222** (SFTP éditeur), 135, 139, 445, **3306**, 3389, 5357, 5985, **8080/8443** (Mirth), 8081 (Tomcat), 5432 et 8005 en local |
+| Correctifs | ⚠️ **derniers KB d'avril 2023** |
+| Sécurité | ⚠️ **pare-feu désactivé sur les 3 profils** ; Defender temps réel actif, signatures du 04/09/2026 ✅ ; TeamViewer en service ⚠️ ; Office 2021 + OneDrive (**13 SID utilisateurs** ont des tâches OneDrive : beaucoup de sessions interactives sur ce serveur) ⚠️ |
+| Partages SMB | `deployment$` (`D:\nicesoft\02_deployment`) |
+
+> **Le SFTP reçoit bien des connexions venues d'Internet.** Au moment du relevé,
+> 14 sessions étaient établies sur `2222` depuis **six adresses publiques
+> distinctes** (sans enregistrement inverse) — ce sont les sites qui déposent.
+> Mais le port **ne répond pas** depuis un VPS OVH sur les trois adresses
+> publiques connues du site (`37.61.243.245`, `37.61.243.246`,
+> `77.158.128.112`) : la publication est donc **filtrée par adresse source**, ou
+> faite sur une autre adresse — ⚠️ **à faire préciser par le prestataire**, c'est
+> le seul flux entrant d'Internet du RIS. Un SFTP en mot de passe, à
+> chiffrement ancien, sur une machine sans correctif depuis avril 2023 et sans
+> pare-feu local, mérite que ce filtrage soit **vérifié et documenté**.
+
+#### `TIM-VENUS3-DB` (`.65`) — la base partagée, inventorié le 04/09/2026
+
+Relevé : [`configs/inventaire-tim-venus3-db-2026-09-04.md`](configs/inventaire-tim-venus3-db-2026-09-04.md).
+**C'est la base de données de production du RIS** : `.63` et surtout `.64` s'y
+connectent en permanence (nombreuses sessions établies vers `3306` au moment du
+relevé). Machine bien plus récente que les deux autres.
+
+| | |
+|---|---|
+| Machine | **VM Proxmox** (QEMU **Q35**, VirtIO, MAC `BC:24:11:34:A0:21`, lien **10 Gbps**) — **4 vCPU, 8 Go** seulement pour le serveur de base ⚠️ ; 3 disques VirtIO (120 + 750 + 750 Go) |
+| OS | Windows Server 2022 **Standard** 21H2, installé le **13/07/2025**, licence **OEM active** ; dernier démarrage le 30/07/2026 (uptime 36 j) |
+| Réseau | `.65/24`, passerelle `.254`, DNS publics |
+| Stockage | C: 119 Go (83 libres) · D: « VENUS » 750 Go — **748 libres** (ne contient que `D:\sql`, des exports ponctuels de sept. 2025) · **E: « BACKUP BDD » 750 Go — 0 fichier, totalement vide** ⚠️ |
+| Base | **MariaDB 11.8.2** — base de production **`isotim` ≈ 2,1 Go**, plus `mysql`/`sys`. ⚠️ Les données sont dans **`C:\Program Files\MariaDB 11.8\data`**, le chemin d'installation par défaut **sur `C:`** — ni sur `D:` (750 Go dédiés, vides) ni protégées par un volume séparé |
+| Écoute | **3306 sur toutes les interfaces**, 22 (notre sshd), 80 (`http.sys`), 135, 139, 445, 3389, 5985 |
+| Correctifs | ⚠️ **aucun depuis l'installation** : les 3 KB présents datent du 13/07/2025 |
+| Sécurité | ⚠️ **pare-feu désactivé sur les 3 profils** ; Defender temps réel actif ✅ ; TeamViewer en service ⚠️ ; WinSCP, QuickViewHL7 |
+| Comptes | 5 comptes locaux (2 actifs) ; administrateurs : `Administrateur`, `Nicesoft_Appli` |
+
+> ⚠️⚠️ **La base de production du RIS n'est pas sauvegardée.** Le volume `E:`,
+> nommé « BACKUP BDD » et dimensionné à 750 Go, est **vide (0 fichier)** ;
+> **aucune tâche planifiée** de sauvegarde n'existe sur la machine (les seules
+> tâches non-Microsoft sont celles d'Edge). Les seuls exports retrouvés sont
+> **manuels et anciens** : `isotim_backup.sql` (883 Mo) du **10/12/2025** dans
+> le dossier `Downloads` d'un compte d'administration, et `D:\sql\event\event.sql`
+> (245 Mo) du 30/09/2025. **C'est le point le plus grave de l'inventaire** : une
+> perte de la VM ou une corruption de `isotim` ferait perdre neuf mois de RIS.
+> À porter à Softway Medical **et** au prestataire (qui sauvegarde les VM du
+> Proxmox du site ? ⚠️ inconnu — voir [checklist](#checklist-de-collecte)).
+
+> ⚠️ **Points de vigilance communs aux trois VENUS** : Windows Server 2022 **sans
+> correctif** (avril 2023 pour `.63`/`.64`, juillet 2025 pour `.65`) ;
+> **pare-feu Windows désactivé sur `.64` et `.65`** (le filtrage repose
+> entièrement sur le pfSense, dont les règles nous sont ⚠️ inconnues) ;
+> **TeamViewer actif sur les trois** (canal d'accès tiers, comme sur le PACS et
+> les syngo) ; DNS publics `8.8.8.8` sur des serveurs de données de santé ;
+> `.64` n'a pas redémarré depuis **366 jours** ; licence Windows **non activée**
+> sur `.63`. Aucun de ces serveurs n'est **supervisé** ([17-zabbix.md](17-zabbix.md))
+> ni sauvegardé à notre connaissance.
 
 ##### Accès SSH aux serveurs VENUS (04/09/2026)
 
@@ -315,9 +420,12 @@ pair du VPN nomades du pfSense** (`172.31.0.3`, tunnel `DC-TELLIS2`, voir
 | `venus3` (.65) | idem | capacité native **9.5p1** ; pare-feu **désactivé** sur les 3 profils (règle posée mais inerte, filtrage au pfSense) |
 | `venus2` (.64) | **cohabitation** dans un sshd préexistant | ⚠️ un **OpenSSH 9.8p2** de l'éditeur (`C:\OpenSSH-Win64`, 18/04/2025) écoutait déjà sur **`2222`** : serveur **SFTP de dépôt HL7**, mot de passe, `PubkeyAuthentication no` global, chroot par site — **8 comptes** `isoteam<site>` (Valence, Agen, Angers CH, Poitiers, Quimper, Rouen CHB, Yon, Niort) vers `D:\_VENUS\VENUS_ITF\<SITE>`, algorithmes anciens « pour JSch/Mirth » |
 
-> **VENUS2-IF est le point d'entrée SFTP des interfaces** (probablement le flux
-> HL7 depuis Mirth sur [TIMWFMCORE](#timwfmcore--le-pacs-principal-inventorié-le-29082026) — la
-> mention « JSch/Mirth » dans sa config le suggère). **Ne pas durcir ce sshd** :
+> **VENUS2-IF est le point d'entrée SFTP des interfaces.** L'inventaire du même
+> jour a tranché : **Mirth Connect tourne sur les VENUS eux-mêmes** (`.63` et
+> `.64`, ports 8080/8443), pas seulement sur TIMWFMCORE — la mention
+> « JSch/Mirth » de la config désigne la bibliothèque SSH de Mirth. Les dépôts
+> viennent des **7 sites, par Internet** (voir la fiche de `.64` ci-dessus).
+> **Ne pas durcir ce sshd** :
 > interdire le mot de passe couperait les dépôts. Notre accès admin par clé
 > **cohabite** sans y toucher — un bloc `Match Group administrators`
 > (`PubkeyAuthentication yes` + `administrators_authorized_keys`) ajouté en fin
@@ -567,13 +675,25 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 - [ ] `nginx -T` — noms servis, backends, certificats et leurs échéances — à
   rapprocher de l'inventaire des noms ([14-noms-de-domaine.md](14-noms-de-domaine.md))
 
-**RIS VENUS** :
+**RIS VENUS** (les trois serveurs sont inventoriés depuis le 04/09/2026) :
 
-- [x] ~~flux HL7 de `TIM-VENUS2-IF` : … ports~~ — **SFTP `2222`** identifié le
-  04/09/2026 (8 comptes `isoteam<site>` chrootés, « JSch/Mirth »), voir
-  [Accès SSH](#accès-ssh-aux-serveurs-venus-04092026) ; ⚠️ reste le **sens** et
-  le **contenu** des échanges (dépôt de fichiers HL7 par les sites ? récupération ?)
-- [ ] sauvegarde de la base `TIM-VENUS3-DB` : qui, comment, testée ?
+- [x] ~~flux HL7 de `TIM-VENUS2-IF` : correspondants, sens, ports~~ — **SFTP
+  `2222`**, dépôt **entrant** des **7 sites actifs** (Agen, Angers CH, Rouen CHB,
+  Valence, Quimper, Yon, Niort) dans des chroots par site, repris par 12 démons
+  `Venus_*_Daemon` et Mirth Connect local ; résolu le 04/09/2026
+- [x] ~~sauvegarde de la base `TIM-VENUS3-DB` : qui, comment, testée ?~~ —
+  tranché le 04/09/2026 : **il n'y en a aucune** (volume `E:` « BACKUP BDD »
+  vide, aucune tâche planifiée, dernier export manuel du 10/12/2025) →
+  **action ouverte** dans [06-reste-a-faire.md](06-reste-a-faire.md)
+- [ ] **par où le SFTP `2222` est-il publié ?** — connexions établies depuis 6 IP
+  publiques, mais aucune réponse depuis un VPS externe sur `37.61.243.245/.246`
+  ni `77.158.128.112` : NAT filtré par source, ou autre adresse ⚠️
+- [ ] **qui sauvegarde les VM du Proxmox de TELLIS ?** (aucune sauvegarde
+  visible *dans* les VM VENUS — la protection ne peut venir que de l'hyperviseur)
+- [ ] `D:` de `TIM-VENUS1-AP` à **4,8 Go libres** : purge, extension, ou bascule
+  des archives sur `E:` (1 To vide) — à traiter avec Softway
+- [ ] chroot manquant de `isoteampoitiers` (`…\VENUS_ITF\POITIERS`) : compte à
+  supprimer ou dossier à créer
 - [ ] contact support Softway Medical
 
 **Prestataire** :

@@ -108,8 +108,9 @@ Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
                          TSplus inventoriés et supervisés le 02/09 (syngo en
                          SNMP, agent refusé par WDAC ; TSplus : ni correctif ni
                          sauvegarde depuis 2025, pas de 2FA)
-                         RIS VENUS ×3 (Softway) : accès SSH par clé posé le
-                         04/09 (venus1/2/3) ; VENUS2-IF = SFTP HL7 des sites
+                         RIS VENUS ×3 (Softway, VM Proxmox du site) : SSH par
+                         clé et inventaire le 04/09 ; .64 = SFTP de dépôt des
+                         7 sites ; .65 = base isotim ⛔ SANS SAUVEGARDE
 PACS de secours          pacs03 (bare-metal Windows, GRA3) · vRack VLAN 400
                          10.40.0.40 · backend pacs-secours servi en privé
 VPN DICOM                headscale 0.29.3 (CT 202) · tailnet 100.72.0.0/16

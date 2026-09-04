@@ -289,6 +289,28 @@ ici. Les trois points saillants :
 - **informer le prestataire de l'exposition de la clé `tun_wg0`** et suivre sa
   rotation (voir le § 8 ci-dessus).
 
+### ⛔ La base de production du RIS VENUS n'est pas sauvegardée (04/09/2026)
+
+Constaté à l'inventaire des trois serveurs VENUS
+([13-tellis.md](13-tellis.md#tim-venus3-db-65--la-base-partagée-inventorié-le-04092026)) :
+la base **`isotim` (≈ 2,1 Go)** de `TIM-VENUS3-DB` (`192.168.111.65`), qu'appellent
+en permanence les deux serveurs applicatifs, **n'a aucune sauvegarde**. Le volume
+`E:` nommé « BACKUP BDD », dimensionné à 750 Go, est **vide (0 fichier)** ; il
+n'existe **aucune tâche planifiée** de sauvegarde ; les seuls exports retrouvés
+sont manuels et anciens (`isotim_backup.sql` de 883 Mo du **10/12/2025**, dans le
+dossier `Downloads` d'un compte d'administration). Les données sont de surcroît
+dans `C:\Program Files\MariaDB 11.8\data`, le chemin d'installation par défaut,
+alors que 750 Go dédiés (`D:`) sont vides.
+
+À porter **à Softway Medical** (c'est son applicatif, `mariadb-dump` planifié vers
+`E:` au minimum) **et au prestataire TELLIS** : aucune sauvegarde n'étant visible
+*dans* les VM, la seule protection possible est celle de l'hyperviseur Proxmox du
+site — **personne ne nous a confirmé qu'elle existe**. Tant que ce point n'est pas
+levé, une perte de la VM fait perdre le RIS. Deux points voisins, moins graves
+mais du même inventaire : `D:` de `TIM-VENUS1-AP` n'a plus que **4,8 Go libres**
+sur 200, et les trois serveurs sont **sans correctif Windows** (avril 2023 pour
+deux d'entre eux).
+
 ---
 
 ## 10. Authentification centralisée — suites du déploiement du 27/08/2026
