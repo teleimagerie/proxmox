@@ -236,7 +236,12 @@ fait ou pas été prouvé :
   les ~2 min de relance ; c'est une déduction, pas un chiffre.
 - **Les routes ne sont posées que sur `192.168.101.52`.** Les autres serveurs à
   joindre doivent recevoir le même traitement, ou le pfSense doit masquer notre
-  trafic derrière une de ses adresses locales.
+  trafic derrière une de ses adresses locales. Nuance du 04/09/2026 : seuls les
+  serveurs dont la passerelle est le second pfSense (`.62`) en ont besoin —
+  VENUS (`.254`) et Syngo (`.110`) répondent déjà au pfSense principal ; et le
+  poste d'admin joint TELLIS par le `tun_wg0` du pfSense (`172.31.0.3`), pas
+  par `wg2` ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)). Reste à tester
+  `10.40.0.0/24` → `192.168.111.x` depuis une VM.
 - **À terme : supprimer le tunnel direct « DC-TELLIS-PARTENAIRES » (`tun_wg1`)
   entre pacs03 et le pfSense TELLIS** ([15-pacs-secours.md](15-pacs-secours.md)),
   une fois les flux TELLIS↔pacs03 basculés sur `wg2`/vRack. Décision du

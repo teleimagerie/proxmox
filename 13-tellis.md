@@ -33,7 +33,7 @@ le tunnel à ce jour. Chaque information porte donc son statut :
 |---|---|---|---|
 | `192.168.101.48/28` | `.49` → `.62` | bloc imagerie et production (PACS, IA, passerelles, équipements réseau) | ✅ **`.62`** (second pfSense) — constaté sur prod01 (25/08) et TIMWFMCORE (29/08), distribué par DHCP ; le `.59` ne sert que les routes vers nos réseaux |
 | `192.168.101.96/28` | `.97` → `.110` | bloc Syngo Via (serveurs, TSplus, ProxyVia) | ✅ **`.110`** (pfSense principal) — constaté le 02/09/2026 sur les trois serveurs inventoriés ; ⚠️ **masques incohérents** : `.98` est en /28 mais `.100` et `.102` sont en **/24** (voir [Syngo Via](#syngo-via)) |
-| `192.168.111.0/24` | `.1` → `.254` | RIS VENUS | ⚠️ `.254` (patte pfSense) probable, à confirmer |
+| `192.168.111.0/24` | `.1` → `.254` | RIS VENUS | ✅ **`.254`** (pfSense principal) — constaté le 04/09/2026 sur `TIM-VENUS1-AP` (`Get-NetRoute`, masque /24) |
 | `192.168.171.0/24` | `.1` = TIMWFMCORE (2ᵉ patte) | ⚠️ **découvert le 29/08/2026** dans l'inventaire du PACS — réseau sans passerelle, rôle inconnu (réseau d'imagerie/stockage ? lié au volume `Images02` ?) | — |
 
 > Les trois réseaux `192.168.101.x`/`111.x` sont exactement ceux annoncés dans
@@ -55,7 +55,7 @@ Le site compte **deux pfSense** et son propre reverse proxy nginx — trois
 
 | IP | Machine | Rôle | Mainteneur | Statut |
 |---|---|---|---|---|
-| `192.168.101.59` | pfSense principal | pare-feu du site, serveur du tunnel `wg2` et du VPN nomades `tun_wg0` ; pattes `192.168.101.59`, `192.168.101.110`, `192.168.111.254` | ⚠️ | pattes ✅ (mise en place du tunnel, 14/08/2026) ; règles, NAT et WireGuard ⚠️ à vérifier précisément |
+| `192.168.101.59` | pfSense principal | pare-feu du site, serveur du tunnel `wg2` et du VPN nomades `tun_wg0` ; pattes `192.168.101.59`, `192.168.101.110`, `192.168.111.254` | ⚠️ | pattes ✅ (`.59`/`.110` : mise en place du tunnel, 14/08/2026 ; `.254` : passerelle par défaut constatée sur VENUS1 le 04/09/2026) ; règles, NAT et WireGuard ⚠️ à vérifier précisément |
 | `192.168.101.62` | pfSense « FW-Passerelle » | **second pfSense** — c'est lui la **passerelle par défaut des serveurs du bloc production** (et leur DHCP : route `proto dhcp` sur prod01) ; rôle complet et règles ⚠️ | ⚠️ | ✅ passerelle+DHCP constatés sur prod01 le 25/08/2026 ; le reste ⚠️ |
 | `192.168.101.61` | Reverse proxy nginx | reverse proxy local du site — noms servis, certificats et backends inconnus | ⚠️ | 📋 existence, ⚠️ rôle |
 | `192.168.101.60` | Routeur vers Philips | routage vers l'environnement Philips (lié au PACS et à la télémaintenance ?) | ⚠️ | 📋 existence, ⚠️ rôle |
@@ -140,7 +140,10 @@ l'alias `ssh timwfmcore` du `~/.ssh/config` le fait (`ProxyJump pacs03`). La
 connexion directe poste→`192.168.101.52` par le VPN nomade **échoue à l'échange
 de bannière** (trou noir MTU sur le chemin `wg0`→OPNsense→`wg2`) alors que le
 port TCP s'ouvre : passer par pacs03, dont le tunnel direct TELLIS arrive en
-`172.32.0.2`, contourne le problème.
+`172.32.0.2`, contourne le problème. ⚠️ Le chemin « direct » décrit ici est en
+réalité le `tun_wg0` du pfSense (poste = `172.31.0.3`), pas `wg0`→OPNsense→`wg2`
+— constat du 04/09/2026, voir [`tun_wg0`](#tun_wg0--vpn-nomades-du-site) : le diagnostic
+MTU reste à refaire sur le bon chemin.
 
 > **Pare-feu Windows : laissé désactivé, volontairement.** Contrairement à
 > pacs03 (nu sur Internet), TIMWFMCORE est un serveur **de production interne
@@ -269,7 +272,11 @@ OpenSSH serveur (10.0) **installé le 02/09/2026** sur les trois machines, clé
 nomade fonctionne, sans rebond par pacs03** : scp et sessions longues passent.
 La différence tient vraisemblablement au chemin retour — ces trois serveurs
 sortent par le pfSense principal (`.110`), TIMWFMCORE par le second pfSense
-(`.62`) — ⚠️ hypothèse, non vérifiée.
+(`.62`) — ⚠️ hypothèse, non vérifiée. Précision du 04/09/2026 : ce « VPN
+nomade » est le **`tun_wg0` du pfSense** (le poste y est le pair `172.31.0.3`,
+adresse vue par `netstat` sur les deux serveurs), pas le VPN nomade OPNsense —
+voir [`tun_wg0`](#tun_wg0--vpn-nomades-du-site) ; l'hypothèse MTU de TIMWFMCORE est à
+relire dans ce cadre.
 
 Le script d'inventaire est copié, exécuté puis supprimé : **rien n'est laissé
 sur les serveurs** (mode d'emploi en tête de
@@ -283,12 +290,53 @@ facturation. Déploiement classique en trois tiers.
 
 | IP | Machine | Rôle | Éditeur | Statut |
 |---|---|---|---|---|
-| `192.168.111.63` | `TIM-VENUS1-AP` | serveur application | Softway Medical | 📋 |
-| `192.168.111.64` | `TIM-VENUS2-IF` | serveur interfaces — interopérabilité (HL7) avec les autres systèmes | Softway Medical | 📋 ; correspondants et flux ⚠️ |
-| `192.168.111.65` | `TIM-VENUS3-DB` | base de données | Softway Medical | 📋 ; sauvegarde ⚠️ |
+| `192.168.111.63` | `TIM-VENUS1-AP` | serveur application | Softway Medical | ✅ machine et OS constatés le 04/09/2026 (Windows Server 2022, `nicesoft_appli`) ; applicatif ⚠️ |
+| `192.168.111.64` | `TIM-VENUS2-IF` | serveur interfaces — interopérabilité (HL7) avec les autres systèmes | Softway Medical | ✅ machine et OS le 04/09/2026 ; **flux HL7 identifié** (SFTP `2222`, voir [Accès SSH](#accès-ssh-aux-serveurs-venus-04092026)) ; ⚠️ sens et contenu des échanges |
+| `192.168.111.65` | `TIM-VENUS3-DB` | base de données | Softway Medical | ✅ machine et OS le 04/09/2026 ; moteur de base et sauvegarde ⚠️ |
 
 > L'autre RIS utilisé, **Xplore (EDL)**, est hébergé directement chez EDL :
 > **hors périmètre** de cette documentation.
+
+##### Accès SSH aux serveurs VENUS (04/09/2026)
+
+Accès par clé posé sur les **trois** serveurs, tous **Windows Server 2022
+Standard** (build 20348), compte local **`nicesoft_appli`** (membre du groupe
+Administrateurs), passerelle par défaut `192.168.111.254` (pfSense principal).
+Clé `id_ed25519` du poste dans `C:\ProgramData\ssh\administrators_authorized_keys`
+(ACL SID `S-1-5-32-544`/`S-1-5-18`), mot de passe interdit. Alias `venus1`,
+`venus2`, `venus3` dans le `~/.ssh/config` du poste. Chemin : **le poste est
+pair du VPN nomades du pfSense** (`172.31.0.3`, tunnel `DC-TELLIS2`, voir
+[`tun_wg0`](#tun_wg0--vpn-nomades-du-site)) — c'est cette source, et non
+`10.90.0.0/24`, qu'admet la règle pare-feu.
+
+| Serveur | Ce qui a été fait | Détail |
+|---|---|---|
+| `venus1` (.63) | OpenSSH **installé** par nos soins | capacité Windows native **8.1p1**, service auto, clé seule, règle pare-feu `ssh-in` (TCP 22 depuis `172.31.0.3`, `10.90.0.0/24`) — pare-feu **actif** sur les 3 profils |
+| `venus3` (.65) | idem | capacité native **9.5p1** ; pare-feu **désactivé** sur les 3 profils (règle posée mais inerte, filtrage au pfSense) |
+| `venus2` (.64) | **cohabitation** dans un sshd préexistant | ⚠️ un **OpenSSH 9.8p2** de l'éditeur (`C:\OpenSSH-Win64`, 18/04/2025) écoutait déjà sur **`2222`** : serveur **SFTP de dépôt HL7**, mot de passe, `PubkeyAuthentication no` global, chroot par site — **8 comptes** `isoteam<site>` (Valence, Agen, Angers CH, Poitiers, Quimper, Rouen CHB, Yon, Niort) vers `D:\_VENUS\VENUS_ITF\<SITE>`, algorithmes anciens « pour JSch/Mirth » |
+
+> **VENUS2-IF est le point d'entrée SFTP des interfaces** (probablement le flux
+> HL7 depuis Mirth sur [TIMWFMCORE](#timwfmcore--le-pacs-principal-inventorié-le-29082026) — la
+> mention « JSch/Mirth » dans sa config le suggère). **Ne pas durcir ce sshd** :
+> interdire le mot de passe couperait les dépôts. Notre accès admin par clé
+> **cohabite** sans y toucher — un bloc `Match Group administrators`
+> (`PubkeyAuthentication yes` + `administrators_authorized_keys`) ajouté en fin
+> de `sshd_config` **avec l'accord de Softway (04/09/2026)** : la clé n'ouvre que
+> les comptes administrateurs, les 8 comptes SFTP restent en mot de passe
+> (vérifié). Sauvegarde de la config d'origine dans
+> `sshd_config.avant-tim-<horodatage>`. `ssh venus2` vise donc le **port 2222**.
+
+> Le script [scripts/installer-openssh-windows.ps1](scripts/installer-openssh-windows.ps1)
+> a servi aux trois : installation native ou MSI signé en repli, clé + ACL,
+> durcissement validé par `sshd -t` avant redémarrage, règle pare-feu limitée à
+> la source admin. Il **s'arrête en diagnostic** devant un sshd préexistant
+> (cas de `.64`) — rien n'est modifié sans `-ForcerConfigExistante`.
+
+> ⚠️ **À signaler** : les trois VENUS sont en Windows Server 2022 **sans
+> correctif depuis avril 2023** (`.63` : KB de 04/2023) ; le pare-feu Windows est
+> **désactivé** sur `.64` et `.65` (actif sur `.63`) — le filtrage repose
+> entièrement sur le pfSense. OpenSSH 8.1/9.5 sans échange de clés
+> post-quantique.
 
 ### À identifier
 
@@ -374,6 +422,23 @@ ses utilisateurs ont été coupés le 14/08/2026 (piège n° 23), et surtout :
 > rotation est à la main du prestataire, **qui doit en être informé** — suivi
 > dans [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts).
 > Aucune clé ne figure ni ne doit figurer dans ce dépôt.
+
+**Le poste d'administration est lui-même un pair de ce VPN** (tunnel
+« DC-TELLIS2 » côté Windows, adresse `172.31.0.3/32`, `AllowedIPs`
+`192.168.101.48/28`, `192.168.101.96/28` et `192.168.111.0/24`) — constaté le
+04/09/2026 en cherchant pourquoi une règle pare-feu « SSH depuis `10.90.0.0/24` »
+jetait les paquets du poste sur VENUS1. C'est par ce tunnel, et non par
+`wg0`→OPNsense→`wg2`, que le poste joint les serveurs TELLIS : le tunnel
+OPNsense du poste ne porte que `10.40.0.0/24` et `10.90.0.0/24`. Les serveurs
+voient donc le poste en **`172.31.0.3`** — vérifié par `netstat` sur syngovia1,
+TSplus et VENUS1. Conséquences : (1) toute règle pare-feu locale « depuis le
+poste » doit admettre `172.31.0.3` (et `10.90.0.0/24` seulement pour le jour où
+la route basculerait sur OPNsense) — c'est le défaut de
+[scripts/installer-openssh-windows.ps1](scripts/installer-openssh-windows.ps1) ;
+(2) le « SSH direct » vers syngo, TSplus et VENUS ne prouve rien sur le chemin
+`wg2`, qui n'a été éprouvé que vers `.52` ; (3) l'exposition de la clé
+`tun_wg0` nous concerne aussi comme utilisateur : sa rotation changera la
+configuration du poste.
 
 ---
 
@@ -504,7 +569,10 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 
 **RIS VENUS** :
 
-- [ ] flux HL7 de `TIM-VENUS2-IF` : correspondants, sens, ports
+- [x] ~~flux HL7 de `TIM-VENUS2-IF` : … ports~~ — **SFTP `2222`** identifié le
+  04/09/2026 (8 comptes `isoteam<site>` chrootés, « JSch/Mirth »), voir
+  [Accès SSH](#accès-ssh-aux-serveurs-venus-04092026) ; ⚠️ reste le **sens** et
+  le **contenu** des échanges (dépôt de fichiers HL7 par les sites ? récupération ?)
 - [ ] sauvegarde de la base `TIM-VENUS3-DB` : qui, comment, testée ?
 - [ ] contact support Softway Medical
 

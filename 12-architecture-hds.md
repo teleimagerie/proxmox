@@ -92,7 +92,7 @@ Trois liens distincts entre les deux mondes :
 | Défis ACME du certificat TSplus | Internet | `57.130.34.122` → relais → `37.61.243.246` | TCP `80` | public, via `proxy-tim` | ✅ testé le 24/08/2026 |
 | Transport du tunnel site-à-site | `57.130.34.121` | `37.61.243.246` | UDP `51822` | public (WireGuard) | ✅ monté le 14/08/2026 |
 | Admin / nomades → Vue PACS | `10.40.0.0/24`, `10.90.0.0/24` | `192.168.101.52` | — | dans `wg2` | ✅ testé le 14/08/2026 |
-| Admin → autres machines TELLIS | idem | `192.168.101.x`, `192.168.111.x` | — | dans `wg2` | ⚠️ routes retour posées sur `.52` seulement ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
+| Admin → autres machines TELLIS | idem | `192.168.101.x`, `192.168.111.x` | — | dans `wg2` | ⚠️ routes retour posées sur `.52` seulement ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) ; le poste d'admin, lui, arrive par le VPN nomades du pfSense (`172.31.0.3`, hors `wg2`) — vérifié le 04/09/2026 ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)) |
 | TELLIS → nos VM | `192.168.101.x`, `192.168.111.x` | `10.40.0.0/24` | — | dans `wg2` | ⚠️ jamais testé dans ce sens ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
 | Passerelles DICOM des sites → futur PACS | sites d'acquisition | futur PACS (DC OVH) | DICOM `104`, `11112` | tailnet (`tag:gateway` → `tag:pacs`) | 📋 à venir ([11-headscale.md](11-headscale.md)) |
 | `proxy-tim` → backend PACS de secours | `10.40.0.10` | `10.40.0.40` (pacs03, GRA3) | TCP `80` | vRack VLAN 400, inter-DC GRA4↔GRA3 | ✅ basculé le 25/08/2026, 0,25 ms ([15-pacs-secours.md](15-pacs-secours.md)) — avant : HTTP clair vers `188.165.77.137` par Internet |

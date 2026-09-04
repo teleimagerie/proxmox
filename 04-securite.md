@@ -127,7 +127,9 @@ vaut pour les trois) :
   côté Windows natif** (`C:\Users\Matt\.ssh\`) : PowerShell et WSL ont chacun
   leur trousseau, une clé WSL ne sert pas à `ssh.exe`. Le commentaire
   d'origine (`matt@LENOVO-MCA2`) a été suffixé `-windows` pour pouvoir
-  distinguer — et révoquer — chaque clé indépendamment ;
+  distinguer — et révoquer — chaque clé indépendamment. Sur le poste actuel
+  (`ZENBOOK-MCA`) il n'y a plus de trousseau Windows natif au 04/09/2026 :
+  seule la clé WSL sert, c'est elle qui est déposée sur les serveurs Windows ;
 - les clés root croisées des 3 nœuds (nécessaires à `pvecm` et à la migration) ;
 - `brtrnd@thinkpad` (ed25519, ajoutée le 2026-08-26).
 

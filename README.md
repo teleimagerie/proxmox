@@ -74,7 +74,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
 | [19-carte-reseau.md](19-carte-reseau.md) | **Carte réseau régénérable** : `make carte` interroge l'API Proxmox, confronte aux intentions de `topologie.yml` et réécrit le schéma — les écarts aux règles sont peints en rouge sur la carte |
 | [20-mytim.md](20-mytim.md) | **MyTIM sur le cluster** : 📋 plan validé le 31/08 — l'app d'abord (VPS → VM 104), MySQL ensuite (clouddb OVH → VM 103), exécution non commencée |
-| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche — passe aussi sous WDAC/*ConstrainedLanguage*), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation), `genere-carte.py` (carte réseau depuis l'API Proxmox — voir `make aide`) |
+| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche — passe aussi sous WDAC/*ConstrainedLanguage*), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation), `installer-openssh-windows.ps1` (OpenSSH serveur par clé sur un serveur Windows : installation native ou MSI, clé administrateur avec ACL, mot de passe interdit, port 22 limité au VPN nomade — rejouable), `genere-carte.py` (carte réseau depuis l'API Proxmox — voir `make aide`) |
 | `topologie.yml` | Intentions d'architecture — zones, rôles, cloisonnements, règles vérifiées à chaque génération de la carte. **Seul fichier de la carte à éditer à la main** |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 
@@ -108,6 +108,8 @@ Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
                          TSplus inventoriés et supervisés le 02/09 (syngo en
                          SNMP, agent refusé par WDAC ; TSplus : ni correctif ni
                          sauvegarde depuis 2025, pas de 2FA)
+                         RIS VENUS ×3 (Softway) : accès SSH par clé posé le
+                         04/09 (venus1/2/3) ; VENUS2-IF = SFTP HL7 des sites
 PACS de secours          pacs03 (bare-metal Windows, GRA3) · vRack VLAN 400
                          10.40.0.40 · backend pacs-secours servi en privé
 VPN DICOM                headscale 0.29.3 (CT 202) · tailnet 100.72.0.0/16

@@ -213,7 +213,14 @@ du pfSense sur son propre réseau — `192.168.101.59`, `192.168.101.110` ou
 pare-feu local. Les équipements réseau dont la route par défaut pointe déjà sur
 le pfSense fonctionnent sans rien ajouter. La liste des machines concernées est
 l'inventaire de [13-tellis.md](13-tellis.md#inventaire-par-bloc-fonctionnel) —
-seule `192.168.101.52` a reçu ce traitement à ce jour.
+seule `192.168.101.52` a reçu ce traitement à ce jour. Constat du 04/09/2026 :
+les serveurs VENUS ont pour passerelle par défaut `192.168.111.254` et ceux du
+bloc Syngo `.110` — le pfSense principal dans les deux cas, donc **rien à
+ajouter** ; seul le bloc production (passerelle `.62`, second pfSense) est
+concerné. Et le poste d'admin n'emprunte pas `wg2` pour joindre TELLIS : il est
+pair du VPN nomades du pfSense (`172.31.0.3`), voir
+[13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site) — ce paragraphe ne vaut que pour
+nos VM en `10.40.0.0/24`, jamais testées vers `192.168.111.x`.
 
 Ajouter `172.33.0.0/24` à ces routes n'est pas nécessaire au service, mais
 conserve un point de mesure : si `172.33.0.7` joint un serveur alors que
