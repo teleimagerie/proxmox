@@ -15,7 +15,7 @@ SOURCE     := carte-reseau.d2
 CIBLE      := carte-reseau.svg
 HOTE       ?= pve1
 
-.PHONY: carte collecte rendu image controle inventaire propre aide
+.PHONY: carte collecte rendu image controle liens inventaire propre aide
 
 # « make » nu affiche l'aide : les autres cibles interrogent la production ou
 # réécrivent des fichiers versionnés, ce n'est pas ce qu'on veut déclencher
@@ -47,6 +47,10 @@ image:
 ## controle     liste les écarts aux règles, sans rien écrire
 controle:
 	python3 scripts/genere-carte.py --hote $(HOTE) --controle
+
+## liens        vérifie les ancres des fiches, sans rien écrire
+liens:
+	python3 scripts/controle-liens.py
 
 ## inventaire   affiche l'inventaire découvert, sans rien écrire
 inventaire:

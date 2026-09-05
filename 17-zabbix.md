@@ -29,7 +29,7 @@ noté dans [14-noms-de-domaine.md](14-noms-de-domaine.md)). L'incident du
 28/08/2026 (ci-dessous) a démontré le risque : **32 h de supervision aveugle
 sans que personne ne soit prévenu** — le monitoring ne se surveille pas
 lui-même. La migration le fait entrer dans le périmètre HA + PBS, et répond au
-point ouvert de [06-reste-a-faire.md §4](06-reste-a-faire.md#4-supervision)
+point ouvert de [06-reste-a-faire.md §4](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe)
 (« mutualiser plutôt que construire un deuxième monitoring ? »).
 
 ---
@@ -187,7 +187,7 @@ perte : ce que le CT a collecté entre-temps.
   `GET /v3/REST/message` de la clé API « keycloack » — le média Zabbix utilise
   d'autres identifiants Mailjet (hérités du VPS, dans le dump) ;
 - [ ] vérifier la **première sauvegarde PBS** du CT 204 (job de 02:00) puis
-  **restauration de test sous l'ID 299** ([10-sauvegardes.md](10-sauvegardes.md#rejouer-le-test)) ;
+  **restauration de test sous l'ID 299** ([10-sauvegardes.md](10-sauvegardes.md#rejouer-le-test-de-restauration)) ;
 - [ ] `bascule-zabbix.py ttl3600` après quelques jours de stabilité (précédent
   proxy : 3 jours) — le `revert` devient alors lent (~1 h) ;
 - [ ] **résiliation du VPS** après J+7 : drainage déjà nul, mais laisser la
@@ -309,7 +309,7 @@ ha-manager status | grep 204   # (après ajout HA)
 
 ## Supervision du cluster — depuis le 29/08/2026
 
-Le point 3 de [06 §4](06-reste-a-faire.md#4-supervision) est traité : Zabbix
+Le point 3 de [06 §4](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe) est traité : Zabbix
 supervise le cluster qui l'héberge, par **l'API PVE en HTTPS**, avec un token
 **lecture seule** :
 
@@ -507,11 +507,11 @@ re-teste en continu, est le canal principal et le mail le filet.
   les whitelists `Server=` des agents reconnaissent via le nom) et le 10051
   entrant arrive par la même VIP — une panne d'OPNsense (~2 min de bascule
   HA) aveugle la supervision, exactement la fenêtre du test 6
-  ([08-opnsense.md](08-opnsense.md#risques-et-limites)).
+  ([08-opnsense.md](08-opnsense.md#points-dattention)).
 - **Le monitoring ne se surveille toujours pas lui-même** : l'incident du 28/08
   le prouve. Une sonde externe minimale sur `https://zabbix.teleimagerie.net/`
   (Uptime robot ou équivalent) reste à mettre en place —
-  [06-reste-a-faire.md §4](06-reste-a-faire.md#4-supervision).
+  [06-reste-a-faire.md §4](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe).
 - **Il ne supervise pas non plus le cluster** : depuis le VLAN 400, les
   hyperviseurs sont inaccessibles par construction (blocages OPNsense +
   `cluster.fw`). L'étendre au cluster = patron PBS (2ᵉ carte VLAN 300), une

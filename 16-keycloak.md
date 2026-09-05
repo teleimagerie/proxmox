@@ -129,7 +129,7 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
   `browser-totp` (copie du flux `browser`, sous-flux *Conditional 2FA* passé
   en *Required*, conditions retirées) : un compte local sans TOTP se le voit
   imposer à l'enrôlement. Les connexions **via Google n'y passent pas** —
-  leur MFA est porté par Google ([piège n° 34](07-pieges.md#34-laction-requise-par-défaut-simpose-aussi-aux-arrivants-google)).
+  leur MFA est porté par Google ([piège n° 34](07-pieges.md#34-laction-requise--par-défaut--simpose-aussi-aux-arrivants-google)).
 - Utilisateurs initiaux : `matt` (mcapon@teleimagerie.net) et `brtrnd`
   (bleroux@teleimagerie.net) — tous deux connectés le 27/08/2026, mots de
   passe temporaires remplacés et TOTP enrôlés.
@@ -247,7 +247,7 @@ Configuration retenue (« le plus sécurisé », décision du 27/08/2026) :
 | `trustEmail` | `true` | e-mails du domaine vérifiés par Google, pas de re-vérification |
 | Première connexion | flux `first broker login` par défaut | e-mail inconnu → création à la volée ; e-mail d'un compte existant → **liaison avec confirmation** (mot de passe local exigé) |
 | Comptes admin (`matt`, `brtrnd`) | **ne pas lier à Google** | décision organisationnelle : l'accès infra reste sur les comptes locaux + TOTP Keycloak ; le flux de confirmation empêche de toute façon une liaison sans le mot de passe local |
-| TOTP Keycloak des arrivants Google | **non demandé** | leur MFA est celui de Google — corrigé le 27/08/2026, [piège n° 34](07-pieges.md#34-laction-requise-par-défaut-simpose-aussi-aux-arrivants-google) |
+| TOTP Keycloak des arrivants Google | **non demandé** | leur MFA est celui de Google — corrigé le 27/08/2026, [piège n° 34](07-pieges.md#34-laction-requise--par-défaut--simpose-aussi-aux-arrivants-google) |
 
 Client OAuth : projet Google Cloud du Workspace, ID
 `990230308603-…apps.googleusercontent.com`, URI de retour
@@ -441,7 +441,7 @@ pct exec 203 -- ls -la /var/backups/keycloak/
 - **SPOF fonctionnel** : 19 s de coupure d'authentification à chaque bascule
   HA, et OPNsense (~2 min de bascule) reste devant tout. Parade : comptes de
   secours locaux sur chaque service raccordé — ne jamais les supprimer.
-- **Aucune supervision** ([06-reste-a-faire.md](06-reste-a-faire.md#4-supervision)) :
+- **Aucune supervision** ([06-reste-a-faire.md](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe)) :
   une panne de Keycloak ne se verrait qu'à la première connexion ratée. À
   raccorder au chantier supervision (l'échéance du certificat et le timer
   `kc-pgdump` aussi).

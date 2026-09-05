@@ -8,7 +8,7 @@ que de la panne matérielle.
 > propre système découvert à l'inventaire du 29/08/2026 : un **Veeam B&R 12.1
 > complet** (indépendant de PBS) plus une sauvegarde applicative de la base
 > Oracle — jobs, cibles et supervision **non documentés** à ce jour, voir
-> [15-pacs-secours.md](15-pacs-secours.md#veeam-br--un-serveur-de-sauvegarde-complet-rôle-à-documenter).
+> [15-pacs-secours.md](15-pacs-secours.md#veeam-br---désinstallé-le-30082026-navait-jamais-rien-sauvegardé).
 
 ---
 

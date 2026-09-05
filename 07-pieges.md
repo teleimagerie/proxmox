@@ -6,7 +6,9 @@ leur résolution. C'est le fichier à relire avant toute intervention comparable
 Ordre chronologique : 1 à 21 le déploiement (11/08), 22 le proxy et le premier
 tunnel (12-13/08), 23 le site-à-site pfSense vers TELLIS (14/08), 24 à 28 le NAS-HA et les
 sauvegardes (13-15/08), 29 le déploiement headscale (15/08), 30 le diagnostic
-certificats syngo-via (24/08), 31 les premiers enrôlements headscale (25/08).
+certificats syngo-via (24/08), 31 les premiers enrôlements headscale (25/08),
+puis 32 à 38 les chantiers suivants — 38 (05/09) vaut pour la documentation
+elle-même, pas pour l'infrastructure.
 
 ---
 
@@ -854,3 +856,56 @@ deux fois : sur pacs03 le 25/08/2026 (`New-NetRoute … 10.90.0.0/24`,
 `ip route get <IP du client>` **sur la cible**, et vérifier que le SYN arrive
 (`tcpdump`). Un pare-feu qui bloque et une réponse qui part ailleurs donnent
 exactement le même symptôme.
+
+---
+
+## 38. Renommer un titre casse en silence tous les liens qui le visaient
+
+**Symptôme** — Un renvoi entre fiches, `[§ 4](06-reste-a-faire.md#4-supervision)`,
+n'ouvre plus la section citée : il dépose le lecteur en haut du fichier. Aucune
+erreur, aucun avertissement, rien dans un rendu Markdown — le lien reste
+souligné et cliquable. Le contrôle du 05/09/2026 en a trouvé **13 d'un coup**,
+dont certains cassés depuis des semaines.
+
+**Cause** — Deux mécanismes distincts, le premier de loin le plus fréquent.
+
+*Le titre a bougé, pas le lien* (9 des 13). C'est une conséquence directe d'une
+convention du dépôt : les titres reçoivent un **suffixe d'état ou de date**
+quand le sujet avance. `## 4. Supervision` est devenu
+`## 4. Supervision — ✅ TRAITÉ le 29/08/2026 (reste la sonde externe)`, et
+« Veeam B&R — un serveur de sauvegarde complet, rôle à documenter » est devenu
+« Veeam B&R — ✅ désinstallé le 30/08/2026 … ». L'ancre suit le titre : les
+cinq liens qui visaient l'ancienne sont morts sans que rien ne le signale. Une
+section simplement **redatée** (« Inventaire du 29/08 » → « du 30/08 ») fait
+exactement le même effet.
+
+*L'ancre a été écrite à la main, sans la bonne règle* (3 des 13). La fabrication
+d'une ancre par GitHub tient en trois points, et c'est le troisième qui piège :
+
+1. minuscules ;
+2. suppression de tout ce qui n'est ni lettre, ni chiffre, ni `_`, ni `-`, ni
+   espace — guillemets, tirets cadratins, emojis, points, parenthèses ;
+3. **un tiret par espace**, sans fusionner les suites.
+
+Une ponctuation retirée **entre deux espaces laisse donc deux tirets**, et trois
+pour un tiret cadratin entouré d'espaces. `34. L'action requise « par défaut »
+s'impose…` donne `#34-laction-requise--par-défaut--simpose…`, et
+`✅ Test « porte 2 seule » — 01/09/2026` donne `#test--porte-2-seule---01092026`
+— sans tiret de tête, l'emoji ne laissant pas d'espace derrière lui.
+
+**Résolution** — Corriger **le lien**, jamais le titre : renommer un titre pour
+sauver un lien casserait les signets et les liens externes. Et surtout, rendre
+la rupture visible :
+
+```bash
+make liens        # scripts/controle-liens.py — sort en code 1 s'il reste un lien mort
+```
+
+Le script calcule les ancres réelles de toutes les fiches, signale chaque lien
+mort avec sa ligne et propose le titre le plus proche.
+
+**Leçon** — Dans un dépôt dont la valeur tient aux renvois croisés, un lien mort
+est une régression silencieuse : rien ne la signale, et elle ne se voit qu'à la
+lecture, des semaines plus tard. **Après avoir renommé ou redaté un titre,
+lancer `make liens`** — c'est le seul geste qui rattrape la rupture au moment où
+elle est créée, quand on sait encore quoi corriger.

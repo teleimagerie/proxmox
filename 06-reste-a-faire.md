@@ -381,7 +381,7 @@ Proxmox VE, PBS et headscale raccordés en OIDC. Ce qui reste :
   d'administration ; tester une restauration de la base depuis un dump
   `kc-pgdump` (le vzdump du CT, lui, suit la procédure standard de
   [10-sauvegardes.md](10-sauvegardes.md)).
-- **Supervision de l'IdP** : voir [§ 4](#4-supervision).
+- **Supervision de l'IdP** : voir [§ 4](#4-supervision---traité-le-29082026-reste-la-sonde-externe).
 
 ---
 
@@ -493,7 +493,7 @@ session. **À refaire avant toute fermeture du même genre.**
 - ✅ **Test « porte 2 seule » réussi le 01/09/2026** : wg0 coupé sur le poste,
   les 3 nœuds restent joignables par le tailnet en SSH et 8006, chaîne
   `tailnet → nœud → qm terminal 100` vérifiée
-  ([11-headscale.md](11-headscale.md#-test--porte-2-seule--01092026)). Au
+  ([11-headscale.md](11-headscale.md#test--porte-2-seule---01092026)). Au
   passage : le chemin direct bascule en **IPv6**, couvert parce que la règle
   `udp/41641` est sans source — ne jamais la restreindre à de l'IPv4.
 - ⚠️ **Test complet restant** (arrêt réel de la VM 100) : ce qui reste à

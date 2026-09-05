@@ -19,10 +19,10 @@ l'Internet public.
 | Hostname | `ns3062628` ✅ (PTR : `ns3062628.ip-188-165-77.eu`) |
 | Serveur OVH | ID `1693386`, datacentre **GRA3**, baie `GRA0328A03B` 📋 |
 | Matériel | carte mère GIGABYTE MX33-BS1-V1 (BIOS F09d de 08/2023) ✅ ; Xeon-E 2386G (6c/12t, 3,5/4,7 GHz) ✅ ; 32 Go ECC DDR4-3200 (2×16 Go Samsung, 2 slots libres, 64 Go max) ✅ |
-| Disques | 2×512 Go SSD NVMe + 2×6 To HDD SATA, soft RAID 📋 — volumes relevés : [Inventaire](#inventaire-du-29082026) |
+| Disques | 2×512 Go SSD NVMe + 2×6 To HDD SATA, soft RAID 📋 — volumes relevés : [Inventaire](#inventaire-du-30082026) |
 | OS | Windows Server 2022 Standard 21H2 (build 20348) ✅, installé le 13/05/2024, licence volume (KMS), hors domaine (WORKGROUP) |
 | Statut | HDS 📋 |
-| Rôle | **PACS complet EDL Xplore sur Oracle 19c** ✅ ([Inventaire](#inventaire-du-29082026)) — backend HTTP de `pacs-secours.teleimagerie.net` ✅ ; réplication depuis TELLIS par tunnel WireGuard direct ✅ |
+| Rôle | **PACS complet EDL Xplore sur Oracle 19c** ✅ ([Inventaire](#inventaire-du-30082026)) — backend HTTP de `pacs-secours.teleimagerie.net` ✅ ; réplication depuis TELLIS par tunnel WireGuard direct ✅ |
 | Accès admin | RDP et **SSH par clé** (compte `admin`) sur `10.40.0.40`, **via VPN nomade uniquement** depuis le 30/08/2026 — pare-feu allumé, IP publique fermée ([Accès SSH et pare-feu](#accès-ssh-et-pare-feu-30082026)) ✅ |
 
 Le cluster est en **GRA4**, ce serveur en **GRA3** : le vRack s'étend entre les
