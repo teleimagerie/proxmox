@@ -81,6 +81,9 @@ le SPF, la configuration voyage dans le dump).
 | `SYNGOVIA-135113` | idem | `192.168.101.100` par `wg2` | ✅ idem |
 | `TIMWFMCORE` | **actif Windows** | IP non capturée (agent actif) | ✅ **rétabli le 30/08** : muet depuis la bascule (agent accroché à l'ancienne résolution DNS), reparti après **redémarrage de l'agent sur la machine** — 63/77 items frais en 2 min. Épisode du 30/08 au matin : cru à tort Linux à cause de `162.19.25.107` (voir ligne suivante), re-templaté ~1 h puis rétabli. **Seuils disque `Database(F:)` personnalisés le 30/08** : Warning à 90 % (macro `{$VFS.FS.PUSED.MAX.WARN:"Database(F:)"}` — ⚠️ le contexte est `{#FSLABEL}({#FSNAME})`, pas la lettre seule), palier template neutralisé (CRIT à 100) et remplacé par un déclencheur **High ≥ 95 %** qui part en mail |
 | ~~`162.19.25.107`~~ (`vps-2e178199.vps.ovh.net`) | — | 162.19.25.107 | **ancien serveur MYTIM** : ne sert plus mais toujours allumé, agent Zabbix 7.4 actif et whitelist ouverte sur zabbix — **pas de supervision souhaitée** (décidé le 30/08). Candidat à l'extinction/résiliation : une machine oubliée allumée est une surface d'attaque |
+| `TIM-VENUS1-AP` | **actif** (65 items) + ICMP et sondes TCP | `192.168.111.63` par `wg2` | ✅ **raccordé le 05/09/2026** — voir [§ RIS VENUS](#serveurs-ris-venus-de-tellis--agent-actif-05092026) |
+| `TIM-VENUS2-IF` | idem (60 items) | `192.168.111.64` par `wg2` | ✅ idem |
+| `TIM-VENUS3-DB` | idem (63 items) | `192.168.111.65` par `wg2` | ✅ idem |
 | `CMSI-LES-HERBIERS` | 1 item, quasi mort | pas vu en 3 min | toujours muet — à trancher (supprimer ?) |
 
 Pas de proxy Zabbix, pas de traps SNMP (trapper désactivé), pas de JMX/IPMI,
@@ -240,6 +243,49 @@ Au passage, **TSplus** (`WIN-SRV-TSPLUS`, agent actif 7.4.3, 156 items frais)
 n'a rien eu à installer ; son service a reçu la **même récupération
 automatique que pacs03** (`sc failure … restart/60000 ×3`, `reset= 86400`),
 qu'il n'avait pas.
+
+---
+
+## Serveurs RIS VENUS de TELLIS — agent actif (05/09/2026)
+
+Les trois serveurs du RIS VENUS de Softway Medical
+([13-tellis.md](13-tellis.md#ris-venus-softway-medical)) étaient les derniers
+serveurs de TELLIS sans supervision, alors que leur inventaire de la veille y
+avait trouvé deux points durs à surveiller : le `D:` de `.63` proche de la
+saturation et la base `isotim` de `.65` sans sauvegarde.
+
+**Ici l'agent passe**, contrairement aux syngo : aucun Device Guard / WDAC,
+PowerShell en *FullLanguage* sur les trois — c'est donc la méthode « avec
+agent » qui s'applique, et elle donne les services Windows et les journaux
+d'événements, invisibles en SNMP. SNMP aurait de toute façon exigé d'**installer
+une fonctionnalité Windows** sur des serveurs sans correctif depuis avril 2023,
+là où les syngo n'avaient qu'un service existant à reconfigurer.
+
+| | |
+|---|---|
+| Chemin | vérifié avant tout le reste, le 05/09 : le CT 204 (`10.40.0.60`) joint les trois en ICMP **par `wg2`**, et surtout les trois joignent `10.40.0.60:10051` **en sortie**. Passerelle `.254` (pfSense principal) : **aucune route retour à poser**, comme pour les syngo. Cela lève la réserve « reste à tester `10.40.0.0/24` → `192.168.111.x` » de [06-reste-a-faire.md](06-reste-a-faire.md) |
+| Mode | **agent 2 en mode ACTIF** (gabarit `Windows by Zabbix agent active`, comme TIMWFMCORE et TSplus) : l'agent se connecte au serveur, **aucun port entrant à ouvrir** — décisif sur `.63`, le seul des trois dont le pare-feu Windows est allumé |
+| Agent | **7.0.30**, la version du serveur ; MSI officiel signé « Zabbix SIA », **signature vérifiée avant `msiexec`**. `Server` et `ServerActive` visent **`10.40.0.60`, l'adresse privée et non le nom** : depuis TELLIS le nom résout en public et le trafic ressortirait par Internet vers la VIP `.122`, alors que l'adresse garde le flux dans `wg2` |
+| Gabarits | `Windows by Zabbix agent active` **+ `ICMP Ping`** — vérifié en base : le gabarit agent actif ne contient **aucun** item `icmpping`, le cumul est donc sans risque. ⚠️ Ne pas transposer ce cumul aux hôtes SNMP, où il crée une clé en double (piège rencontré sur les syngo) |
+| Interface | une interface agent est déclarée bien qu'inutile en mode actif : elle sert d'**ancre `{HOST.CONN}` aux *simple checks***. ⚠️ Cela ne suffit pas : par l'API, un *simple check* dont la clé laisse l'adresse vide part en « non supporté » (« *Check service item must have IP parameter or host interface specified* ») tant que l'item ne porte pas explicitement `interfaceid` — l'interface web le fait toute seule, l'API non |
+| Sondes TCP | *simple checks* à la minute, déclencheurs `max(…,3m)=0`, sur le motif syngo : **SFTP de dépôt des sites `2222`** (`.64`, High), **MariaDB `3306`** (`.63` et `.65`, High), **web/IIS `443`** (`.63`, High), Tomcat JasperReports `8081` (`.64`, Average), RDP `3389` (les trois, Average) |
+| Services | **Mirth Connect** est surveillé **par l'agent** (`service.info["Mirth Connect Service",state]`, High si ≠ 0) et non par une sonde TCP : Mirth écoute bien sur 8080, mais sur `.63` le port n'est **pas publié sur le réseau** (pare-feu actif, aucune règle) — vérifié depuis le serveur Zabbix *et* depuis le poste, alors qu'il répond en local. Une sonde externe y aurait alarmé en permanence sur un service en parfait état ; le même capteur est utilisé sur `.64` pour que les deux serveurs se lisent pareil |
+| Volume `D:` de `.63` | le gabarit classe « *critically low* » en **Average, donc sans mail**. Palier du gabarit neutralisé par macro contextuelle `{$VFS.FS.PUSED.MAX.CRIT:"VENUS(D:)"}` = 100 (⚠️ le contexte est `{#FSLABEL}({#FSNAME})`) et remplacé par un déclencheur **High** avec hystérésis : problème si `min(…,5m) > 90 %`, retour à la normale seulement si `max(…,30m) < 85 %`. L'hystérésis n'est pas décorative — ce volume oscille (4,8 Go libres le 04/09 au soir, 5,4 Go le 05/09 à 10 h 55, **16,4 Go à 11 h 03** après passage de `Venus_Clean_Daemon`), un seuil sec produirait une rafale de mails à chaque purge |
+| Récupération | `sc failure … restart/60000 ×3`, `reset= 86400` sur les trois, comme pacs03 et TSplus |
+| Vérifié | 05/09/2026 : **65 / 60 / 63 items, aucun non supporté**, données fraîches ; volumes découverts `C: D: E:` sur `.63` et `.65`, `C: D:` sur `.64` ; ICMP et toutes les sondes à 1 ; **la chaîne de mail testée en réel** — le déclencheur `D:` est parti en High et le mail est enregistré comme envoyé à `mcapon@` et `support@` |
+| Secrets | **aucun** : l'agent actif ne demande ni communauté SNMP ni jeton. Rien de nouveau hors dépôt |
+
+Deux signaux de fond que la supervision montre désormais, et qui ne sont pas
+des faux positifs : `TIM-VENUS3-DB` est en **Average « High memory
+utilization »** — 8 Go pour le serveur de base du RIS, déjà relevé à
+l'inventaire — et le `D:` de `.63` reste au-dessus de 90 % même après purge.
+
+> **Attention en cas de changement de macro.** Neutraliser le palier d'un
+> déclencheur déjà en problème remet bien le déclencheur à l'état normal, mais
+> **ne referme pas l'événement ouvert** : Zabbix ne génère pas d'événement OK
+> sur un simple changement de configuration. Il faut recharger le cache
+> (`zabbix_server -R config_cache_reload`) et, si le problème persiste,
+> le fermer une fois à la main.
 
 ---
 

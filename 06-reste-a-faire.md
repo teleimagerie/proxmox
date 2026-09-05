@@ -240,8 +240,10 @@ fait ou pas été prouvé :
   serveurs dont la passerelle est le second pfSense (`.62`) en ont besoin —
   VENUS (`.254`) et Syngo (`.110`) répondent déjà au pfSense principal ; et le
   poste d'admin joint TELLIS par le `tun_wg0` du pfSense (`172.31.0.3`), pas
-  par `wg2` ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)). Reste à tester
-  `10.40.0.0/24` → `192.168.111.x` depuis une VM.
+  par `wg2` ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)).
+  **Tranché le 05/09/2026** : `10.40.0.0/24` ↔ `192.168.111.x` fonctionne dans
+  les deux sens — le CT 204 joint les trois VENUS, et leurs agents Zabbix
+  sortent vers `10.40.0.60:10051` ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)).
 - **À terme : supprimer le tunnel direct « DC-TELLIS-PARTENAIRES » (`tun_wg1`)
   entre pacs03 et le pfSense TELLIS** ([15-pacs-secours.md](15-pacs-secours.md)),
   une fois les flux TELLIS↔pacs03 basculés sur `wg2`/vRack. Décision du
@@ -310,6 +312,13 @@ levé, une perte de la VM fait perdre le RIS. Deux points voisins, moins graves
 mais du même inventaire : `D:` de `TIM-VENUS1-AP` n'a plus que **4,8 Go libres**
 sur 200, et les trois serveurs sont **sans correctif Windows** (avril 2023 pour
 deux d'entre eux).
+
+Depuis le 05/09/2026 les trois sont **supervisés** ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)) :
+le volume `D:` est sous déclencheur High qui part en mail, et la mémoire de
+`TIM-VENUS3-DB` (8 Go) est en alerte permanente. **L'absence de sauvegarde,
+elle, reste invisible de Zabbix** — il n'y a rien à mesurer tant qu'aucune
+sauvegarde n'existe. Le jour où elle sera en place, surveiller l'âge du dernier
+fichier de `E:` fermera la boucle.
 
 ---
 

@@ -399,8 +399,9 @@ relevé). Machine bien plus récente que les deux autres.
 > **TeamViewer actif sur les trois** (canal d'accès tiers, comme sur le PACS et
 > les syngo) ; DNS publics `8.8.8.8` sur des serveurs de données de santé ;
 > `.64` n'a pas redémarré depuis **366 jours** ; licence Windows **non activée**
-> sur `.63`. Aucun de ces serveurs n'est **supervisé** ([17-zabbix.md](17-zabbix.md))
-> ni sauvegardé à notre connaissance.
+> sur `.63`. Ces serveurs sont **supervisés depuis le 05/09/2026**
+> ([Supervision](#supervision-05092026)) — mais toujours **pas sauvegardés** à
+> notre connaissance.
 
 ##### Accès SSH aux serveurs VENUS (04/09/2026)
 
@@ -445,6 +446,23 @@ pair du VPN nomades du pfSense** (`172.31.0.3`, tunnel `DC-TELLIS2`, voir
 > **désactivé** sur `.64` et `.65` (actif sur `.63`) — le filtrage repose
 > entièrement sur le pfSense. OpenSSH 8.1/9.5 sans échange de clés
 > post-quantique.
+
+##### Supervision (05/09/2026)
+
+Les trois sont dans **Zabbix depuis le 05/09/2026**, par **agent 2 en mode
+actif** (`TIM-VENUS1-AP`, `TIM-VENUS2-IF`, `TIM-VENUS3-DB`) : l'agent sort vers
+`10.40.0.60:10051` par `wg2`, donc **aucun port entrant n'a été ouvert** — ce
+qui compte sur `.63`, seul des trois à avoir son pare-feu allumé. Sont
+surveillés le processeur, la mémoire, tous les volumes, les services et les
+journaux d'événements, plus des sondes de service : **SFTP `2222` des sites**
+et **MariaDB `3306`** en High (donc mail), web/IIS `443`, Tomcat `8081`,
+RDP `3389`, ICMP. **Mirth Connect est suivi par l'état de son service** et non
+par son port : il écoute sur 8080 mais n'est pas publié sur le réseau du `.63`
+(pare-feu actif, aucune règle), une sonde externe y aurait alarmé en permanence
+sur un service sain. Le `D:` saturé a un **déclencheur High dédié à hystérésis**
+(problème au-dessus de 90 %, retour sous 85 %), le gabarit seul l'aurait laissé
+en Average sans mail. Mise en œuvre, chiffres et pièges :
+[17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026).
 
 ### À identifier
 
@@ -694,6 +712,11 @@ canal des secrets et ne rejoignent jamais ce dépôt.
   des archives sur `E:` (1 To vide) — à traiter avec Softway
 - [ ] chroot manquant de `isoteampoitiers` (`…\VENUS_ITF\POITIERS`) : compte à
   supprimer ou dossier à créer
+- [x] ~~raccorder les trois serveurs à Zabbix~~ — **fait le 05/09/2026**, agent 2
+  en mode actif ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026))
+- [ ] superviser l'**existence** d'une sauvegarde de `isotim` le jour où elle
+  existera (âge du dernier fichier de `E:`) ; la mémoire de `.65` (8 Go) est
+  déjà en Average permanent depuis le raccordement
 - [ ] contact support Softway Medical
 
 **Prestataire** :
