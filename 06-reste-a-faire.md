@@ -320,6 +320,38 @@ elle, reste invisible de Zabbix** — il n'y a rien à mesurer tant qu'aucune
 sauvegarde n'existe. Le jour où elle sera en place, surveiller l'âge du dernier
 fichier de `E:` fermera la boucle.
 
+### ⚠️ ProxyVia (`dicomproxy`) — cinq points partis en ticket Siemens (09/09/2026)
+
+Constaté à l'inventaire du répartiteur DICOM
+([13-tellis.md](13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026)).
+C'est une **appliance gérée par Siemens** : on ne touche pas à sa configuration,
+**les cinq points sont adressés par un ticket éditeur** (contenu rédigé, ouverture
+du ticket à la main de TIM). Par priorité :
+
+1. **⛔ Base PostgreSQL `registry` joignable depuis le LAN sans mot de passe.**
+   Le service écoute `0.0.0.0:5432` et, depuis le réseau via `192.168.101.103`,
+   une connexion `psql` aboutit **sans authentification** pour le compte applicatif
+   `dicom` **et pour le superutilisateur `postgres`** (vérifié le 09/09). La table
+   `location` contient des **identités patients** (nom, date de naissance, sexe,
+   numéro d'accession). Toute machine du bloc `192.168.101.96/28` peut lire et
+   écrire cette base. Demander à Siemens la configuration supportée (écoute sur
+   `localhost` et/ou mot de passe) — le proxy accède à la base en `localhost`.
+2. **Horloge en retard d'environ 10 minutes.** `System clock synchronized: no` ;
+   NTP actif mais ne résout plus `*.pool.ntp.org`, les DNS déclarés
+   (`192.168.150.1`, `192.168.250.1`) étant injoignables. Horodatage DICOM et
+   journaux qui dérivent.
+3. **Redémarrage en attente** depuis le 05/08/2026 (noyau) et **439 jours
+   d'uptime** — convenir d'une fenêtre.
+4. **Journaux DEBUG à 12 Go** (`/opt/dicomproxy/ec/log`, ~850 Mo/jour) — repasser
+   en INFO en exploitation normale ?
+5. **Sauvegarde quotidienne incomplète** : le `tar` de `/opt/dicomproxy` n'inclut
+   **ni la base `registry`** (mapping patient→serveur) **ni la config du portail**.
+
+Depuis le 09/09 le serveur est **supervisé** ([17-zabbix.md](17-zabbix.md#proxyvia--sans-agent-sondes-tcp--icmp-09092026))
+par ICMP et trois sondes TCP (9104/5432/8443) depuis le CT 204. La supervision ne
+corrige aucun des points ci-dessus ; elle prévient si le répartiteur, sa base ou
+son portail tombent.
+
 ---
 
 ## 10. Authentification centralisée — suites du déploiement du 27/08/2026

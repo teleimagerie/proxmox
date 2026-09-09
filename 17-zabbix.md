@@ -84,6 +84,7 @@ le SPF, la configuration voyage dans le dump).
 | `TIM-VENUS1-AP` | **actif** (65 items) + ICMP et sondes TCP | `192.168.111.63` par `wg2` | ✅ **raccordé le 05/09/2026** — voir [§ RIS VENUS](#serveurs-ris-venus-de-tellis--agent-actif-05092026) |
 | `TIM-VENUS2-IF` | idem (60 items) | `192.168.111.64` par `wg2` | ✅ idem |
 | `TIM-VENUS3-DB` | idem (63 items) | `192.168.111.65` par `wg2` | ✅ idem |
+| `DICOMPROXY` | **sans agent** : ICMP + 3 sondes TCP | `192.168.101.103` par `wg2` | ✅ **raccordé le 09/09/2026** — voir [§ ProxyVia](#proxyvia--sans-agent-sondes-tcp--icmp-09092026) |
 | `CMSI-LES-HERBIERS` | 1 item, quasi mort | pas vu en 3 min | toujours muet — à trancher (supprimer ?) |
 
 Pas de proxy Zabbix, pas de traps SNMP (trapper désactivé), pas de JMX/IPMI,
@@ -286,6 +287,35 @@ l'inventaire — et le `D:` de `.63` reste au-dessus de 90 % même après purge.
 > sur un simple changement de configuration. Il faut recharger le cache
 > (`zabbix_server -R config_cache_reload`) et, si le problème persiste,
 > le fermer une fois à la main.
+
+---
+
+## ProxyVia — sans agent (sondes TCP + ICMP, 09/09/2026)
+
+Le répartiteur DICOM `dicomproxy`
+([13-tellis.md](13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026))
+était, après l'inventaire du 09/09, le dernier serveur DICOM de TELLIS hors
+supervision. C'est une **appliance Siemens** : on n'y installe pas d'agent, et
+aucun démon SNMP n'y est publié — donc **ni la méthode VENUS (agent) ni la
+méthode syngo (SNMP)**. On supervise par le seul chemin déjà ouvert.
+
+| | |
+|---|---|
+| Chemin | vérifié le 09/09 : le CT 204 (`10.40.0.60`) joint `192.168.101.103` **par `wg2`** (route via `10.40.0.1`), ICMP ~27 ms, ports 9104/8443/5432 ouverts. Même /28 que les syngo `.98`/`.100` déjà supervisés — aucune route retour à poser |
+| Mode | **sans agent, sans SNMP** : uniquement le gabarit `ICMP Ping` et des *simple checks* TCP. `.103` (bloc syngo) est la cible ; `.58` est la patte imagerie, pas une cible de sonde |
+| Gabarit | `ICMP Ping` **seul** — il fournit `icmpping` et le déclencheur High « *Unavailable by ICMP ping* ». Aucun autre gabarit posé, donc **pas de clé `icmpping` en double** (le piège des hôtes SNMP ne s'applique pas ici) |
+| Interface | une interface agent est déclarée bien qu'**aucun agent** ne tourne : elle sert d'ancre `{HOST.CONN}` aux *simple checks*. ⚠️ Même piège que VENUS/syngo : par l'API, il faut porter `interfaceid` explicitement sur chaque *simple check*, sinon « non supporté » |
+| Sondes TCP | *simple checks* `net.tcp.service[tcp,,PORT]` à la minute, déclencheur `max(…,3m)=0` : **`9104`** (l'AET `DP_EC`, le répartiteur, **High**), **`5432`** (PostgreSQL `registry` dont le proxy dépend, **High**), **`8443`** (portail admin, Average). Le mail ne part qu'en High |
+| Secrets | **aucun** : ni agent, ni communauté SNMP, ni jeton propre à l'hôte |
+| Vérifié | 09/09/2026 : `icmpping` = 1 et les trois sondes = 1, **aucun item non supporté**, données fraîches, **0 problème ouvert**. Aucune régression sur les hôtes existants |
+
+> ⚠️ **La sonde `5432` n'est pas une caution.** Elle ne fait qu'ouvrir la socket ;
+> le fait que ce port réponde depuis le réseau est justement le **défaut n°1 parti
+> en ticket Siemens** (base `registry` joignable sans mot de passe, données
+> patients — voir [13-tellis.md § ProxyVia](13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026)).
+
+Provisionné par [`scripts/zabbix-provision-dicomproxy.py`](scripts/zabbix-provision-dicomproxy.py)
+(idempotent, sur le patron de `zabbix-provision-venus.py`), exécuté sur le CT 204.
 
 ---
 

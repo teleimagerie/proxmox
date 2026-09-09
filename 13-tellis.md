@@ -187,12 +187,14 @@ bruts dans `configs/`, synthèses ci-dessous).
 | `192.168.101.98` | **`syngovia-135104`** — Syngo Via serveur 1 | **instance syngo.via VB80 complète** (serveur 10.6, SQL Server 2022 locale, AD LDS, licences FLEXlm, SCP DICOM 104, 16,6 To d'images) — **jumelle** du serveur 2, les deux étant fédérées par l'*Enterprise Browser* | Siemens Healthineers | ✅ **inventorié le 02/09/2026** (voir ci-dessous) |
 | `192.168.101.100` | **`syngovia-135113`** — Syngo Via serveur 2 | idem : même matériel, même logiciel, même base d'utilisateurs ; c'est le **serveur par défaut** du client publié par TSplus | Siemens Healthineers | ✅ **inventorié le 02/09/2026** |
 | `192.168.101.102` | **`win-srv-tsplus`** — TSplus | publication de l'*Enterprise Browser* Siemens (« SyngoVIA EC ») à 618 comptes par le portail web + RemoteApp de **TS2log 18** (marque blanche TSplus), multiplexés sur le 443 ; joint depuis Internet par le NAT du pfSense, le WAN `37.61.243.246` étant « son » adresse publique | TSplus | ✅ **inventorié le 02/09/2026** ; ✅ **NAT 443 → `.102` confirmé** (même certificat, même numéro de série, vu depuis Internet et depuis le LAN) |
-| `192.168.101.103` | ProxyVia | routage DICOM vers Syngo Via | — | 📋 |
+| `192.168.101.103` | **`dicomproxy`** — ProxyVia | **répartiteur DICOM `DicomProxy VB10B`** (Debian 11, dcm4che sur Tomcat 9, base PostgreSQL `registry`) : reçoit les examens des sites et du PACS Xplore sur l'AET `DP_EC` (9104) et les répartit en **round-robin** entre les deux syngo.via | Siemens Healthineers | ✅ **inventorié le 09/09/2026** (voir ci-dessous) |
 
 > **ProxyVia est double-attaché** : `192.168.101.103` dans ce bloc **et**
 > `192.168.101.58` dans le bloc imagerie — `.58` n'est donc pas une adresse
-> libre. Vraisemblablement le pont DICOM entre les deux sous-réseaux
-> (modalités/PACS → Syngo Via), ⚠️ à confirmer.
+> libre. ✅ **Confirmé le 09/09/2026** : `ens18` porte `.103` (bloc syngo,
+> passerelle par défaut `.110`), `ens19` porte `.58` (bloc imagerie) et
+> route les réseaux des sites par le pfSense principal `.59`. C'est bien le
+> pont DICOM entre les deux sous-réseaux — voir [section ProxyVia](#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026).
 
 #### `syngovia-135104` (`.98`) et `syngovia-135113` (`.100`) — deux syngo.via jumeaux, inventoriés le 02/09/2026
 
@@ -210,7 +212,9 @@ libre), chacune avec sa base SQL, son annuaire AD LDS, sa licence et ses
 serveur est présent sur chacune) et l'*Enterprise Browser* publié par TSplus
 interroge les deux : un utilisateur voit les examens des deux serveurs et ouvre
 chacun sur celui qui le détient. **Ce qui décide qu'un examen va sur l'un ou
-l'autre est en amont, dans le routage DICOM de ProxyVia** (⚠️ à documenter).
+l'autre est en amont, dans le routage DICOM de ProxyVia** — ✅ tranché le
+09/09/2026 : **répartition round-robin** entre les deux, sans règle par examen
+(voir [section ProxyVia](#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026)).
 Les statistiques d'ouverture de session sont identiques sur les deux
 (38 comptes distincts sur 7 jours, 70 sur 30 jours) : les deux servent.
 
@@ -234,6 +238,48 @@ Les statistiques d'ouverture de session sont identiques sur les deux
 > hors-machine visible ; 630 comptes locaux à mot de passe, non fédérés
 > ([candidats SSO](16-keycloak.md#candidats-au-raccordement--étude-du-27082026)) ;
 > masques réseau incohérents entre jumeaux.
+
+#### `dicomproxy` (`.103`) — ProxyVia, le répartiteur DICOM, inventorié le 09/09/2026
+
+Relevé : [`configs/inventaire-dicomproxy-2026-09-09.md`](configs/inventaire-dicomproxy-2026-09-09.md)
+(par SSH `ssh dicom@192.168.101.58`, lecture seule, clé du poste posée le 09/09 ;
+rien déposé ni modifié sur la machine).
+
+**Ce que c'est** : une VM Debian 11 (QEMU/KVM du Proxmox de site, 4 vCPU, 8 Gio,
+disque 128 Go rempli à 13 %, **439 jours d'uptime**) qui fait tourner **Siemens
+syngo.via DicomProxy VB10B** (`serialNumber 200147`) : le service `dp-ec` (dcm4che
+2.0.29 en JVM) écoute l'AET **`DP_EC` sur `0.0.0.0:9104`**, un Tomcat 9 sert le
+portail d'administration sur **8443**, et un **PostgreSQL 13** local héberge la base
+`registry` du mapping patient→serveur. C'est **la réponse à la question laissée
+ouverte** sur la répartition entre les deux syngo.via.
+
+**Le routage, tranché** (`proxy.properties`) : le proxy reçoit les examens des sites
+et du PACS Xplore, puis les **répartit en round-robin (`viaGroup RR`, `loadIndex 1`
+chacun) entre `SYNGOVIA-135104` (`.98:104`) et `SYNGOVIA-135113` (`.100:104`)**, avec
+**repli croisé** si l'un est indisponible et **mapping par PatientID** (un patient
+déjà connu retourne sur le même serveur, via la base `registry`). **Il n'y a pas de
+règle par type d'examen** : `routing.rule.count = 0`. En amont, le PACS `timwfmcoreFIR`
+= **TIMWFMCORE `192.168.101.52:2104`** (store + query/retrieve) reçoit les
+`MoveDestination` réécrites. **12 sources DICOM** sont déclarées : le PACS Xplore
+(`10.0.241.54:104`) et dix AET de sites agrégés sur `172.18.162.40:11112` (ISO-TELE,
+Saintes, Valence, Agen, Angers, Périgueux, Poitiers, Quimper, Rouen CHB, Réunion). Le
+jour du relevé, ~38 000 images reçues (ISO-TELE 10 085), ~425 associations en sortie
+vers TIMWFMCORE : le proxy travaille normalement.
+
+**Double patte** (voir tableau ci-dessus) : `.103` bloc syngo (passerelle `.110`),
+`.58` bloc imagerie, routes des sites par le pfSense `.59`.
+
+**Supervision** : hôte `DICOMPROXY` ajouté à Zabbix le 09/09 (ICMP + sondes TCP
+9104/5432/8443 depuis le CT 204) — [17-zabbix.md](17-zabbix.md#proxyvia--sans-agent-sondes-tcp--icmp-09092026).
+
+> ⚠️ **Points de vigilance** (partis en ticket Siemens, l'appliance est gérée par
+> l'éditeur) : **PostgreSQL `registry` joignable depuis le LAN sans mot de passe**
+> — depuis le réseau via `.103`, `psql` aboutit sans authentification pour `dicom`
+> **et pour le superutilisateur `postgres`**, alors que la base contient des
+> identités patients (nom, date de naissance, sexe) ; **horloge en retard d'environ
+> 10 min** (NTP muet faute de DNS résolvant) ; **redémarrage en attente** depuis le
+> 05/08 et 439 jours sans reboot ; **12 Go de journaux DEBUG** ; **sauvegarde
+> quotidienne incomplète** (ni la base `registry`, ni la config du portail).
 
 #### `win-srv-tsplus` (`.102`) — la porte d'entrée des utilisateurs, inventorié le 02/09/2026
 
@@ -588,7 +634,9 @@ présomptions d'architecture, pas des flux constatés :
 | modalités / sites d'acquisition | `.52` Vue PACS | DICOM | envoi des examens | ⚠️ chemin d'arrivée à documenter |
 | `.52` Vue PACS | `.55` Gleamer, `.56` Avicenna | DICOM | envoi à l'analyse IA, retour des résultats | 📋 présumé |
 | `.51` DLMBOX | PACS / RIS / Internet | DICOM, HL7 | échanges téléradiologie IMADIS | 📋 présumé |
-| `.58`/`.103` ProxyVia | `.98`, `.100` Syngo Via | DICOM **104** | routage des examens vers Syngo Via | ✅ SCP DICOM 104 en écoute sur les deux serveurs (02/09) ; la source ProxyVia et la règle de répartition entre les deux restent 📋 |
+| `.58`/`.103` ProxyVia (`dicomproxy`) | `.98`, `.100` Syngo Via | DICOM **104** | **répartition round-robin** des examens entre les deux (repli croisé, mapping par PatientID) | ✅ tranché le 09/09/2026 : `viaGroup RR`, aucune règle par examen ([inventaire](configs/inventaire-dicomproxy-2026-09-09.md)) |
+| sites (`172.18.162.40:11112`), PACS Xplore (`10.0.241.54:104`) | `.58`/`.103` ProxyVia `DP_EC:9104` | DICOM | arrivée des examens sur le répartiteur | ✅ 12 SCP déclarés, ~38 000 images le 09/09 |
+| `.58`/`.103` ProxyVia | `.52` TIMWFMCORE `:2104` | DICOM (store, Q/R) | PACS amont (`MoveDestination` réécrites) | ✅ constaté le 09/09 |
 | `.53` Vue Motion | `.52` Vue PACS | — | lecture des images pour le visualiseur web | 📋 présumé |
 | `.102` TSplus | `.98`, `.100` Syngo Via | client syngo.via (47101, 80/443, 32912…) | l'Enterprise Browser publié par TSplus interroge **les deux** serveurs | ✅ constaté le 02/09 (caches de configuration des deux serveurs sur TSplus, mêmes statistiques de connexion sur les deux) |
 | `.98` ↔ `.100` Syngo Via | — | syngo (fédération) | chaque serveur connaît l'autre (Enterprise Browser) | ✅ constaté le 02/09 |
@@ -652,8 +700,9 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 
 - [x] ~~répartition des rôles entre les deux serveurs~~ — **pas de
       répartition : deux instances jumelles fédérées** (02/09/2026)
-- [ ] règle de routage DICOM de ProxyVia : quels examens vont sur `.98`,
-      lesquels sur `.100` ?
+- [x] ~~règle de routage DICOM de ProxyVia : quels examens vont sur `.98`,
+      lesquels sur `.100` ?~~ — **répartition round-robin**, aucune règle par
+      examen, repli croisé et mapping par PatientID (09/09/2026, [inventaire](configs/inventaire-dicomproxy-2026-09-09.md))
 - [ ] qui pose les correctifs Windows (lots du 11/12/2025, 27/08 et
       31/08/2026) — Siemens par SRS, ou TELLIS ?
 - [ ] Defender temps réel désactivé sur les deux : exigence Siemens
@@ -728,7 +777,7 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 
 **Divers** :
 
-- [ ] confirmer la double patte ProxyVia `.58`/`.103` et son rôle de pont DICOM
+- [x] ~~confirmer la double patte ProxyVia `.58`/`.103` et son rôle de pont DICOM~~ — ✅ **fait le 09/09/2026** : `ens18`=`.103` (bloc syngo), `ens19`=`.58` (bloc imagerie), répartiteur DICOM `DP_EC` ([inventaire](configs/inventaire-dicomproxy-2026-09-09.md))
 - [ ] liste des adresses réellement occupées (la demander, ne pas scanner un
       site de production)
 - [ ] poser les routes retour `10.40.0.0/24`/`10.90.0.0/24` sur chaque serveur
