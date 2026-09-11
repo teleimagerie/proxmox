@@ -79,7 +79,7 @@ le SPF, la configuration voyage dans le dump).
 | `WIN-SRV-TSPLUS` | **actif** (156 items) | 37.61.243.246 (TSplus, TELLIS) | ✅ a suivi le DNS (< 4 min) ; récupération automatique du service armée le 02/09/2026 (comme pacs03) |
 | `SYNGOVIA-135104` | **SNMP v2c + ICMP + sondes TCP** (Windows by SNMP), depuis le **02/09/2026** | `192.168.101.98` par `wg2` | ✅ **agent impossible** : WDAC Siemens refuse le MSI (code 1625) — supervision sans agent, voir [§ Syngo Via](#serveurs-syngo-via-de-tellis--sans-agent-02092026) |
 | `SYNGOVIA-135113` | idem | `192.168.101.100` par `wg2` | ✅ idem |
-| `TIMWFMCORE` | **actif Windows** | IP non capturée (agent actif) | ✅ **rétabli le 30/08** : muet depuis la bascule (agent accroché à l'ancienne résolution DNS), reparti après **redémarrage de l'agent sur la machine** — 63/77 items frais en 2 min. Épisode du 30/08 au matin : cru à tort Linux à cause de `162.19.25.107` (voir ligne suivante), re-templaté ~1 h puis rétabli. **Seuils disque `Database(F:)` personnalisés le 30/08** : Warning à 90 % (macro `{$VFS.FS.PUSED.MAX.WARN:"Database(F:)"}` — ⚠️ le contexte est `{#FSLABEL}({#FSNAME})`, pas la lettre seule), palier template neutralisé (CRIT à 100) et remplacé par un déclencheur **High ≥ 95 %** qui part en mail |
+| `TIMWFMCORE` | **actif Windows** | IP non capturée (agent actif) | ✅ **rétabli le 30/08** : muet depuis la bascule (agent accroché à l'ancienne résolution DNS), reparti après **redémarrage de l'agent sur la machine** — 63/77 items frais en 2 min. Épisode du 30/08 au matin : cru à tort Linux à cause de `162.19.25.107` (voir ligne suivante), re-templaté ~1 h puis rétabli. **Seuils disque `Database(F:)` personnalisés le 30/08** : Warning à 90 % (macro `{$VFS.FS.PUSED.MAX.WARN:"Database(F:)"}` — ⚠️ le contexte est `{#FSLABEL}({#FSNAME})`, pas la lettre seule), palier template neutralisé (CRIT à 100) et remplacé par un déclencheur **High ≥ 95 %** qui part en mail. **Complété le 11/09/2026** : interface `192.168.101.52` + `ICMP Ping`, 10 sondes TCP, 19 services critiques en High, fraîcheur RMAN, plantages, contrôles internes du PACS, High à hystérésis sur `BACKUP(G:)` ; agent repointé sur `10.40.0.60` (il sortait par Internet) et récupération armée — voir [§ Vue PACS](#vue-pacs-timwfmcore--supervision-applicative-11092026) |
 | ~~`162.19.25.107`~~ (`vps-2e178199.vps.ovh.net`) | — | 162.19.25.107 | **ancien serveur MYTIM** : ne sert plus mais toujours allumé, agent Zabbix 7.4 actif et whitelist ouverte sur zabbix — **pas de supervision souhaitée** (décidé le 30/08). Candidat à l'extinction/résiliation : une machine oubliée allumée est une surface d'attaque |
 | `TIM-VENUS1-AP` | **actif** (65 items) + ICMP et sondes TCP | `192.168.111.63` par `wg2` | ✅ **raccordé le 05/09/2026** — voir [§ RIS VENUS](#serveurs-ris-venus-de-tellis--agent-actif-05092026) |
 | `TIM-VENUS2-IF` | idem (60 items) | `192.168.111.64` par `wg2` | ✅ idem |
@@ -316,6 +316,50 @@ méthode syngo (SNMP)**. On supervise par le seul chemin déjà ouvert.
 
 Provisionné par [`scripts/zabbix-provision-dicomproxy.py`](scripts/zabbix-provision-dicomproxy.py)
 (idempotent, sur le patron de `zabbix-provision-venus.py`), exécuté sur le CT 204.
+
+
+---
+
+## Vue PACS TIMWFMCORE — supervision applicative (11/09/2026)
+
+Le PACS principal ([13-tellis.md](13-tellis.md#timwfmcore--le-pacs-principal-inventorié-le-29082026))
+était raccordé depuis le 30/08 en agent actif, mais **seule la couche Windows
+était regardée** : 206 items du gabarit, seuils `Database(F:)` posés à la main,
+et rien sur l'applicatif Vue PACS, Oracle, la chaîne de sauvegarde RMAN, la
+réception DICOM ni les plantages. L'audit du 11/09
+([relevé](configs/audit-timwfmcore-2026-09-11.md)) a fourni la liste de ce qu'il
+fallait regarder, et deux défauts de l'agent lui-même.
+
+| | |
+|---|---|
+| Agent | **7.4.1** (préinstallé, serveur 7.0.30 LTS), `Server`/`ServerActive` visaient **le nom** `zabbix.teleimagerie.net` → VIP publique `.122` : l'agent **sortait par Internet** avec des `i/o timeout` quotidiens (1 à 5/j du 07 au 11/09), et le service s'était **terminé inopinément le 05/09 14:08** sans récupération automatique. Corrigé le 11/09 par [`scripts/installer-zabbix-agent-windows.ps1`](scripts/installer-zabbix-agent-windows.ps1) `-ForcerConfigExistante -ServeurZabbix 10.40.0.60 -NomHote TIMWFMCORE` (scp, exécution, suppression) : `10.40.0.60` par `wg2`, `.orig` conservé, `sc failure … restart/60000 ×3`, binaire inchangé |
+| Chemin | agent actif sortant `.52 → 10.40.0.60:10051` par `wg2` (vérifié) ; *simple checks* entrants `10.40.0.60 → .52` : la route retour `10.40.0.0/24 via .59` existe sur `.52` (persistante) |
+| Interface | l'hôte n'avait **aucune interface** (agent actif pur) : une interface agent `192.168.101.52:10050` est déclarée comme ancre `{HOST.CONN}` des *simple checks*, aucun sondage passif. `interfaceid` porté explicitement par chaque sonde (piège du 05/09) |
+| Gabarits | `Windows by Zabbix agent active` (inchangé) + **`ICMP Ping`** (cumul sûr, aucun `icmpping` en double) |
+| Sondes TCP | *simple checks* à la minute, `max(…,3m)=0` : **2104 MVSMAIN** (serveur DICOM, AET `TODAY`/`URGENCE`…), **2001 et 2105 Loader DICOM**, **1521 Oracle**, **443 IIS/Vue** en **High** ; 22104 MVSMAIN TLS, 8080 Tomcat, 7789 FLEXlm, 3389 RDP, 22 SSH en Average |
+| Services critiques | le gabarit découvre chaque service et porte un Average « is not running » sans mail. Sur les **19 items découverts** suivants, un déclencheur **High « SERVICE CRITIQUE … en anomalie »** (`last()<>0`) et l'Average du gabarit **désactivé** (motif pacs03) : MVSMain et MVSMain Secured, Loader, AutoRouter ×2, Medilink Listener, RisSync, Task Dispatcher, PACS Restarter, DataGrid Controller, Mirth3.5.2, OracleServicemst1, listener Oracle, Tomcat7, W3SVC, FLEXlm, Kafka, Zookeeper, Ignite |
+| Sauvegarde RMAN | trois items agent `vfs.dir.count[…,max_age]` (rien de plus récent que N → `=0`) : `G:\Backup\oradata\mst1\backup` `^back_archive\.ok_` < 8 h (**High**, cycle normal 3 h) ; `…\backup\COPY` `^DF_` < 9 j (**High**, copie complète hebdomadaire le vendredi) ; `G:\Backup\DBInfo` `^DBInfo_` < 2 j (Average). Pas de `vfs.dir.get` : le prétraitement JSONPath ne sait pas prendre le max d'une date |
+| Plantages | `eventlog[Application,,"Error","Application Error",1000,,skip]` : **High** si `svdser.exe` (serveur DICOM : chaque plantage coupe les associations de son processus ; 5 le 10/09), se referme 15 min après le dernier ; Average si ≥ 10 `svstream.exe` en 24 h. Tendance : `vfs.dir.count[…\System5\log\crashes,…,24h]`, Average ≥ 20 |
+| Contrôles internes du PACS | `logrt[…\system_checks\log_system_check_.*\.log, "(check_oracle_free_space|check_mirth|check_patient_data|check_storage)\.pl ended with errors"]` : **High** si Oracle `CRITICAL`, Average si Oracle `WARNING` (tablespace `MEDISTORE_MEDIUM_INX` à 6,5 % libre, **alerte attendue dès la pose**) ou si mirth/patient data/storage `CRITICAL` (Mirth 8014 muet : attendue aussi). Les autres contrôles (uptime, cpu, mémoire) bavardent toutes les 15 min et sont exclus. **C'est le seul regard sur Oracle** : `/ as sysdba` est refusé en session SSH (ORA-01017) |
+| Disques | `Database(F:)` inchangé (30/08). **`BACKUP(G:)`** : l'Average du gabarit à 90 % est conservé et un **High à hystérésis 95 %/90 %** ajouté — pas 85 % : G: monte de ~200 Go chaque vendredi (74 → ~94 %) avant purge de la copie précédente, un seuil plus bas sonnerait chaque semaine pour rien |
+| Secrets | **aucun** nouveau : agent actif, pas de communauté SNMP, pas de mot de passe Oracle |
+
+Provisionné par [`scripts/zabbix-provision-timwfmcore.py`](scripts/zabbix-provision-timwfmcore.py)
+(`hotes`, `disque`, `check` ; idempotent, sur le patron de `zabbix-provision-venus.py`),
+exécuté sur le CT 204. Deux pièges rencontrés :
+
+- **`Test-NetConnection` sous SSH** : sans console, son `Write-Progress` échoue en
+  « Access is denied » et, avec `$ErrorActionPreference = 'Stop'`, arrêtait le
+  script d'installation à l'étape 0 sans rien modifier. Réglé dans le script par
+  `$ProgressPreference = 'SilentlyContinue'` ;
+- **hôte sans interface** : un hôte créé « agent actif » à la main n'a pas
+  d'interface, et `hostinterface.get` rend une liste vide — le script la crée
+  avant toute sonde, là où le patron VENUS la supposait posée par `host.create`.
+
+> ⚠️ Deux déclencheurs Average **sont attendus en problème permanent** tant que
+> Philips n'a pas traité le fond : l'espace du tablespace `MEDISTORE_MEDIUM_INX`
+> et Mirth muet sur 8014. Ils ne partent pas en mail ; ils rendent visible ce
+> que le PACS se disait à lui-même toutes les 15 min sans lecteur.
 
 ---
 

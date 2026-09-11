@@ -226,6 +226,31 @@ par ICMP et trois sondes TCP (9104/5432/8443) depuis le CT 204. La supervision n
 corrige aucun des points ci-dessus ; elle prévient si le répartiteur, sa base ou
 son portail tombent.
 
+
+### ⚠️ Vue PACS `TIMWFMCORE` — ce que l'audit du 11/09/2026 laisse ouvert
+
+Constaté à l'audit en lecture seule du PACS principal
+([13-tellis.md](13-tellis.md#audit-du-11092026--disques-sauvegarde-plantages-réception-dicom),
+[relevé](configs/audit-timwfmcore-2026-09-11.md)). Le serveur est **supervisé
+jusqu'à l'applicatif depuis le 11/09** ([17-zabbix.md](17-zabbix.md#vue-pacs-timwfmcore--supervision-applicative-11092026)) ;
+la supervision rend ces points visibles, elle n'en corrige aucun. Par
+destinataire :
+
+- **Philips** : tempête de plantages `svstream.exe`/`svdser.exe` (3 à 56 par
+  jour depuis au moins le 12/08, `svdser` — le serveur DICOM — 5 fois le 10/09),
+  `Watchdog_SvMax` cassé, Mirth muet sur 8014, tablespace `MEDISTORE_MEDIUM_INX`
+  à 6,5 % libre, correctifs Windows figés depuis mars 2025 ;
+- **TELLIS** : `G:` BACKUP porte ~2 semaines de RMAN sur 1 To avec une copie
+  complète de 200 Go chaque vendredi (259 Go libres le 11/09, pic à ~94 % avant
+  purge) — capacité et rétention à confirmer, ainsi que la destination du
+  snapshot Proxmox de 23:30 que la VM voit passer ;
+- **EDL** : deux envois vers l'AET `TODAY` rompus la nuit du 10/09 ; le Vue PACS
+  a acquitté SUCCESS toutes les images et a **reçu** l'abort (deux connexions à
+  10 ms d'écart à 02:06:29) — la cause est chez l'émetteur ou sur leur chemin
+  réseau ; leur demander le renvoi des deux séries et la correction du VR
+  `OW`/`OB` de leur pixel data encapsulé ;
+- **nous** : rétrograder l'agent Zabbix 7.4.1 vers le 7.0.30 LTS du serveur.
+
 ---
 
 ## 10. Authentification centralisée — suites du déploiement du 27/08/2026
