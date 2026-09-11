@@ -12,7 +12,10 @@ Usage (PowerShell ADMINISTRATEUR, sur le serveur) :
                      (le poste sur le VPN nomade du pfSense TELLIS, tunnel
                      DC-TELLIS2 : c'est ce que voient les serveurs TELLIS, verifie
                      le 04/09/2026 par netstat sur syngovia1 et tsplus) et
-                     10.90.0.0/24 (VPN nomade OPNsense, sans NAT sur wg2)
+                     10.90.0.0/24 (VPN nomade OPNsense, sans NAT sur wg2).
+                     Passe par -File, une liste `a,b,c` arrive en UNE chaine
+                     (PowerShell ne l'analyse pas) : le script la redecoupe sur
+                     les virgules - piege n° 40, vu sur TIMVUEEXPLORER le 11/09/2026
   -Msi             : chemin du paquet OpenSSH-Win64-v10.0.0.0.msi (repli, voir 1.) ;
                      par defaut cherche a cote du script
   -ForcerConfigExistante : si un sshd etait DEJA installe avant ce script, le
@@ -75,6 +78,12 @@ param(
     [switch]$ForcerConfigExistante
 )
 $ErrorActionPreference = 'Stop'
+# `powershell -File script.ps1 -SourceAutorisee a,b,c` lie la chaine "a,b,c" telle
+# quelle (un seul element) : New-NetFirewallRule la refuse (« The address is
+# invalid »). Redecoupe systematique, sans effet sur un vrai tableau.
+$SourceAutorisee = @($SourceAutorisee | ForEach-Object { $_ -split ',' } |
+                     ForEach-Object { $_.Trim() } | Where-Object { $_ })
+if (-not $SourceAutorisee) { throw 'SourceAutorisee est vide.' }
 
 # --- 0. releve --------------------------------------------------------------
 '=== 0. Releve ==='

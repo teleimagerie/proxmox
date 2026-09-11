@@ -60,6 +60,10 @@ param(
     [switch]$ForcerConfigExistante
 )
 $ErrorActionPreference = 'Stop'
+# Sans console (session SSH), Write-Progress de Test-NetConnection echoue en
+# "Access is denied" et, avec ErrorActionPreference=Stop, arretait le script
+# a l'etape 0 (constate sur TIMWFMCORE le 11/09/2026) : on coupe la barre.
+$ProgressPreference = 'SilentlyContinue'
 
 # --- 0. releve --------------------------------------------------------------
 '=== 0. Releve ==='

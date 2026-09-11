@@ -60,7 +60,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
 | [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
 | [06-reste-a-faire.md](06-reste-a-faire.md) | Points ouverts : sauvegardes, VPN site-à-site, DC TELLIS, authentification |
-| [07-pieges.md](07-pieges.md) | **Les 38 pièges rencontrés et leur résolution** |
+| [07-pieges.md](07-pieges.md) | **Les 40 pièges rencontrés et leur résolution** |
 | [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
 | [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
 | [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
@@ -115,6 +115,9 @@ Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
                          Siemens, inventorié et supervisé le 09/09 ; répartit
                          en round-robin sur les 2 Syngo Via ; ⚠️ base patients
                          PostgreSQL ouverte sans mot de passe (ticket Siemens)
+                         Vue Motion (TIMVUEEXPLORER .53) : frontal web Vue
+                         12.2.8 lisant TIMWFMCORE, SSH par clé et inventaire
+                         le 11/09 ; pare-feu Windows sans effet, AnyDesk actif
 PACS de secours          pacs03 (bare-metal Windows, GRA3) · vRack VLAN 400
                          10.40.0.40 · backend pacs-secours servi en privé
 VPN DICOM                headscale 0.29.3 (CT 202) · tailnet 100.72.0.0/16

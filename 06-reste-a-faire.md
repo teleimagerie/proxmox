@@ -103,7 +103,10 @@ et validées (ping prod01 → pacs03 en 17–23 ms, session TCP complète, MSS/M
   pacs03 disparaît (reboot) alors que prod01 garde sa route, les réponses de
   pacs03 partiront dans le tunnel direct avec la source `10.40.0.40` et le
   pfSense les jettera (cryptokey routing) — poser ou retirer **les deux
-  ensemble**.
+  ensemble**. Constat du 11/09/2026 : depuis pacs03, prod01 (`.54`) ne répond
+  plus au SYN sur le port 22 alors que `.52`, dont les routes sont
+  persistantes, répond — l'une au moins des deux routes volatiles a disparu.
+  Le point est donc à trancher, pas à constater.
 - **restreindre les règles « tout protocole / tout port »** de `OPT1_TIM` aux
   hôtes et ports réellement nécessaires.
 - **La segmentation n'a pas été éprouvée depuis TELLIS.** Les règles
@@ -113,15 +116,19 @@ et validées (ping prod01 → pacs03 en 17–23 ms, session TCP complète, MSS/M
   mesuré.** Le keepalive de 25 s devrait le rétablir en moins d'une minute après
   les ~2 min de relance ; c'est une déduction, pas un chiffre.
 - **Routes retour côté TELLIS** : seuls les serveurs dont la passerelle est le
-  second pfSense (`.62`, bloc production) en ont besoin, et seule
-  `192.168.101.52` en a reçu une ; VENUS (`.254`) et Syngo (`.110`) répondent
-  déjà au pfSense principal — tranché le 05/09/2026, `10.40.0.0/24` ↔
-  `192.168.111.x` fonctionne dans les deux sens
+  second pfSense (`.62`, bloc production) en ont besoin ; VENUS (`.254`) et
+  Syngo (`.110`) répondent déjà au pfSense principal — tranché le 05/09/2026,
+  `10.40.0.0/24` ↔ `192.168.111.x` fonctionne dans les deux sens
   ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)).
-  Le poste d'admin, lui, joint TELLIS par le `tun_wg0` du pfSense
-  (`172.31.0.3`), pas par `wg2`
-  ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)). Reste : les
-  autres serveurs du bloc production, s'il faut un jour les joindre.
+  `192.168.101.52` en a pour `10.40.0.0/24`, `10.90.0.0/24`, `172.32.0.0/24`
+  et `172.31.0.0/24`, `.53` pour `172.31.0.0/24`. Le poste d'admin joint
+  TELLIS par le `tun_wg0` du pfSense (`172.31.0.3`), pas par `wg2`
+  ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)), et a besoin de
+  la même route : sans elle, RDP et SSH vers `.52`/`.53` ouvraient le port puis
+  se taisaient — corrigé le 11/09/2026
+  ([13-tellis.md](13-tellis.md#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données)). Reste : les autres serveurs du bloc
+  production (`.51`, `.55`, `.56`, `.57`) s'il faut un jour les joindre, et
+  demander au prestataire s'il préfère autoriser l'asymétrie sur `.62`.
 - **Le tunnel direct « DC-TELLIS-PARTENAIRES » (`tun_wg1`) entre pacs03 et le
   pfSense TELLIS doit perdurer** (décision du 25/08/2026) : c'est lui qui route
   `192.168.101.48/28` et `.96/28` vers le serveur, et aucune route équivalente
@@ -144,9 +151,9 @@ il doit en être informé. Tant qu'elle n'est pas régénérée, quiconque a eu 
 
 ## 9. DC TELLIS — collecte et vérification de l'inventaire
 
-Le DC TELLIS a sa fiche de référence ([13-tellis.md](13-tellis.md)) : huit
-serveurs y ont été contrôlés sur machine entre le 29/08 et le 09/09/2026
-(TIMWFMCORE, les deux syngo.via, TSplus, les trois VENUS, ProxyVia). La liste
+Le DC TELLIS a sa fiche de référence ([13-tellis.md](13-tellis.md)) : neuf
+serveurs y ont été contrôlés sur machine entre le 29/08 et le 11/09/2026
+(TIMWFMCORE, les deux syngo.via, TSplus, les trois VENUS, ProxyVia, Vue Motion). La liste
 détaillée de ce qu'il reste à collecter est dans
 [13-tellis.md](13-tellis.md#checklist-de-collecte) — ne pas la dupliquer ici.
 Les trois points saillants :

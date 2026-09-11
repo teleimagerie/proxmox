@@ -7,8 +7,9 @@ Ordre chronologique : 1 à 21 le déploiement (11/08), 22 le proxy et le premier
 tunnel (12-13/08), 23 le site-à-site pfSense vers TELLIS (14/08), 24 à 28 le NAS-HA et les
 sauvegardes (13-15/08), 29 le déploiement headscale (15/08), 30 le diagnostic
 certificats syngo-via (24/08), 31 les premiers enrôlements headscale (25/08),
-puis 32 à 38 les chantiers suivants — 38 (05/09) vaut pour la documentation
-elle-même, pas pour l'infrastructure.
+puis 32 à 39 les chantiers suivants — 38 (05/09) vaut pour la documentation
+elle-même, pas pour l'infrastructure, 39 (11/09) pour le routage retour vers
+TELLIS.
 
 ---
 
@@ -909,3 +910,87 @@ est une régression silencieuse : rien ne la signale, et elle ne se voit qu'à l
 lecture, des semaines plus tard. **Après avoir renommé ou redaté un titre,
 lancer `make liens`** — c'est le seul geste qui rattrape la rupture au moment où
 elle est créée, quand on sait encore quoi corriger.
+
+---
+
+## 39. Une connexion qui s'ouvre puis se tait : la réponse revient par l'autre pare-feu
+
+**Symptôme** — Depuis le poste, `mstsc` vers `192.168.101.52` et `.53` échoue,
+et le SSH direct vers `.52` n'a jamais rendu sa bannière. Rien ne ressemble à
+un blocage : le port TCP **s'ouvre**, `ping` passe, un paquet de 1392 octets
+sans fragmentation passe, un paquet RDP malformé reçoit son RST en 30 ms. Le
+diagnostic du 30/08 avait conclu à un trou noir MTU, et la fiche l'a porté
+douze jours.
+
+**Cause** — Le piège 37 dans sa version retorse. Le serveur a des routes
+retour vers nos réseaux… mais pas vers **tous** : `10.40.0.0/24`,
+`10.90.0.0/24` et `172.32.0.0/24` via `.59`, rien pour `172.31.0.0/24`, la
+plage du VPN nomades d'où le poste arrive (`172.31.0.3`). La réponse part donc
+par la passerelle par défaut, le second pfSense `.62`, qui la relaie bien vers
+`.59` — d'où le SYN-ACK, le RST et le ping qui reviennent — mais qui, ne voyant
+que la moitié de la connexion, **jette les segments porteurs de données**. Un
+service qui ouvre son port et ne parle jamais.
+
+**Ce qui l'a tranché** — Le TTL des réponses, lisible dans un simple `ping` :
+
+```
+192.168.101.52 : ttl=125   ← 3 routeurs sur le retour (.62, .59, NAT WSL)
+192.168.101.98 : ttl=126   ← 2 : le seul pfSense principal (.110) et le NAT
+```
+
+Les serveurs Windows partent de 128 : un saut de trop, c'est un routeur de
+trop. Puis la contre-épreuve depuis pacs03, qui a sa route retour sur `.52`
+mais pas sur `.53` : le premier négocie le RDP, le second ne renvoie rien. Et
+`route print -4` sur la cible, en lecture seule, a montré la liste des routes
+retour — et l'absente.
+
+**Résolution** — La route manquante, persistante, sur chaque serveur du bloc
+production à joindre depuis les nomades :
+
+```
+route -p add 172.31.0.0 mask 255.255.255.0 192.168.101.59
+```
+
+Effet immédiat : TTL 125 → 126, `RDP_NEG_RSP` reçu, bannière SSH en direct
+([13-tellis.md](13-tellis.md#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données)).
+
+**Leçon** — « Le port s'ouvre » ne prouve que l'aller et les paquets sans
+charge. Avant d'accuser le MTU, comparer le **TTL** d'une cible qui marche et
+d'une cible qui ne marche pas : s'il diffère d'un, le retour ne passe pas par
+le même chemin, et un pare-feu à états qui ne voit qu'une moitié de connexion
+laisse passer le handshake puis coupe le reste. Et une route retour se vérifie
+**plage par plage** : le poste et pacs03 arrivent par deux tunnels différents,
+donc deux plages, donc deux routes.
+
+## 40. `powershell -File` ne découpe pas les listes : `a,b,c` arrive en une seule chaîne
+
+**Symptôme** — Sur TIMVUEEXPLORER, le 11/09/2026,
+`scripts/installer-openssh-windows.ps1` lancé avec
+`-SourceAutorisee 172.31.0.3,10.90.0.0/24,172.32.0.2` déroule les étapes 1 à 4
+puis échoue à la règle pare-feu : `New-NetFirewallRule : The address is
+invalid`. Le paramètre est pourtant déclaré `[string[]]` et la même syntaxe
+fonctionne, tapée dans une console PowerShell.
+
+**Cause** — Avec `-File`, les arguments viennent de la ligne de commande du
+système, pas de l'analyseur PowerShell : `172.31.0.3,10.90.0.0/24,172.32.0.2`
+est **un** jeton, lié tel quel comme unique élément du tableau. Dans une
+console (ou avec `-Command`), la virgule est l'opérateur de tableau et produit
+trois éléments. Un script qui « marche en test » depuis la console échoue donc
+sans rien changer quand on le lance comme les instructions le demandent.
+
+**Conséquence sournoise** — L'échec survient **après** le redémarrage de sshd et
+**avant** la désactivation de la règle d'installation `OpenSSH-Server-In-TCP` :
+le serveur reste joignable, mais avec le port 22 ouvert à tout le monde et non
+à la seule source prévue. Ici sans effet, le profil pare-feu concerné étant
+désactivé ; sur une machine au pare-feu actif, la restriction voulue n'aurait
+pas existé sans que rien ne le signale.
+
+**Résolution** — Le script redécoupe désormais chaque élément sur les virgules
+avant de s'en servir (sans effet sur un vrai tableau, vérifié sous PowerShell
+5.1). Règle générale : tout paramètre tableau d'un script destiné à `-File`
+doit accepter la forme « une chaîne à virgules », ou le script doit être lancé
+par `-Command ". .\script.ps1 -Param a,b,c"`.
+
+**Leçon** — Tester un script `.ps1` **exactement comme sa notice dit de le
+lancer** (`powershell -File …`), pas en le sourçant dans une console : les deux
+n'analysent pas les arguments de la même façon.
