@@ -253,6 +253,82 @@ JPEG Lossless arrivent avec un pixel data encapsulé en VR `OW` au lieu de `OB`
 (« Incorrectly encoded encapsulated data… trying to recover »), corrigé à la
 volée et stocké — sans lien avec les ruptures.
 
+##### Notification des nouvelles études vers MyTIM — relevé du 11/09/2026
+
+Question posée le 11/09 : le Vue PACS peut-il appeler MyTIM et MyISOTEAM en
+HTTPS quand un examen arrive ? **Oui, et sans code à déposer sur le serveur.**
+Relevé en lecture seule par SSH (PowerShell en `-EncodedCommand`, rien laissé
+sur la machine).
+
+**Réseau, prouvé.** Depuis `.52`, un HEAD HTTPS sur `app.teleimagerie.net` et
+`app.isoteam.mn` répond 200 (180 à 700 ms), `curl.exe` 7.83 (Schannel) valide
+le certificat, sortie Internet directe par la passerelle `.62` sans proxy, **IP
+publique source `77.158.128.112`** (la seconde adresse publique du site, pas
+`37.61.243.245`). Le tunnel `wg2` vers `10.40.0.0/24` et les récepteurs DICOM
+de pacs03 (`172.32.0.2:11112/11113`) sont aussi joignables depuis `.52`.
+
+**L'Info Router est la bonne porte.** L'Auto-Router Algotec
+(`System5\autorouter`, services `Imaginet Auto-Router Execution/Scheduling
+Module`) déclenche des règles sur des sondes et exécute des commandes, relevées
+dans `ar_server.jar` :
+
+| Commande de règle (nom dans l'UI) | Ce qu'elle fait |
+|---|---|
+| **Run An Executable** (la « fonction personnalisée ») | Executable Name + Full Path + Parameters ; espaces réservés `#CLE#` (obligatoire) et `?#CLE#` (optionnel) remplacés par les propriétés de l'événement ; stdout/stderr et code de sortie journalisés dans le statut de la commande. L'outil mammo Philips `loader\exe\tool_image_processor\execute_mg_tool.bat` s'appelle ainsi (`-p "#PATIENT_ID#" -i "#ISSUER_OF_PATIENT_ID#"`) : le mécanisme est en production sur cette machine |
+| **Sending Http URL Request** | une URL avec les mêmes `#CLE#`, `HttpsURLConnection` avec trust manager local (pas de souci de CA), POST possible, succès = HTTP 200 (« HTTP response OK »), erreurs tracées dans `AutoRouter.ExecutionModule.log` |
+| HTTP Call | variante liée au Patient Portal (jeton de sécurité Vue, réponse `Status/Message/Success`) — pas pour nous |
+
+Les propriétés remplaçables dépendent de la sonde : **First image arrived /
+Whole Study Arrived** (`NewStudyProbe`, fin d'étude par
+`wait_for_study_in_minutes` + `study_idle_time_in_minutes`) fournissent
+`STUDY_INSTANCE_UID`, `ACCESSION_NUMBER`, `PATIENT_ID`, `ISSUER_OF_PATIENT_ID`,
+`PATIENT_NAME`, `PATIENTS_LAST_NAME`, `PATIENTS_FIRST_NAME`, `MODALITY`,
+`NUMBER_OF_IMAGES`, `TAMAR_STUDY_INSERT_TIME`, `TAMAR_SITE_ID`,
+`TRIGGER_REASON` — **ni date de naissance ni date d'étude** ; **New Study
+Metadata** (`NewStudyMetadataProbe`) ajoute `PATIENTS_BIRTH_DATE`,
+`PATIENTS_SEX`, `STUDY_DATE`, `STUDY_TIME`, `STUDY_DESCRIPTION`,
+`MODALITIES_IN_STUDY`, `TAMAR_SOURCE_AE` et tout tag DICOM déclaré dans la
+sonde, mais se déclenche au début de l'étude. Un espace réservé absent de
+l'événement arrive en clair (`#PATIENTS_BIRTH_DATE#`) : l'application le
+traite comme vide.
+
+**Ce qui ne marche pas, ou n'est pas à nous.** Mirth Connect 3.5.2
+(`C:\Program Files\Mirth Connect`, base Oracle `mirth`) porte le canal Philips
+**SCN** (« Send SCN messages », Web Service Listener → HL7 TCP), le mécanisme
+natif de notification d'étude (module `Algotec.MST.EventNotification.*`) ;
+mais le service tourne **sans aucun port en écoute** : keystore
+`appdata\keystore.jks` invalide (`Could not initialize security settings…
+Invalid keystore format`, `Could not start web server`, depuis le redémarrage
+du 19/08), serveur web 8014/9443 mort, aucun canal déployé. C'est la cause du
+« Mirth muet sur 8014 » de la liste Philips. `/ExternalAutoRouter` (IIS)
+répond « No methods available » ; `/FHIRAutoEventsService` et
+`/KafkaProxy/topics/events` sont internes Philips. QIDO-RS
+(`/QidoRS/qidors.svc/timwfmcoreFIR/studies`, public via
+`pacs01.teleimagerie.net` → nginx TELLIS `.61`) fonctionne avec `includefield`,
+`limit`, `offset`, `fuzzymatching`, mais **sans filtre « reçu depuis »** ;
+MyTIM l'appelle déjà **~31 000 fois entre 0 h et 14 h 30** (comptage d'images
+étude par étude, toutes les minutes) — le journal IIS du PACS
+(`System5\log\IISLogFiles\W3SVC1`) les voit arriver de `.61`.
+
+**Constat annexe** : la règle Auto-Router « copy to VIACLUSTER » échoue en
+boucle (`Move operation failed… Communication error while storing instances`,
+14:22 le 11/09) — à remonter à Philips avec le reste.
+
+**Ce qui est fait côté MyTIM** (dépôt `gestion`, branche
+`feat/pacs-study-events`, commit `db4e47390`) : endpoint
+`GET|POST /api/pacs/study-events` authentifié par `?access_token=` (un
+`ApiClient` par tenant, rôle `ROLE_PACS_EVENT`), qui accepte query-string, corps
+form-encoded ou JSON, ignore les espaces réservés non remplacés, répond 200
+même pour un événement ignoré (tout non-200 est un échec pour le PACS) ;
+rapprochement par StudyInstanceUID puis nom + prénom + date de naissance + date
+d'étude ±1 j, enrichissement QIDO-RS par UID, rapprochement QIDO périodique
+toutes les 15 min en filet de sécurité, liste blanche IP `77.158.128.112`
+d'abord en mode observation. Contrat, body de la règle et runbook :
+`docs/technique/pacs-study-events.md` du dépôt `gestion`. **Reste à faire** :
+déployer la branche, créer les clés AppConfig et les deux `ApiClient`, poser
+les deux règles Info Router (sonde Whole Study Arrived, POST vers chaque
+tenant), informer Philips et TELLIS de la règle ajoutée.
+
 ### Analyse IA des images
 
 Deux passerelles locales envoient les examens aux services d'analyse de leur
@@ -848,8 +924,13 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 - [ ] **capacité de `G:`** (1 To pour ~2 semaines de RMAN, copie hebdo de
       200 Go, 259 Go libres le 11/09) et rétention : à faire préciser à TELLIS
 - [ ] **plantages `svstream.exe`/`svdser.exe`** (3 à 56 par jour, audit du
-      11/09), `Watchdog_SvMax` cassé, Mirth muet sur 8014, tablespace
+      11/09), `Watchdog_SvMax` cassé, Mirth muet sur 8014 (cause connue le
+      11/09 : keystore invalide, serveur web jamais démarré), règle Auto-Router
+      « copy to VIACLUSTER » en échec en boucle, tablespace
       `MEDISTORE_MEDIUM_INX` à 6,5 % : à escalader à Philips
+- [ ] **notification des nouvelles études vers MyTIM / MyISOTEAM** : endpoint
+      livré côté `gestion`, règles Info Router à poser
+      ([relevé du 11/09](#notification-des-nouvelles-études-vers-mytim--relevé-du-11092026))
 - [ ] agent Zabbix 7.4.1 sur un serveur 7.0.30 : rétrograder vers l'agent LTS
       (le script d'installation impose 7.0.30, un 7.4.1 a déjà planté sur pacs03)
 - [ ] envois EDL rompus (10/09) : transmettre à EDL le tableau de l'audit du

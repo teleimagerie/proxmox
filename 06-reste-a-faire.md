@@ -238,8 +238,10 @@ destinataire :
 
 - **Philips** : tempête de plantages `svstream.exe`/`svdser.exe` (3 à 56 par
   jour depuis au moins le 12/08, `svdser` — le serveur DICOM — 5 fois le 10/09),
-  `Watchdog_SvMax` cassé, Mirth muet sur 8014, tablespace `MEDISTORE_MEDIUM_INX`
-  à 6,5 % libre, correctifs Windows figés depuis mars 2025 ;
+  `Watchdog_SvMax` cassé, Mirth muet sur 8014 (keystore `appdata\keystore.jks`
+  invalide, serveur web jamais démarré depuis le 19/08 — cause relevée le 11/09),
+  règle Auto-Router « copy to VIACLUSTER » en échec en boucle, tablespace
+  `MEDISTORE_MEDIUM_INX` à 6,5 % libre, correctifs Windows figés depuis mars 2025 ;
 - **TELLIS** : `G:` BACKUP porte ~2 semaines de RMAN sur 1 To avec une copie
   complète de 200 Go chaque vendredi (259 Go libres le 11/09, pic à ~94 % avant
   purge) — capacité et rétention à confirmer, ainsi que la destination du
@@ -249,7 +251,15 @@ destinataire :
   10 ms d'écart à 02:06:29) — la cause est chez l'émetteur ou sur leur chemin
   réseau ; leur demander le renvoi des deux séries et la correction du VR
   `OW`/`OB` de leur pixel data encapsulé ;
-- **nous** : rétrograder l'agent Zabbix 7.4.1 vers le 7.0.30 LTS du serveur.
+- **nous** : rétrograder l'agent Zabbix 7.4.1 vers le 7.0.30 LTS du serveur ;
+  **mettre en service la notification des nouvelles études vers MyTIM et
+  MyISOTEAM** — le PACS sort en HTTPS vers les deux applications (vérifié le
+  11/09) et son Info Router sait appeler une URL à l'arrivée d'une étude ; le
+  code MyTIM est livré (dépôt `gestion`, branche `feat/pacs-study-events`,
+  endpoint `/api/pacs/study-events`, runbook `docs/technique/pacs-study-events.md`),
+  restent le déploiement, les clés AppConfig, les deux `ApiClient`, les deux
+  règles Info Router (sonde Whole Study Arrived) et l'information de
+  Philips/TELLIS ([13-tellis.md](13-tellis.md#notification-des-nouvelles-études-vers-mytim--relevé-du-11092026)).
 
 ---
 
