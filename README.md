@@ -59,8 +59,8 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [03-exploitation.md](03-exploitation.md) | Diagnostic, pannes disque et nœud, procédures courantes |
 | [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
 | [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
-| [06-reste-a-faire.md](06-reste-a-faire.md) | Abonnement, supervision, IP publiques VM, points ouverts du VPN |
-| [07-pieges.md](07-pieges.md) | **Les 37 pièges rencontrés et leur résolution** |
+| [06-reste-a-faire.md](06-reste-a-faire.md) | Points ouverts : sauvegardes, VPN site-à-site, DC TELLIS, authentification |
+| [07-pieges.md](07-pieges.md) | **Les 38 pièges rencontrés et leur résolution** |
 | [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
 | [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
 | [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
@@ -73,7 +73,6 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [17-zabbix.md](17-zabbix.md) | **Supervision Zabbix** : migration VPS → CT 204 (audit, incident du 28/08, plomberie) + supervision des sauvegardes (échec **et absence**, 30/08) |
 | [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
 | [19-carte-reseau.md](19-carte-reseau.md) | **Carte réseau régénérable** : `make carte` interroge l'API Proxmox, confronte aux intentions de `topologie.yml` et réécrit le schéma — les écarts aux règles sont peints en rouge sur la carte |
-| [20-mytim.md](20-mytim.md) | **MyTIM sur le cluster** : 📋 plan validé le 31/08 — l'app d'abord (VPS → VM 104), MySQL ensuite (clouddb OVH → VM 103), exécution non commencée |
 | `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche — passe aussi sous WDAC/*ConstrainedLanguage*), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation), `installer-zabbix-agent-windows.ps1` (agent Zabbix 2 en mode actif sur un serveur Windows : MSI signé vérifié, configuration, règle pare-feu, récupération du service — rejouable), `zabbix-provision-venus.py` (hôtes, sondes et déclencheurs des trois serveurs RIS VENUS, idempotent), `zabbix-provision-dicomproxy.py` (hôte ProxyVia sans agent : ICMP + sondes TCP 9104/5432/8443 depuis le CT 204, idempotent), `installer-openssh-windows.ps1` (OpenSSH serveur par clé sur un serveur Windows : installation native ou MSI, clé administrateur avec ACL, mot de passe interdit, port 22 limité au VPN nomade — rejouable), `controle-liens.py` (ancres des fiches : signale les liens morts et le titre le plus proche — `make liens`), `genere-carte.py` (carte réseau depuis l'API Proxmox — voir `make aide`) |
 | `topologie.yml` | Intentions d'architecture — zones, rôles, cloisonnements, règles vérifiées à chaque génération de la carte. **Seul fichier de la carte à éditer à la main** |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |

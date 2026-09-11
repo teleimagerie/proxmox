@@ -7,9 +7,10 @@ celui que joint le tunnel WireGuard `wg2`
 relais TLS `syngo-via.*` ([09-proxy-tim.md](09-proxy-tim.md)).
 
 L'inventaire ci-dessous a été **déclaré le 25/08/2026** par le responsable
-infrastructure. Contrairement aux fichiers 01 à 11, la plupart des informations
-n'ont pas encore été contrôlées sur machine : une seule adresse a été jointe par
-le tunnel à ce jour. Chaque information porte donc son statut :
+infrastructure, puis contrôlé sur machine au fil des relevés : TIMWFMCORE
+(29-30/08), les deux syngo.via et TSplus (02/09), les trois VENUS (04/09) et
+ProxyVia (09/09). Le reste (pfSense, `prod01`, équipements) est encore
+déclaratif. Chaque information porte donc son statut :
 
 > ✅ vérifié/mesuré · 📋 déclaré (source : responsable infra, non contrôlé sur
 > machine) · ⚠️ à vérifier / inconnu
@@ -528,11 +529,11 @@ Ce qui est établi :
   mise en place du tunnel ;
 - il porte des **routes statiques** vers `10.40.0.0/24` et `10.90.0.0/24` via le
   tunnel `wg2` ;
-- mais **les routes retour n'ont été posées que sur `192.168.101.52`** : les
-  autres serveurs répondent à leur passerelle par défaut et sont injoignables
-  depuis chez nous tant qu'ils n'ont pas reçu le même traitement — point ouvert
-  documenté dans
-  [06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts) ;
+- les **routes retour explicites** n'ont été posées que sur `192.168.101.52`,
+  et seuls les serveurs dont la passerelle est le second pfSense `.62` (bloc
+  production) en ont besoin : VENUS (`.254`) et Syngo (`.110`) répondent déjà
+  au pfSense principal — vérifié dans les deux sens le 05/09/2026
+  ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)) ;
 - constaté le 25/08/2026 sur `prod01` : la passerelle par défaut des serveurs
   du bloc production est **le second pfSense `.62`** (via DHCP), pas le `.59` —
   d'où la nécessité des routes retour explicites ;
@@ -553,8 +554,8 @@ Ce qui est établi :
 Validées aussitôt : ping prod01 → `10.40.0.40` en 17–23 ms TTL 126, session
 TCP complète ([15-pacs-secours.md](15-pacs-secours.md#mesures-du-25082026)).
 ✅ **`SRV_TIM_WFMCORE` identifié le 29/08/2026** : c'est la Vue PACS
-`TIMWFMCORE` (`192.168.101.52`), le PACS principal — la règle prépare donc le
-futur flux de réplication PACS principal → PACS de secours par `wg2`.
+`TIMWFMCORE` (`192.168.101.52`), le PACS principal — la règle l'autorise vers
+`DC_OVH_TIM` ; aucun flux ne l'emprunte à ce jour.
 ⚠️ Reste à relever le contenu de l'alias `DC_OVH_TIM` (vraisemblablement
 `10.40.0.0/24` — inclut-il `10.90.0.0/24` ?) — dans la
 [checklist de collecte](#checklist-de-collecte) du pfSense. Règles en

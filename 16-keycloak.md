@@ -223,7 +223,7 @@ connecté ; seuls les nouveaux logins attendent.
 | Proxmox VE, PBS, headscale | OIDC | ✅ fait |
 | **Google Workspace** (brokering amont) | OIDC | ✅ en place et **testé en réel** le 27/08/2026 (compte Workspace technique : passage Google, création à la volée dans `tim` — compte de test supprimé après validation) |
 | **MyTIM** (appli interne de gestion) | OIDC | ✅ **prod TIM raccordée le 01/09/2026** : tenant `app.teleimagerie.net`, realm `tim`, client `mytim` audité, secret vaulté puis déployé (vérifié : `.env` prod = secret Keycloak par comparaison de hash, `/oidc/start` → 302 Keycloak), clé `local+sso` (bouton SSO + formulaire local en repli, internes `@teleimagerie.net` d'abord). 📋 Validation pilotes en cours. Intégration développée le 29/08/2026 (Symfony 7.4/FrankenPHP chez OVH, `app`/`gestion` → `51.210.24.59`, drenso/symfony-oidc-bundle, rapprochement par e-mail, aucun provisioning), clients `mytim` + `mytim-staging` créés le 30/08/2026 (tableau ci-dessus). 📋 **Reste** : tenant **Isoteam** (`app.isoteam.mn`) — créer le **realm `isoteam`** (copie de `tim` : force brute, `browser-totp`, broker Google avec redirect URI `…/realms/isoteam/broker/google/endpoint` à ajouter au client OAuth Google) et ses **2 clients** (`mytim`, `mytim-staging`) ; puis mode `sso-default` + médecins (phase ultérieure). Ce dépôt = relevé de ce qui est en place ; **runbook** (script kcadm, vaultage du secret, matrice de validation, phasage) : `docs/technique/sso-keycloak.md` du dépôt gestion |
-| Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | 📋 accès SSH collecté le 29/08/2026 (clé, compte `ubuntu` sur le VPS `vps-41b1229b`) — raccordement à instruire après la migration vers le cluster (17-zabbix.md à venir) |
+| Zabbix (`zabbix.teleimagerie.net`) | SAML ou LDAP | 📋 tourne sur le CT 204 depuis le 29/08/2026 ([17-zabbix.md](17-zabbix.md)) — raccordement à instruire |
 | **Odoo** (`odoo.teleimagerie.net`) | OIDC | ✅ **raccordé le 31/08/2026** — module OCA `auth_oidc` (flux code + PKCE S256, signature id_token vérifiée par JWKS), client `odoo`, rapprochement par e-mail, aucun provisioning, formulaire local en repli. Détail : [18-odoo.md](18-odoo.md#sso-keycloak) |
 | CRM, e-learning, bastion, app/gestion | à déterminer | ⚠️ hors périmètre du dépôt |
 | Syngo Via (Siemens) · Vue PACS (Philips) · RIS VENUS (Softway) · TSplus | selon capacités éditeur (souvent SAML/OIDC dans les versions récentes) | 📋 cible à terme — à instruire éditeur par éditeur via la [checklist TELLIS](13-tellis.md#checklist-de-collecte) |
@@ -441,19 +441,17 @@ pct exec 203 -- ls -la /var/backups/keycloak/
 - **SPOF fonctionnel** : 19 s de coupure d'authentification à chaque bascule
   HA, et OPNsense (~2 min de bascule) reste devant tout. Parade : comptes de
   secours locaux sur chaque service raccordé — ne jamais les supprimer.
-- **Aucune supervision** ([06-reste-a-faire.md](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe)) :
-  une panne de Keycloak ne se verrait qu'à la première connexion ratée. À
-  raccorder au chantier supervision (l'échéance du certificat et le timer
-  `kc-pgdump` aussi).
+- **Supervision** : depuis le 29-30/08/2026, agent Zabbix dans le CT 203 et
+  certificat `auth.teleimagerie.net` suivi (hôte `cert-auth`) —
+  [17-zabbix.md](17-zabbix.md#supervision-du-cluster--depuis-le-29082026).
 - **Périmètre HDS** : un IdP qui porte l'authentification d'accès aux données
   de santé entre dans le périmètre — question contractuelle à trancher, voir
   [12-architecture-hds.md](12-architecture-hds.md#où-lire-le-détail).
 - **MyTIM dépend de l'IdP pour ses nouveaux logins SSO** (prod TIM depuis
   le 01/09/2026) : un Keycloak mort = bouton SSO en erreur (flash,
   jamais de 500), formulaire local intact, sessions ouvertes non affectées.
-  Pas de dépendance circulaire (l'app est chez OVH, hors cluster) — et le jour
-  où elle rejoindra le cluster ([20-mytim.md](20-mytim.md#risques-et-limites)),
-  le formulaire local reste la porte de secours. Le secret du client vit
+  Pas de dépendance circulaire (l'app est chez OVH, hors cluster) ; le
+  formulaire local reste la porte de secours. Le secret du client vit
   **uniquement** dans le vault Ansible du dépôt gestion (relisible par
   `kcadm get clients/<id>/client-secret -r tim`) : un secret vide passe le
   déploiement sans erreur et ne casse qu'au retour du callback — vécu le

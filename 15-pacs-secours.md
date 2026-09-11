@@ -27,8 +27,7 @@ l'Internet public.
 
 Le cluster est en **GRA4**, ce serveur en **GRA3** : le vRack s'étend entre les
 deux datacentres et la latence mesurée est sub-milliseconde (voir
-[Mesures](#mesures-du-25082026)) — sans conséquence pour un flux HTTP, mais à
-garder en tête si un jour un flux synchrone type Ceph était envisagé.
+[Mesures](#mesures-du-25082026)) — sans conséquence pour un flux HTTP.
 
 ---
 
@@ -85,9 +84,10 @@ La plage `172.32.0.0/24` est intégrée au contrôle de recouvrement
 ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)) — elle ne croise
 ni `172.33.0.0/24` (notre `wg2`) ni aucune autre plage documentée.
 
-**Ce tunnel doit perdurer pour le moment.** Sa suppression au profit du
-vRack/`wg2` est un chantier futur, consigné dans
-[06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts).
+**Ce tunnel doit perdurer** (décision du 25/08/2026) : c'est lui qui route
+`192.168.101.48/28` et `.96/28` vers le serveur, et aucune route équivalente
+n'existe via OPNsense
+([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)).
 
 ---
 
@@ -157,9 +157,7 @@ envoyées par les syngo.via de TELLIS — **par le tunnel direct, sur `172.32.0.
 (constaté le 03/09/2026 : `.100` → `172.32.0.2:11112`) — et les remontent à l'API
 MyTIM (`app.teleimagerie.net`, `app.isoteam.mn`) ; `isoteam-sender` fait le chemin
 inverse (mode *sender*, `key_image.enabled: true`, destination DICOM fournie par
-l'API — `remote_config: true`). Les ports 104 et 11112 sont précisément ceux prévus
-par les ACL du tailnet pour `tag:pacs` ([11-headscale.md](11-headscale.md)) :
-l'enrôlement futur collera au trafic déjà en place.
+l'API — `remote_config: true`).
 
 Les tâches planifiées « Sauvegarde de la base de données »
 (`E:\__XPLORE32\Backup\Scripts\Save_base.bat`) et « Optimisation » sont le
@@ -386,10 +384,3 @@ tel quel après réinstallation : [`scripts/parefeu-pacs03.ps1`](scripts/parefeu
   **seule** sauvegarde active du serveur.
 - ⚠️ **Statuer sur TeamViewer et Azure Arc** : les garder comme canaux
   d'administration, ou les remplacer par le tailnet.
-- 📋 À terme, enrôler le serveur dans le tailnet headscale avec `tag:pacs`
-  (clé sous le user `infra`, client Windows + « Run unattended » —
-  [11-headscale.md](11-headscale.md#enrôler-une-passerelle-dicom-procédure-par-site))
-  s'il doit recevoir du DICOM des passerelles de sites — c'est le rôle prévu
-  par les ACL, et les ports attendus (104, 11112) sont déjà servis.
-- 📋 Chantier futur : supprimer le tunnel `DC-TELLIS-PARTENAIRES`
-  ([06-reste-a-faire.md](06-reste-a-faire.md)).

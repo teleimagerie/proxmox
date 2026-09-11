@@ -179,9 +179,8 @@ pve1, membre de `+cluster`).
 Depuis le 27/08/2026, la connexion peut se faire en OIDC (realm `keycloak`
 dans la liste déroulante) — `https://localhost:8007/*` est déclarée comme URI
 de redirection, [16-keycloak.md](16-keycloak.md#ce-qui-est-raccordé).
-Ouvrir le 8007 à la plage VPN `10.90.0.0/24` serait possible d'une règle dans
-`102.fw`, mais c'est une **décision de sécurité** : le confinement actuel est
-voulu — à consigner ici si elle se prend.
+Le 8007 n'est pas ouvert à la plage VPN `10.90.0.0/24` : le confinement au
+VLAN 300 est voulu.
 
 Le certificat de PBS est **auto-signé** : l'avertissement du navigateur est ici
 normal, contrairement au cluster qui porte un Let's Encrypt valide.

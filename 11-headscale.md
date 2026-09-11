@@ -3,7 +3,7 @@
 Conteneur LXC **202**, Debian 13, headscale **v0.29.3**. Déployé le 15/08/2026
 pour que des **passerelles DICOM sur sites distants** montent des VPN WireGuard
 vers le cluster — dans les deux sens : pousser des images vers les serveurs
-hébergés ici (PACS à venir), et être administrées depuis ici.
+hébergés ici, et être administrées depuis ici.
 
 | | |
 |---|---|
@@ -66,7 +66,7 @@ hébergés ici (PACS à venir), et être administrées depuis ici.
   du tailnet peuvent relayer) — aucun relais public Tailscale (`urls: []`),
   aucune télémétrie (`logtail: false`). Même relayé, le trafic reste chiffré de
   bout en bout : le relais ne voit jamais les images en clair.
-- **Pas de subnet router** : chaque futur serveur hébergé (PACS…) enrôle son
+- **Pas de subnet router** : chaque serveur hébergé enrôle son
   propre client tailscale. Décision délibérée — ne pas cumuler « exposé à
   Internet » et « routeur vers le VLAN 400 » sur la même machine, et garder des
   ACLs par tag, plus fines qu'un filtrage par IP. Si un équipement ne peut pas
@@ -93,11 +93,11 @@ et [configs/headscale-acl.hujson](configs/headscale-acl.hujson).
 | Objet | Valeur | Rôle |
 |---|---|---|
 | user `admin` (ID 1) | postes d'administration | enrôlement interactif |
-| user `infra` (ID 2) | serveurs hébergés sur le cluster | clés pré-auth `tag:pacs` |
+| user `infra` (ID 2) | serveurs hébergés sur le cluster | clés pré-auth `tag:pacs` — aucun nœud enrôlé à ce jour |
 | users `site-<code>` | un par site distant, créés au fil des déploiements | portent les clés pré-auth `tag:gateway` ; **leurs nœuds atterrissent sous `tagged-devices`** — révoquer un site = `headscale nodes delete` de ses `gw-<code>` ([07-pieges.md, piège 31](07-pieges.md#31-les-nœuds-enrôlés-par-clé-taguée-nappartiennent-pas-au-user-de-la-clé)) |
 | user `tagged-devices` (synthétique) | créé par headscale | propriétaire de tous les nœuds tagués — le tag remplace le user comme identité (constaté le 25/08/2026) |
 | `tag:gateway` | passerelles DICOM | n'atteint que `tag:pacs:104,11112` |
-| `tag:pacs` | serveurs DICOM hébergés | n'initie rien |
+| `tag:pacs` | tag déclaré dans l'ACL, aucun nœud ne le porte à ce jour | n'initie rien |
 | **`tag:pve`** (31/08/2026) | **les 3 hyperviseurs** — `pve1` `100.72.0.6`, `pve2` `100.72.0.5`, `pve3` `100.72.0.7` | seconde porte d'administration : joignables par `admin@` sur **22 et 8006 seulement**, n'initient rien |
 
 L'ACL est en **deny par défaut** : aucune règle n'autorise le trafic
@@ -112,8 +112,7 @@ deux CT jetables enrôlés (`tag:gateway` et `tag:pacs`) :
 | chemin retenu | direct | `direct`, pas de relais |
 | `tailscale netcheck` | une seule région DERP | `tim` uniquement, 200 µs |
 
-Les ports 104/11112 sont les ports DICOM usuels — **à resserrer au port réel
-quand le PACS existera**.
+Les ports 104/11112 sont les ports DICOM usuels.
 
 ### Les hyperviseurs — seconde porte d'administration (31/08/2026)
 
@@ -256,14 +255,14 @@ Windows ci-dessus : `gw-qum` (clé du user `site-QUM`, `100.72.0.2`,
 jour : `netcheck` **UDP ok** (sortie publique découverte, DERP `tim` seul à
 22,3 ms) ; `tailscale ping` vers le téléphone admin passe mais reste
 `via DERP(tim)` — direct non établi avec un mobile en CGNAT, attendu et non
-représentatif du futur flux gateway → pacs (deux extrémités fixes). Entre
+représentatif d'un flux entre deux extrémités fixes. Entre
 extrémités fixes, justement, le direct est confirmé le même jour : poste
 admin ↔ `gw-qum` en `direct` à 32 ms (contre ~40 ms via DERP). **La montée
 en direct prend quelques dizaines de secondes** : les premiers pongs d'un
 `tailscale ping` passent par DERP, ce n'est pas un échec — laisser tourner
 avant de conclure.
 
-**Serveur hébergé ici (futur PACS)** : clé `--tags tag:pacs` sous le user
+**Serveur hébergé sur le cluster** : clé `--tags tag:pacs` sous le user
 `infra`. En VM, rien de spécial. En **CT non privilégié**, tailscaled a besoin
 de `/dev/net/tun` — ajouter à `/etc/pve/lxc/<id>.conf` **avant** le premier
 démarrage :
@@ -408,7 +407,7 @@ curl -s https://headscale.teleimagerie.net/health        # {"status":"pass"}
 headscale nodes list                # qui est enrôlé, en ligne, tagué
 headscale users list
 journalctl -u headscale -f
-curl -s 127.0.0.1:9090/metrics     # métriques Prometheus (supervision future)
+curl -s 127.0.0.1:9090/metrics     # métriques Prometheus
 
 # Sur un client
 tailscale status                    # pairs et chemin (direct / via DERP "tim")

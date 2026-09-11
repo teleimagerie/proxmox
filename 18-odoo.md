@@ -229,9 +229,8 @@ sur la VM entre bascule et revert sont perdues. Le point de non-retour est la
 4. ✅ Documents joints validés (SHA1, voir récit) ; ✅ VPS éteint le 29/08
    16:42 UTC puis **résilié le 30/08** ; ✅ TTL remonté à 3600 et export de
    zone rafraîchi le 30/08.
-5. Reste (chantiers séparés) : réactiver un jour la relève du mail entrant
-   (état `draft` hérité du VPS, voir récit) ; raccordement Keycloak
-   ([16-keycloak.md](16-keycloak.md)).
+5. Reste : réactiver la relève du mail entrant (état `draft` hérité du VPS,
+   voir récit).
 
 ## Restauration
 

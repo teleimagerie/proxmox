@@ -17,7 +17,7 @@ nouveau hors des interconnexions entre les deux sites.
 |---|---|---|
 | Lieu | Gravelines, GRA4 | ⚠️ à documenter |
 | Opérateur | nous (serveurs dédiés OVHcloud) | prestataire — ⚠️ identité et contrat à documenter |
-| Rôle | infrastructure transverse : pare-feu, reverse proxy, VPN, sauvegardes, futur PACS | production imagerie : PACS Philips, Syngo Via, RIS VENUS, passerelles IA, téléradiologie IMADIS |
+| Rôle | infrastructure transverse : pare-feu, reverse proxy, VPN, sauvegardes, authentification, supervision, ERP | production imagerie : PACS Philips, Syngo Via, RIS VENUS, passerelles IA, téléradiologie IMADIS |
 | IP publiques | bloc `57.130.34.120/29` + les 3 nœuds | `37.61.243.246` (WAN pfSense) |
 | Documentation | fichiers [01](01-architecture.md) à [11](11-headscale.md) + [15](15-pacs-secours.md), [16](16-keycloak.md) | [13-tellis.md](13-tellis.md) |
 
@@ -45,41 +45,43 @@ OVH de Roubaix**, qui reçoit les sauvegardes du cluster
                          utilisateurs (radiologues, sites)
                             │                    │
               https://syngo-via.*   (b) tailnet headscale 100.72.0.0/16
-                            │            passerelles DICOM des sites
-   aujourd'hui : DNS → ─────┤                    ┆ (à venir)
+                            │            gw-qum (site), postes admin,
+   aujourd'hui : DNS → ─────┤            hyperviseurs pve1/2/3 (tag:pve)
    37.61.243.246 direct     │                    ┆
    cible : DNS → ───────┐   │                    ┆
-   57.130.34.122        │   │                    ┆
-┌─── DC OVH (GRA4) ─────▼───┼────┐   ┌─── DC TELLIS ──┼──────────────────┐
-│                           │    │   │                ┆                  │
-│  proxy-tim (CT 201)       │    │   │  pfSense ══════╪═ WAN 37.61.243.246
-│    .122 · relais TLS ─────┼────┼───┼──► NAT 443 → TSplus .102          │
-│  OPNsense (VM 100)        │    │   │       │                           │
-│    .121 · wg2 ════════════╪════╪═══╪══ tun_wg2 (UDP 51822)             │
-│  headscale (CT 202) ·.123 ┆    │   │                                   │
-│  PBS (VM 102) → NAS Roubaix    │   │  192.168.101.48/28  imagerie      │
-│  futur PACS ·············┆     │   │  192.168.101.96/28  Syngo Via     │
+   57.130.34.122        │   │   ┌┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┘
+┌─── DC OVH (GRA4) ─────▼───┼───┼┐   ┌─── DC TELLIS ─────────────────────┐
+│                           │   ┆│   │                                   │
+│  proxy-tim (CT 201)       │   ┆│   │  pfSense ═══════ WAN 37.61.243.246
+│    .122 · relais TLS ─────┼───┼┼───┼──► NAT 443 → TSplus .102          │
+│  OPNsense (VM 100)        │   ┆│   │       │                           │
+│    .121 · wg2 ════════════╪═══╪╪═══╪══ tun_wg2 (UDP 51822)             │
+│  headscale (CT 202) ·.123 ┆┄┄┄┘│   │                                   │
+│  pve1/2/3 · tag:pve ······┆    │   │  192.168.101.48/28  imagerie      │
+│  PBS (VM 102) → NAS Roubaix    │   │  192.168.101.96/28  Syngo Via     │
 │                                │   │  192.168.111.0/24   RIS VENUS     │
 └────────────────────────────────┘   └───────────────────────────────────┘
         (a) chemin public : TLS relayé ou direct, selon l'état du DNS
         ═══  tunnel WireGuard wg2 (site-à-site)
-        ┆┆┆  tailnet headscale — à venir
+        ┆┆┆  tailnet headscale — en service depuis le 15/08/2026
 ```
 
 Trois liens distincts entre les deux mondes :
 
-- **(a) le chemin public** — `syngo-via.*` en TLS sur le 443. Aujourd'hui le
-  DNS pointe **directement** sur `37.61.243.246` ; après la bascule DNS il
-  passera par `57.130.34.122` (relais TLS de `proxy-tim`,
-  [09-proxy-tim.md](09-proxy-tim.md)) ;
+- **(a) le chemin public** — `syngo-via.*` en TLS sur le 443. Le DNS pointe
+  **directement** sur `37.61.243.246` ; le relais TLS de `proxy-tim`
+  (`57.130.34.122`) est prêt et vérifié, la bascule est une décision non prise
+  ([09-proxy-tim.md](09-proxy-tim.md)) ;
 - **le tunnel `wg2`** — site-à-site WireGuard entre OPNsense et le pfSense
   TELLIS, pour l'administration et les flux privés
   ([08-opnsense.md](08-opnsense.md#site-à-site--wg2-udp-51822)) ;
 - **(b) le tailnet headscale** — plan de contrôle VPN des passerelles DICOM des
-  sites d'acquisition vers le futur PACS ([11-headscale.md](11-headscale.md)).
-  Premiers nœuds de production enrôlés le 25/08/2026 : le téléphone et le
-  poste admin (user `admin`) et la passerelle `gw-qum` (direct vérifié,
-  32 ms) ; le pointillé reste côté flux : le PACS n'existe pas encore.
+  sites d'acquisition ([11-headscale.md](11-headscale.md)), en service depuis
+  le 15/08/2026. Enrôlés : le téléphone et le poste admin (user `admin`), la
+  passerelle `gw-qum` (25/08/2026, direct vérifié, 32 ms) et les trois
+  hyperviseurs (`tag:pve`, seconde porte d'administration, 31/08/2026). Aucun
+  serveur hébergé sur le cluster n'y est enrôlé : `tag:pacs` est déclaré dans
+  l'ACL sans qu'aucun nœud le porte.
 
 ---
 
@@ -92,16 +94,15 @@ Trois liens distincts entre les deux mondes :
 | Défis ACME du certificat TSplus | Internet | `57.130.34.122` → relais → `37.61.243.246` | TCP `80` | public, via `proxy-tim` | ✅ testé le 24/08/2026 |
 | Transport du tunnel site-à-site | `57.130.34.121` | `37.61.243.246` | UDP `51822` | public (WireGuard) | ✅ monté le 14/08/2026 |
 | Admin / nomades → Vue PACS | `10.40.0.0/24`, `10.90.0.0/24` | `192.168.101.52` | — | dans `wg2` | ✅ testé le 14/08/2026 |
-| Admin → autres machines TELLIS | idem | `192.168.101.x`, `192.168.111.x` | — | dans `wg2` | ⚠️ routes retour posées sur `.52` seulement ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) ; le poste d'admin, lui, arrive par le VPN nomades du pfSense (`172.31.0.3`, hors `wg2`) — vérifié le 04/09/2026 ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)) |
-| TELLIS → nos VM | `192.168.101.x`, `192.168.111.x` | `10.40.0.0/24` | — | dans `wg2` | ⚠️ jamais testé dans ce sens ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
+| Admin → autres machines TELLIS | idem | `192.168.101.x`, `192.168.111.x` | — | dans `wg2` | ✅ tranché le 05/09/2026 : `10.40.0.0/24` ↔ `192.168.111.x` fonctionne dans les deux sens ; seuls les serveurs derrière le second pfSense `.62` (bloc production) ont besoin d'une route retour explicite, posée sur `.52` ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) ; le poste d'admin, lui, arrive par le VPN nomades du pfSense (`172.31.0.3`, hors `wg2`) — vérifié le 04/09/2026 ([13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)) |
+| TELLIS → nos VM | `192.168.101.x`, `192.168.111.x` | `10.40.0.0/24` | — | dans `wg2` | ✅ testé le 25/08/2026 (prod01 → pacs03, 17–23 ms, après ajout d'une règle `pass` sur `OPT1_TIM` — [13-tellis.md](13-tellis.md#règles-posées-sur-opt1_tim-le-25082026-sens-tellis--dc-ovh)) ; agents VENUS → CT 204 le 05/09/2026 |
 | **Sites → SFTP du RIS VENUS** | 6+ IP publiques (les sites) | `192.168.111.64:2222` | TCP `2222` | ⚠️ **entrée Internet, chemin de publication inconnu** | ✅ **actif et mesuré le 04/09/2026** (7 sites déposent quotidiennement) ; ⚠️ pas de réponse depuis un VPS externe sur les 3 IP publiques connues → NAT filtré par source ou autre adresse, à faire préciser ([13-tellis.md](13-tellis.md#tim-venus2-if-64--interfaces-sftp-des-sites-inventorié-le-04092026)) |
 | VENUS app/interfaces → base RIS | `192.168.111.63`, `.64` | `192.168.111.65:3306` | TCP `3306` | LAN VENUS | ✅ constaté le 04/09/2026 (base `isotim`) |
 | Sites + PACS Xplore → **ProxyVia** | `172.18.162.40:11112`, `10.0.241.54:104` | `192.168.101.103` (`DP_EC:9104`) | DICOM | bloc imagerie / syngo | ✅ inventorié le 09/09/2026 ([13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026](13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026)) |
 | **ProxyVia → Syngo Via** | `192.168.101.103` | `.98`, `.100` (`:104`) | DICOM | répartition **round-robin**, repli croisé, mapping par PatientID | ✅ tranché le 09/09/2026 |
 | **ProxyVia → PACS amont** | `192.168.101.103` | `192.168.101.52:2104` (TIMWFMCORE) | DICOM (store, Q/R) | `MoveDestination` réécrites | ✅ constaté le 09/09/2026 |
-| Passerelles DICOM des sites → futur PACS | sites d'acquisition | futur PACS (DC OVH) | DICOM `104`, `11112` | tailnet (`tag:gateway` → `tag:pacs`) | 📋 à venir ([11-headscale.md](11-headscale.md)) |
 | `proxy-tim` → backend PACS de secours | `10.40.0.10` | `10.40.0.40` (pacs03, GRA3) | TCP `80` | vRack VLAN 400, inter-DC GRA4↔GRA3 | ✅ basculé le 25/08/2026, 0,25 ms ([15-pacs-secours.md](15-pacs-secours.md)) — avant : HTTP clair vers `188.165.77.137` par Internet |
-| Réplication TELLIS → pacs03 | site TELLIS | `172.32.0.2` (pacs03) | WireGuard | tunnel direct `tun_wg1`, hors `wg2` | ✅ en production ; suppression à terme ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
+| Réplication TELLIS → pacs03 | site TELLIS | `172.32.0.2` (pacs03) | WireGuard | tunnel direct `tun_wg1`, hors `wg2` | ✅ en production — doit perdurer, décision du 25/08/2026 ([06-reste-a-faire.md](06-reste-a-faire.md#8-vpn-site-à-site--points-ouverts)) |
 
 ---
 

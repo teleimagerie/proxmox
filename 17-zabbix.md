@@ -29,7 +29,7 @@ noté dans [14-noms-de-domaine.md](14-noms-de-domaine.md)). L'incident du
 28/08/2026 (ci-dessous) a démontré le risque : **32 h de supervision aveugle
 sans que personne ne soit prévenu** — le monitoring ne se surveille pas
 lui-même. La migration le fait entrer dans le périmètre HA + PBS, et répond au
-point ouvert de [06-reste-a-faire.md §4](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe)
+point ouvert de [06-reste-a-faire.md §4](06-reste-a-faire.md#4-supervision---traité-le-29082026)
 (« mutualiser plutôt que construire un deuxième monitoring ? »).
 
 ---
@@ -339,7 +339,7 @@ ha-manager status | grep 204   # (après ajout HA)
 
 ## Supervision du cluster — depuis le 29/08/2026
 
-Le point 3 de [06 §4](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe) est traité : Zabbix
+Le point 3 de [06 §4](06-reste-a-faire.md#4-supervision---traité-le-29082026) est traité : Zabbix
 supervise le cluster qui l'héberge, par **l'API PVE en HTTPS**, avec un token
 **lecture seule** :
 
@@ -538,14 +538,6 @@ re-teste en continu, est le canal principal et le mail le filet.
   entrant arrive par la même VIP — une panne d'OPNsense (~2 min de bascule
   HA) aveugle la supervision, exactement la fenêtre du test 6
   ([08-opnsense.md](08-opnsense.md#points-dattention)).
-- **Le monitoring ne se surveille toujours pas lui-même** : l'incident du 28/08
-  le prouve. Une sonde externe minimale sur `https://zabbix.teleimagerie.net/`
-  (Uptime robot ou équivalent) reste à mettre en place —
-  [06-reste-a-faire.md §4](06-reste-a-faire.md#4-supervision---traité-le-29082026-reste-la-sonde-externe).
-- **Il ne supervise pas non plus le cluster** : depuis le VLAN 400, les
-  hyperviseurs sont inaccessibles par construction (blocages OPNsense +
-  `cluster.fw`). L'étendre au cluster = patron PBS (2ᵉ carte VLAN 300), une
-  décision de sécurité à part entière — point ouvert de 06 §4.
 - **Items « self » via lxcfs** : l'agent local du CT voit des valeurs
   conteneur (CPU/mémoire), pas machine. Sans effet sur les hôtes distants.
 - **Locale `fr_FR` absente du template Debian** (le VPS Ubuntu l'avait) :

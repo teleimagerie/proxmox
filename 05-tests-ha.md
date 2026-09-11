@@ -168,7 +168,7 @@ Trois choses apprises :
 
 Au passage, confirmation du comportement connu : l'adresse temporaire
 `10.40.0.2` de pve1 (VLAN 400) a disparu au reboot et a été reposée à la main
-([06 §7](06-reste-a-faire.md#7-divers)).
+([08-opnsense.md](08-opnsense.md#accès-dadministration)).
 
 > ⚠️ **Queue d'instabilité observée après le retour** : pendant ~4 min
 > (10:58 → 11:02 UTC), des timeouts **intermittents** sur le chemin public
@@ -263,7 +263,7 @@ entre chaque phase.
   pve2, ct:202/ct:203/vm:102 sur pve1 — chaque nœud porte quelque chose.
 - Mêmes queues d'instabilité brèves (~10-35 s) que le test 5 dans les minutes
   suivant chaque retour.
-- `10.40.0.2` de pve1 à nouveau perdue puis reposée ([06 §7](06-reste-a-faire.md#7-divers)).
+- `10.40.0.2` de pve1 à nouveau perdue puis reposée ([08-opnsense.md](08-opnsense.md#accès-dadministration)).
 
 ## Synthèse
 
@@ -279,8 +279,7 @@ entre chaque phase.
 
 La dernière ligne est la limite structurelle d'un cluster à 3 nœuds : deux pertes
 simultanées font tomber le quorum Corosync **et** violent `min_size=2`. Le
-stockage se met en lecture seule et les VM gèlent. Seul un 4ᵉ nœud, ou un QDevice
-sur un site tiers, changerait cela.
+stockage se met en lecture seule et les VM gèlent.
 
 ## Rejouer les tests
 

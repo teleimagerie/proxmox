@@ -180,7 +180,6 @@ l'interface web, faire précéder cette commande d'un
 Déployé le 14/08/2026. **L'OPNsense est client**, le pfSense du **DC TELLIS**
 ([13-tellis.md](13-tellis.md)) est serveur : c'est lui qui détient l'adressage
 du tunnel et qui a alloué `172.33.0.7/32`.
-L'adressage `10.91.0.0/30` un temps envisagé n'a jamais été utilisé.
 
 | | |
 |---|---|
@@ -220,7 +219,9 @@ ajouter** ; seul le bloc production (passerelle `.62`, second pfSense) est
 concerné. Et le poste d'admin n'emprunte pas `wg2` pour joindre TELLIS : il est
 pair du VPN nomades du pfSense (`172.31.0.3`), voir
 [13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site) — ce paragraphe ne vaut que pour
-nos VM en `10.40.0.0/24`, jamais testées vers `192.168.111.x`.
+nos VM en `10.40.0.0/24`. Vérifié le 05/09/2026 vers `192.168.111.x` : le CT 204
+joint les trois VENUS et leurs agents reviennent vers `10.40.0.60`
+([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)).
 
 Ajouter `172.33.0.0/24` à ces routes n'est pas nécessaire au service, mais
 conserve un point de mesure : si `172.33.0.7` joint un serveur alors que
@@ -413,9 +414,6 @@ mais elles vivent sur la VM — inutiles si la VM est perdue.
 **OPNsense est un point de défaillance unique pour l'accès Internet des VM.**
 Sur panne du nœud porteur, la HA la relance ailleurs en ~2 min. Les VM continuent
 de tourner, elles perdent seulement le réseau ; Ceph n'est pas affecté.
-
-La paire CARP reste possible : le WAN étant dans le vRack, on échappe à la
-limitation d'OVH qui interdit CARP sur le réseau public de ses serveurs dédiés.
 
 **Une carte réseau sans `tag` sur `vmbr1` est raccordée au bloc public.** Toute VM
 de production doit porter `tag=400`. La carte WAN d'OPNsense est la seule carte

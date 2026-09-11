@@ -93,8 +93,8 @@ structure, au-delà d'OPNsense.
 Sur le VLAN 400, les machines sont allouées par dizaines : `.1` passerelle
 (OPNsense), `.10` proxy-tim (CT 201), `.20` PBS (VM 102, sortie APT), `.30`
 headscale (CT 202), `.40` pacs03 (PACS de secours, bare-metal Windows GRA3
-raccordé au vRack — [15-pacs-secours.md](15-pacs-secours.md)), `.60` zabbix
-(CT 204). **Exception aux dizaines : `.2`, `.3` et `.4` sont les pattes
+raccordé au vRack — [15-pacs-secours.md](15-pacs-secours.md)), `.50` keycloak
+(CT 203), `.60` zabbix (CT 204), `.70` odoo (VM 101). **Exception aux dizaines : `.2`, `.3` et `.4` sont les pattes
 d'administration des hyperviseurs** pve1, pve2 et pve3 — posées le 27/08/2026
 pour pve1 puis étendues aux trois le 31/08/2026, pour permettre
 l'administration par VPN sans passer par Internet
@@ -110,8 +110,9 @@ dans le tailnet **en mode noyau** — le client y installe une route
 `100.64.0.0/10` consultée avant la table principale, qui écraserait la
 passerelle par défaut et couperait le nœud d'Internet. Un enrôlement en mode
 `--tun=userspace-networking` (aucune interface, aucune route posée) échappe à
-cette objection : c'est la voie envisagée pour la seconde porte
-d'administration ([06-reste-a-faire.md](06-reste-a-faire.md)).
+cette objection : c'est ainsi que les trois nœuds sont enrôlés depuis le
+31/08/2026, seconde porte d'administration
+([11-headscale.md](11-headscale.md#les-hyperviseurs--seconde-porte-dadministration-31082026)).
 
 > ⚠️ **Une carte sans `tag` sur `vmbr1` est raccordée au bloc public OVH.** Toute
 > VM de production doit porter `tag=400`. Oublier le tag expose la machine
@@ -187,7 +188,7 @@ ne sait pas voir l'espace non alloué.
 > **Le swap n'est pas redondé** : `p4` est une partition indépendante sur chaque
 > disque, hors RAID. La perte d'un NVMe fait donc disparaître la moitié du swap
 > et peut provoquer des OOM. C'est le défaut du template OVH. Avec 64 Go de RAM
-> et Ceph, le risque est faible mais réel — voir [06-reste-a-faire.md](06-reste-a-faire.md).
+> et Ceph, le risque est faible mais réel.
 
 ## Stockage NAS-HA
 
@@ -281,5 +282,4 @@ emplacement pour recréer la troisième réplique.
 - Le mot **`active`** est ce qui compte : les I/O ne sont pas bloquées
 - La resynchronisation se fait seule au retour du nœud (< 1 min mesurée à vide)
 
-C'est le comportement attendu de cette topologie, pas une avarie. Un 4ᵉ nœud
-permettrait l'auto-guérison.
+C'est le comportement attendu de cette topologie, pas une avarie.

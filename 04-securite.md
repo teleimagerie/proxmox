@@ -228,9 +228,9 @@ publique. Ils ne sont plus joignables depuis Internet.
 
 > Depuis le 13/08/2026, les montages du NAS-HA sont en **NFSv4.2**, qui n'utilise
 > ni `rpcbind` ni `statd` et n'ouvre aucun canal de rappel du serveur vers le
-> client. `rpcbind` n'a donc plus d'utilité ici : sa désactivation est un
-> durcissement candidat. Aucune règle de firewall n'a eu à être ajoutée pour le
-> NAS — le trafic est sortant et le filtrage Proxmox est à état.
+> client. `rpcbind` n'a donc plus d'utilité ici. Aucune règle de firewall n'a eu
+> à être ajoutée pour le NAS — le trafic est sortant et le filtrage Proxmox est
+> à état.
 
 **La VM PBS a son propre firewall** (`/etc/pve/firewall/102.fw`) : `policy_in:
 DROP`, entrée limitée à l'ipset `cluster`. Sa seconde carte, sur le LAN des VM

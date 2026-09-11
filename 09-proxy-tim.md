@@ -121,12 +121,7 @@ Ce que le proxy est **configuré** pour servir. Depuis la bascule du
 > non vérifié). Les deux chantiers desservent donc le même site, par deux
 > chemins indépendants : ce relais sort sur l'Internet public, le tunnel passe
 > par WireGuard — vue d'ensemble dans
-> [12-architecture-hds.md](12-architecture-hds.md#flux-inter-datacenters). Le relais
-> pourrait emprunter le tunnel et viser une adresse privée du site — le trafic
-> serait chiffré de bout en bout et cesserait de dépendre de l'exposition du
-> port 443 côté distant. **Non fait, et non trivial** : cela déplace une
-> dépendance de production sur un lien monté la veille, dont le comportement en
-> bascule HA n'a pas encore été mesuré.
+> [12-architecture-hds.md](12-architecture-hds.md#flux-inter-datacenters).
 
 ---
 
