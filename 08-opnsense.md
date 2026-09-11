@@ -212,14 +212,17 @@ du pfSense sur son propre réseau — `192.168.101.59`, `192.168.101.110` ou
 pare-feu local. Les équipements réseau dont la route par défaut pointe déjà sur
 le pfSense fonctionnent sans rien ajouter. La liste des machines concernées est
 l'inventaire de [13-tellis.md](13-tellis.md#inventaire-par-bloc-fonctionnel) —
-seule `192.168.101.52` a reçu ce traitement à ce jour. Constat du 04/09/2026 :
+`192.168.101.52` et `.53` l'ont reçu (la seconde le 11/09/2026). Constat du 04/09/2026 :
 les serveurs VENUS ont pour passerelle par défaut `192.168.111.254` et ceux du
 bloc Syngo `.110` — le pfSense principal dans les deux cas, donc **rien à
 ajouter** ; seul le bloc production (passerelle `.62`, second pfSense) est
-concerné. Et le poste d'admin n'emprunte pas `wg2` pour joindre TELLIS : il est
-pair du VPN nomades du pfSense (`172.31.0.3`), voir
-[13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site) — ce paragraphe ne vaut que pour
-nos VM en `10.40.0.0/24`. Vérifié le 05/09/2026 vers `192.168.111.x` : le CT 204
+concerné. Le poste d'admin, lui, n'emprunte pas `wg2` pour joindre TELLIS : il
+est pair du VPN nomades du pfSense (`172.31.0.3`, voir
+[13-tellis.md](13-tellis.md#tun_wg0--vpn-nomades-du-site)) — et **la règle vaut
+aussi pour lui** : sans route retour `172.31.0.0/24`, les serveurs du bloc
+production lui ouvraient le port puis se taisaient, jusqu'à la pose de la route
+le 11/09/2026 ([13-tellis.md](13-tellis.md#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données)). Vérifié le 05/09/2026 vers
+`192.168.111.x` : le CT 204
 joint les trois VENUS et leurs agents reviennent vers `10.40.0.60`
 ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)).
 

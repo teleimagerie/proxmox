@@ -8,8 +8,9 @@ relais TLS `syngo-via.*` ([09-proxy-tim.md](09-proxy-tim.md)).
 
 L'inventaire ci-dessous a été **déclaré le 25/08/2026** par le responsable
 infrastructure, puis contrôlé sur machine au fil des relevés : TIMWFMCORE
-(29-30/08), les deux syngo.via et TSplus (02/09), les trois VENUS (04/09) et
-ProxyVia (09/09). Le reste (pfSense, `prod01`, équipements) est encore
+(29-30/08), les deux syngo.via et TSplus (02/09), les trois VENUS (04/09),
+ProxyVia (09/09) et Vue Motion (11/09). Le reste (pfSense, `prod01`,
+équipements) est encore
 déclaratif. Chaque information porte donc son statut :
 
 > ✅ vérifié/mesuré · 📋 déclaré (source : responsable infra, non contrôlé sur
@@ -69,8 +70,8 @@ lecture.
 
 | IP | Machine | Rôle | Éditeur | Statut |
 |---|---|---|---|---|
-| `192.168.101.52` | Vue PACS — **`TIMWFMCORE`** | **PACS principal de TIM** : archivage et distribution des examens, tout l'applicatif + base Oracle 19 locale ; alias pfSense `SRV_TIM_WFMCORE` | Philips | ✅ joignabilité `wg2` testée (14/08) ; ✅ **inventorié le 29/08/2026** (voir ci-dessous) |
-| `192.168.101.53` | Vue Motion | visualiseur web « zéro empreinte » de la gamme Vue : consultation des images depuis un simple navigateur, sans client lourd | Philips | 📋 |
+| `192.168.101.52` | Vue PACS — **`TIMWFMCORE`** | **PACS principal de TIM** : archivage et distribution des examens, tout l'applicatif + base Oracle 19 locale ; alias pfSense `SRV_TIM_WFMCORE` | Philips | ✅ joignabilité `wg2` testée (14/08) ; ✅ **inventorié le 29/08/2026** (voir ci-dessous) ; ✅ route retour `172.31.0.0/24` posée le 11/09/2026 — RDP et SSH directs depuis le poste |
+| `192.168.101.53` | Vue Motion — **`TIMVUEEXPLORER`** | visualiseur web « zéro empreinte » de la gamme Vue : consultation des images depuis un simple navigateur, sans client lourd ; **Vue Motion + Vue Explorer 12.2.8**, frontal web qui lit les images sur TIMWFMCORE | Philips | ✅ **inventorié le 11/09/2026** (voir ci-dessous) ; ✅ route retour `172.31.0.0/24` posée le 11/09/2026 ([diagnostic](#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données)) ; ✅ SSH par clé le 11/09 |
 | `192.168.101.57` | Passerelle firewall SRSA | boîtier pare-feu de la télémaintenance Philips : canal d'accès distant de l'éditeur vers ses équipements | Philips | 📋 ; signification exacte du sigle et flux ⚠️ |
 
 Le routeur `192.168.101.60` (bloc réseau ci-dessus) fait partie de cet
@@ -140,15 +141,17 @@ tâches `wfm_*`/`fir_*` très nombreux — l'applicatif s'auto-surveille.
 
 OpenSSH serveur activé sur TIMWFMCORE, clé `id_ed25519` du poste d'admin dans
 `C:\ProgramData\ssh\administrators_authorized_keys` (compte **`Administrator`**),
-`PasswordAuthentication no`. **Chemin obligatoire : rebond par pacs03** —
-l'alias `ssh timwfmcore` du `~/.ssh/config` le fait (`ProxyJump pacs03`). La
-connexion directe poste→`192.168.101.52` par le VPN nomade **échoue à l'échange
-de bannière** (trou noir MTU sur le chemin `wg0`→OPNsense→`wg2`) alors que le
-port TCP s'ouvre : passer par pacs03, dont le tunnel direct TELLIS arrive en
-`172.32.0.2`, contourne le problème. ⚠️ Le chemin « direct » décrit ici est en
-réalité le `tun_wg0` du pfSense (poste = `172.31.0.3`), pas `wg0`→OPNsense→`wg2`
-— constat du 04/09/2026, voir [`tun_wg0`](#tun_wg0--vpn-nomades-du-site) : le diagnostic
-MTU reste à refaire sur le bon chemin.
+`PasswordAuthentication no`. Alias `ssh timwfmcore` du `~/.ssh/config`, en
+direct ; le rebond par pacs03 a été **obligatoire du 30/08 au 11/09/2026** et
+survit comme chemin de secours sous l'alias `timwfmcore-via-pacs03`. La
+connexion directe poste→`192.168.101.52` par
+le VPN nomade (`tun_wg0` du pfSense, poste = `172.31.0.3`) échouait à l'échange
+de bannière alors que le port TCP s'ouvrait ; la fiche a d'abord attribué
+l'échec à un trou noir MTU, ce qui était faux — la cause était une **route
+retour manquante pour la plage des nomades `172.31.0.0/24`**, posée le
+11/09/2026 (voir [le diagnostic](#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données)). Depuis, la bannière arrive en direct
+(`SSH-2.0-OpenSSH_for_Windows_7.7`) ; le rebond reste un chemin de secours
+valable, pacs03 ayant sa propre route retour (`172.32.0.0/24`).
 
 > **Pare-feu Windows : laissé désactivé, volontairement.** Contrairement à
 > pacs03 (nu sur Internet), TIMWFMCORE est un serveur **de production interne
@@ -157,6 +160,65 @@ MTU reste à refaire sur le bon chemin.
 > pare-feu local ici sans cartographie complète couperait la production. C'est
 > une décision à prendre **avec l'exploitant du DC**, pas un oubli — le point
 > reste ouvert dans la [checklist](#checklist-de-collecte).
+
+#### `TIMVUEEXPLORER` (`.53`) — Vue Motion, le visualiseur web, inventorié le 11/09/2026
+
+Relevé : [`configs/inventaire-timvueexplorer-2026-09-11.md`](configs/inventaire-timvueexplorer-2026-09-11.md)
+(par SSH avec droits admin, script copié, exécuté puis supprimé — rien laissé
+sur la machine ; voir [Accès SSH](#accès-ssh-11092026) plus bas).
+
+**Ce que c'est** : le **frontal web** de la pile Vue — la même base logicielle
+que TIMWFMCORE (Carestream/Algotec « Imaginet », `System5`, **Vue PACS/VNA
+12.2.8.100**), mais dans le rôle **Vue Motion + Vue Explorer** (dossiers de
+sauvegarde `VueMotion_12.2.8.100_20230609` et `VueExplorer_12.2.8.100_20230609`,
+configuration système mise à jour le 07/11/2024). Ni Oracle, ni Loader DICOM, ni
+AutoRouter : ce n'est **pas une archive**, c'est un serveur de rendu et un
+portail qui **lit les images sur TIMWFMCORE `.52:2104`** — connexions permanentes
+constatées, ce qui tranche le flux « présumé » de la
+[matrice](#matrice-des-flux-internes-à-documenter).
+
+| | |
+|---|---|
+| Machine | **VM QEMU/KVM** (i440FX, VirtIO disque et réseau, guest agent, balloon, agent Spice) — 4 vCPU « Common KVM processor », **16 Go**, 1 disque de 300 Go ; MAC `26:F6:24:…` administrée localement (pas le préfixe Proxmox `BC:24:11`), l'hyperviseur reste ⚠️ présumé être le Proxmox du site |
+| OS | Windows Server 2019 **Datacenter** 1809, installé le **27/02/2023** (même jour que TIMWFMCORE), workgroup, licence Retail active ; dernier redémarrage le 29/05/2026 (jour des derniers correctifs), uptime 104 j |
+| Réseau | `192.168.101.53/28`, passerelle `.62`, DNS `.62` + `8.8.8.8` ; **une seule route retour**, `172.31.0.0/24` via `.59` (11/09/2026) — rien vers `10.40.0.0/24` ni `10.90.0.0/24`, donc **le CT 204 Zabbix ne le joint pas** et un agent actif n'en sortirait pas non plus |
+| Stockage | C: 249,5 Go SYSTEM (186 Go libres) · D: 50 Go SERVICE (30,7 Go libres) : `PortalCachedFiles` et le certificat `timvueexplorer.pfx` du 09/12/2025 |
+| Applicatif | IIS site **`PACS`** sur **80/443** (portail web : .NET Core 2.2 Hosting, ARR 3.0, URL Rewrite, UrlScan, Web Deploy, AppFabric 1.1) ; **MVSMAIN** en trois instances : serveur `2104`, sécurisé `22104`, LightViewer `29032` ; DataGrid (Filebeat, Metricbeat, Ignite) ; SessionManager `25817` local ; 8888 et 5357 en écoute ; Perl 5.16, Python 3.6 et JDK 8 pour les scripts Carestream ; 10 tâches planifiées Carestream (`syscheck`, rotation des journaux, snapshot, nettoyage DICOM `NDF`, `FilesCleaner`, `zip_and_clean`), **toutes en succès le 11/09** |
+| Sauvegarde | tâche `backup_files` à 02:00 = **versions des fichiers de configuration locaux seulement** (`System5\Backup\Files`, « no candidates » le 11/09) ; pas de données propres à sauvegarder (cache de rendu), la configuration Vue est réinstallable ; copie de la VM hors machine par TELLIS ⚠️ inconnue |
+| Correctifs | **posés le 29/05/2026** (KB5082118, KB5082123, KB5087066), lot précédent du 30/10/2024 — plus à jour que TIMWFMCORE (figé depuis mars 2025) ; **Defender actif** en temps réel, signatures du 10/09/2026 |
+| Accès distants | **AnyDesk service actif, à l'écoute sur `0.0.0.0:7070`** ; TeamViewer 15.47 installé, service arrêté ; RDP, SMB (partage `temp`), WinRM 5985 ouverts — mêmes canaux tiers que sur le PACS |
+| Comptes | 9 comptes locaux (6 actifs) ; **4 administrateurs** : `Administrator` (dernière session 22/10/2024), `philipsadm` (compte de l'éditeur, sert aux interventions), `xadministrator` (dernière session 18/08/2026 à 01:58), `mcapon` (créé le 11/09/2026 pour l'accès SSH) ; `PortalAppPoolUser` et `SysCFGAppPoolUser` portent les pools IIS |
+
+**Pare-feu Windows : sans effet.** Le profil *Domain* est actif, mais la carte
+est classée *Private* et ce profil est **désactivé** (comme *Public*) : aucune
+règle n'est appliquée, exactement la situation de VENUS2/VENUS3. Le filtrage
+repose entièrement sur les deux pfSense. Même décision à prendre avec
+l'exploitant que pour TIMWFMCORE — mais ici la cartographie est simple
+(80/443 entrants, `.52:2104` sortant), ce qui rend un pare-feu local envisageable.
+
+##### Accès SSH (11/09/2026)
+
+OpenSSH serveur **9.5p2** (capacité Windows native) installé le 11/09/2026 par
+[scripts/installer-openssh-windows.ps1](scripts/installer-openssh-windows.ps1)
+lancé depuis le compte `philipsadm` : clé `id_ed25519` du poste dans
+`administrators_authorized_keys` (ACL SYSTEM + Administrateurs vérifiée),
+`PasswordAuthentication no` **vérifié** (`Permission denied (publickey)` sans clé).
+Alias `ssh vuemotion` (ou `timvueexplorer`) du `~/.ssh/config`, compte
+**`mcapon`**, **en direct depuis le poste** (`172.31.0.3`, sans rebond par
+pacs03) grâce à la route retour posée le même jour. L'étape 5 du script (règle
+pare-feu `ssh-in`) a échoué sur la première exécution — liste d'adresses passée
+par `-File`, piège n° 40, corrigé dans le script — si bien que la règle
+d'installation `OpenSSH-Server-In-TCP` (portée *Any*) est restée en place ;
+sans conséquence tant que le profil pare-feu est désactivé, à remplacer par
+`ssh-in` restreinte à `172.31.0.3` pour rester cohérent avec les autres serveurs
+([checklist](#checklist-de-collecte)).
+
+> ⚠️ **Points de vigilance** : pare-feu Windows sans effet (profil *Private*
+> désactivé) ; AnyDesk exposé sur le LAN (7070) ; aucune route vers nos réseaux
+> `10.40.0.0/24`/`10.90.0.0/24`, à poser avant tout raccordement à Zabbix ;
+> DNS public `8.8.8.8` en secours ; certificat `timvueexplorer.pfx` de décembre
+> 2025 dont l'échéance et le nom servi restent à rapprocher de
+> [14-noms-de-domaine.md](14-noms-de-domaine.md).
 
 ### Analyse IA des images
 
@@ -319,15 +381,16 @@ OpenSSH serveur (10.0) **installé le 02/09/2026** sur les trois machines, clé
 **`remoteadmin`** sur les deux syngo.via et **`matthieu`** sur TSplus, shell
 `cmd.exe`, PowerShell 5.1 (en *ConstrainedLanguage* sur les syngo). Alias
 `syngovia1`, `syngovia2` et `tsplus` dans le `~/.ssh/config` du poste.
-**Contrairement à TIMWFMCORE, la connexion directe poste → serveur par le VPN
-nomade fonctionne, sans rebond par pacs03** : scp et sessions longues passent.
-La différence tient vraisemblablement au chemin retour — ces trois serveurs
-sortent par le pfSense principal (`.110`), TIMWFMCORE par le second pfSense
-(`.62`) — ⚠️ hypothèse, non vérifiée. Précision du 04/09/2026 : ce « VPN
-nomade » est le **`tun_wg0` du pfSense** (le poste y est le pair `172.31.0.3`,
-adresse vue par `netstat` sur les deux serveurs), pas le VPN nomade OPNsense —
-voir [`tun_wg0`](#tun_wg0--vpn-nomades-du-site) ; l'hypothèse MTU de TIMWFMCORE est à
-relire dans ce cadre.
+**La connexion directe poste → serveur par le VPN nomade fonctionne ici sans
+rebond par pacs03** : scp et sessions longues passent. La différence avec
+TIMWFMCORE (jusqu'au 11/09/2026) tenait bien au chemin retour — ces trois
+serveurs répondent au pfSense principal (`.110`), TIMWFMCORE au second pfSense
+(`.62`), qui ne relaie pas les données d'une connexion dont il n'a pas vu
+l'aller ; hypothèse du 02/09, **vérifiée le 11/09/2026**
+([diagnostic](#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données)). Précision du 04/09/2026 : ce « VPN nomade » est le
+**`tun_wg0` du pfSense** (le poste y est le pair `172.31.0.3`, adresse vue par
+`netstat` sur les deux serveurs), pas le VPN nomade OPNsense — voir
+[`tun_wg0`](#tun_wg0--vpn-nomades-du-site).
 
 Le script d'inventaire est copié, exécuté puis supprimé : **rien n'est laissé
 sur les serveurs** (mode d'emploi en tête de
@@ -529,11 +592,15 @@ Ce qui est établi :
   mise en place du tunnel ;
 - il porte des **routes statiques** vers `10.40.0.0/24` et `10.90.0.0/24` via le
   tunnel `wg2` ;
-- les **routes retour explicites** n'ont été posées que sur `192.168.101.52`,
-  et seuls les serveurs dont la passerelle est le second pfSense `.62` (bloc
-  production) en ont besoin : VENUS (`.254`) et Syngo (`.110`) répondent déjà
-  au pfSense principal — vérifié dans les deux sens le 05/09/2026
-  ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)) ;
+- les **routes retour explicites** ne concernent que les serveurs dont la
+  passerelle est le second pfSense `.62` (bloc production) : VENUS (`.254`) et
+  Syngo (`.110`) répondent déjà au pfSense principal — vérifié dans les deux
+  sens le 05/09/2026
+  ([17-zabbix.md](17-zabbix.md#serveurs-ris-venus-de-tellis--agent-actif-05092026)).
+  Elles existent sur `192.168.101.52` (`10.40.0.0/24`, `10.90.0.0/24`,
+  `172.32.0.0/24` et, depuis le 11/09/2026, `172.31.0.0/24`) et sur
+  `192.168.101.53` (`172.31.0.0/24` seulement, 11/09/2026) — voir
+  [le diagnostic](#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données) ;
 - constaté le 25/08/2026 sur `prod01` : la passerelle par défaut des serveurs
   du bloc production est **le second pfSense `.62`** (via DHCP), pas le `.59` —
   d'où la nécessité des routes retour explicites ;
@@ -566,6 +633,53 @@ Ce qui est inconnu ⚠️ : les règles de filtrage internes et le NAT du second
 pfSense `.62` — on sait désormais (25 et 29/08/2026) qu'il est **passerelle par
 défaut + DHCP + DNS du bloc production**, mais pas ce qu'il filtre ; et qui
 route réellement entre les trois sous-réseaux (lui seul ? le routeur `.60` ?).
+
+### Diagnostic du 11/09/2026 — le retour par le second pfSense coupe les données
+
+**Symptôme.** Depuis le poste, `mstsc` vers `192.168.101.52` et `.53` échoue,
+et le SSH direct vers `.52` n'a jamais rendu sa bannière (constat du 30/08,
+attribué à tort à un trou noir MTU). Pourtant le port s'ouvre : le SYN-ACK
+revient, un paquet RDP malformé reçoit son RST en 30 ms, `ping` passe, et un
+paquet de 1392 octets sans fragmentation aussi. Seuls les **segments qui
+portent des données** du serveur n'arrivent jamais — réponse X.224 du RDP,
+bannière SSH, `ServerHello` TLS de Vue Motion.
+
+**Ce qui l'a tranché : le TTL des réponses.** Les serveurs Windows partent de
+128, chaque routeur retire 1 ; depuis WSL, le NAT du poste compte un saut de
+plus.
+
+| Cible | TTL reçu | Routeurs sur le retour côté site | Données du serveur |
+|---|---|---|---|
+| `.52`, `.53` depuis le poste, **avant** correction | 125 | 2 : `.62` puis `.59` | ❌ perdues |
+| `.98` syngo, `.63` VENUS1 depuis le poste | 126 | 1 : le pfSense principal | ✅ |
+| `.52` depuis pacs03 (`172.32.0.2`, route retour existante) | 127 | 1 | ✅ RDP négocie, bannière SSH |
+| `.53` depuis pacs03 (aucune route retour vers `172.32.0.0/24`) | — | — | ❌ rien ne revient |
+| `.52`, `.53` depuis le poste, **après** correction | 126 | 1 | ✅ |
+
+La table de routage de TIMWFMCORE (`route print -4`, lecture seule, par
+pacs03) l'a confirmé : routes **persistantes** via `.59` pour `10.40.0.0/24`,
+`10.90.0.0/24`, `172.32.0.0/24` (pacs03) et trois pairs du prestataire
+(`10.0.241.54` le PACS Xplore, `172.29.88.6`, `10.0.101.1`), une route
+`192.68.36.0/29` via `.57` (SRSA Philips), route par défaut `.62` — et **rien
+pour `172.31.0.0/24`**, la plage des nomades. Les paquets du poste entrent par
+`.59`, la réponse ressort par `.62` ; ce second pfSense relaie bien vers `.59`
+(d'où le SYN-ACK, le RST et le ping qui reviennent) mais, ne voyant que la
+moitié de la connexion, jette les segments de données.
+
+**Correction, posée le 11/09/2026 sur `.52` et `.53`**, la même que celle que
+le prestataire applique à ses propres pairs VPN :
+
+```
+route -p add 172.31.0.0 mask 255.255.255.0 192.168.101.59
+```
+
+Vérifié aussitôt depuis le poste : TTL 125 → 126 sur les deux, négociation RDP
+complète (`RDP_NEG_RSP`, protocole NLA), bannière SSH de `.52` en direct, HTTPS
+de Vue Motion `.53` en 0,6 s. L'alternative, si le prestataire préfère corriger
+à la source, est d'autoriser les flux asymétriques sur `.62` (« bypass firewall
+rules for traffic on the same interface » ou règle à état *sloppy*). Le piège
+est consigné
+([07-pieges.md](07-pieges.md#39-une-connexion-qui-souvre-puis-se-tait--la-réponse-revient-par-lautre-pare-feu)).
 
 ---
 
@@ -638,7 +752,7 @@ présomptions d'architecture, pas des flux constatés :
 | `.58`/`.103` ProxyVia (`dicomproxy`) | `.98`, `.100` Syngo Via | DICOM **104** | **répartition round-robin** des examens entre les deux (repli croisé, mapping par PatientID) | ✅ tranché le 09/09/2026 : `viaGroup RR`, aucune règle par examen ([inventaire](configs/inventaire-dicomproxy-2026-09-09.md)) |
 | sites (`172.18.162.40:11112`), PACS Xplore (`10.0.241.54:104`) | `.58`/`.103` ProxyVia `DP_EC:9104` | DICOM | arrivée des examens sur le répartiteur | ✅ 12 SCP déclarés, ~38 000 images le 09/09 |
 | `.58`/`.103` ProxyVia | `.52` TIMWFMCORE `:2104` | DICOM (store, Q/R) | PACS amont (`MoveDestination` réécrites) | ✅ constaté le 09/09 |
-| `.53` Vue Motion | `.52` Vue PACS | — | lecture des images pour le visualiseur web | 📋 présumé |
+| `.53` Vue Motion | `.52` Vue PACS `:2104` | MVSMAIN (protocole Vue) | lecture des images pour le visualiseur web | ✅ constaté le 11/09/2026 : connexions permanentes `.53` → `.52:2104` ([inventaire](configs/inventaire-timvueexplorer-2026-09-11.md)) |
 | `.102` TSplus | `.98`, `.100` Syngo Via | client syngo.via (47101, 80/443, 32912…) | l'Enterprise Browser publié par TSplus interroge **les deux** serveurs | ✅ constaté le 02/09 (caches de configuration des deux serveurs sur TSplus, mêmes statistiques de connexion sur les deux) |
 | `.98` ↔ `.100` Syngo Via | — | syngo (fédération) | chaque serveur connaît l'autre (Enterprise Browser) | ✅ constaté le 02/09 |
 | Internet | `.102` TSplus | TCP 443 (+ 80 : redirection et défis ACME) | NAT du pfSense principal, WAN `37.61.243.246` | ✅ confirmé le 02/09 (même certificat et même redirection des deux côtés) |
@@ -781,5 +895,8 @@ canal des secrets et ne rejoignent jamais ce dépôt.
 - [x] ~~confirmer la double patte ProxyVia `.58`/`.103` et son rôle de pont DICOM~~ — ✅ **fait le 09/09/2026** : `ens18`=`.103` (bloc syngo), `ens19`=`.58` (bloc imagerie), répartiteur DICOM `DP_EC` ([inventaire](configs/inventaire-dicomproxy-2026-09-09.md))
 - [ ] liste des adresses réellement occupées (la demander, ne pas scanner un
       site de production)
-- [ ] poser les routes retour `10.40.0.0/24`/`10.90.0.0/24` sur chaque serveur
-      que nous devons joindre, ou trancher pour un NAT côté pfSense
+- [ ] poser les routes retour sur chaque serveur du bloc production que nous
+      devons joindre, ou trancher pour un NAT côté pfSense — ✅ `.52`
+      (`10.40.0.0/24`, `10.90.0.0/24`, `172.32.0.0/24`, `172.31.0.0/24`) et
+      `.53` (`172.31.0.0/24`) au 11/09/2026 ([diagnostic](#diagnostic-du-11092026--le-retour-par-le-second-pfsense-coupe-les-données)) ; restent
+      `.51`, `.55`, `.56`, `.57` si un jour il faut les joindre
