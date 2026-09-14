@@ -269,6 +269,8 @@ Relevé du 24/08/2026 :
 | `syngo-teleimagerie` | `/etc/nginx/certs/syngo-teleimagerie/` | `syngo.teleimagerie.net`, `syngo-via.teleimagerie.net` | **22/11/2026** | acme.sh sur pve1, déployé automatiquement |
 | `syngo-isoteam` | `/etc/nginx/certs/syngo-isoteam/` | `syngo.isoteam.mn`, `syngo-via.isoteam.mn` | **10/11/2026** | idem |
 | `zabbix-teleimagerie` | `/etc/nginx/certs/zabbix-teleimagerie/` | `zabbix.teleimagerie.net` | **~27/11/2026** (émis le 29/08, fenêtre ARI) | acme.sh sur pve1 (DNS-01), hook [scripts/deploy-zabbix.sh](scripts/deploy-zabbix.sh) — même mécanique que syngo |
+| `staging-teleimagerie` | `/etc/nginx/certs/staging-teleimagerie/` | `*.staging.teleimagerie.net`, `app-staging.teleimagerie.net`, `gestion-staging.teleimagerie.net` | **13/12/2026** (émis le 14/09) | acme.sh sur pve1 (DNS-01, wildcard impossible en HTTP-01), hook [scripts/deploy-staging-teleimagerie.sh](scripts/deploy-staging-teleimagerie.sh) |
+| `staging-isoteam` | `/etc/nginx/certs/staging-isoteam/` | `*.staging.isoteam.mn`, `app-staging`, `gestion-staging`, `preprod-app`, `preprod-gestion` `.isoteam.mn` | **13/12/2026** (émis le 14/09) | idem, hook [scripts/deploy-staging-isoteam.sh](scripts/deploy-staging-isoteam.sh) |
 | `odoo` | `/etc/letsencrypt/live/odoo.teleimagerie.net/` | `odoo.teleimagerie.net` | **27/11/2026** | certbot du conteneur (webroot, émis à la bascule du 29/08) ; l'auto-signé provisoire de `/etc/nginx/certs/odoo-selfsigned/` ne sert plus |
 
 **Le proxy ne gère aucun certificat pour `syngo-via.*`** : ces noms sont en

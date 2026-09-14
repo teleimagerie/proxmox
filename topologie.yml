@@ -152,6 +152,26 @@ machines:
       tag: 400
       ip: 10.40.0.70
 
+  mytim-staging:
+    role: Pré-production MyTIM (Docker Compose, VM 103)
+    zone: vlan400
+    attendu:
+      tag: 400
+      ip: 10.40.0.80
+    note: >
+      Pas de HA (staging) ; sauvegarde hebdomadaire, une copie conservée.
+      Exposée par proxy-tim (app./gestion./mailer.staging.teleimagerie.net).
+
+  myisoteam-staging:
+    role: Pré-production MyISOTEAM (Docker Compose, VM 104)
+    zone: vlan400
+    attendu:
+      tag: 400
+      ip: 10.40.0.90
+    note: >
+      Pas de HA (staging) ; sauvegarde hebdomadaire, une copie conservée.
+      Exposée par proxy-tim (app./gestion./mailer.staging.isoteam.mn).
+
   pbs:
     role: Serveur de sauvegarde
     zone: vlan300

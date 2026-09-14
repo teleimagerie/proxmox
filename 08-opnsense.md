@@ -273,6 +273,7 @@ des **host overrides** :
 | **`pve1.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.2`** | administration des hyperviseurs par le chemin privé — [04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026) |
 | **`pve2.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.3`** | idem |
 | **`pve3.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.4`** | idem |
+| `app.`, `gestion.`, `mailer.staging.teleimagerie.net` et `.isoteam.mn` (14/09/2026) | `10.40.0.10` (proxy-tim) | pré-productions VM 103/104 — [20-mytim-staging.md](20-mytim-staging.md) ; six blocs `<host>` insérés dans `unboundplus/hosts` par [scripts/unbound-overrides-staging.py](scripts/unbound-overrides-staging.py) (via `opnrun.sh`, idempotent, `configctl unbound restart` + contrôle de `host_entries.conf`), sauvegarde `/conf/config.xml.bak-staging-20260914` |
 
 Les trois overrides `pve*` ne sont **pas un confort** : garder le *nom* plutôt
 que l'IP privée conserve un **certificat Let's Encrypt valide** et laisse

@@ -416,8 +416,8 @@ supervise le cluster qui l'héberge, par **l'API PVE en HTTPS**, avec un token
 | Cluster | template officiel **Proxmox VE by HTTP** (hôte `cluster-pve`) | quorum, API, découverte des 3 nœuds (CPU, RAM, load, iowait, FS racine, swap, réseau), stockages, **les 7 VM/CT** (statut, CPU, RAM, disque LXC, réseau) |
 | Ceph | template maison **TIM Cluster PVE** (`/cluster/ceph/status`, même token) | `HEALTH_*`, OSD up/in/total |
 | Nœuds (indépendant du point d'entrée API) | simple checks | `:8006` joignable sur chaque nœud |
-| Invités (vue interne) | **agents dans les 7 invités** | Linux by Zabbix agent (201, 202, 203, 101, 102, 204) · FreeBSD by Zabbix agent (OPNsense, plugin `os-zabbix7-agent`, écoute `10.40.0.1:10050` seule) |
-| Certificats | 9 hôtes `cert-*`, template Website certificate by Zabbix agent 2 | zabbix, auth, pacs-secours, odoo, syngo, headscale + `pveX:8006` — expiration < 14 j |
+| Invités (vue interne) | **agents dans les 9 invités** | Linux by Zabbix agent (201, 202, 203, 101, 102, 204, **103 et 104** depuis le 14/09/2026 — [scripts/zabbix-provision-staging.py](scripts/zabbix-provision-staging.py)) · FreeBSD by Zabbix agent (OPNsense, plugin `os-zabbix7-agent`, écoute `10.40.0.1:10050` seule) |
+| Certificats | 11 hôtes `cert-*`, template Website certificate by Zabbix agent 2 | zabbix, auth, pacs-secours, odoo, syngo, headscale, **staging-tim, staging-isoteam** (wildcards, 14/09) + `pveX:8006` — expiration < 14 j |
 | Sauvegardes | template TIM (API PVE par nœud + API PBS, token `zabbix@pbs!monitoring`) | échec **et absence** de vzdump, verify/GC/prune PBS — [§ dédié](#supervision-des-sauvegardes--depuis-le-30082026) |
 
 Tableau de bord **« Cluster PVE »** (partagé) : état instantané (quorum, Ceph,

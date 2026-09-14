@@ -211,6 +211,7 @@ Le secret du jeton vit dans `/etc/pve/priv/storage/pbs.pw` (répliqué par pmxcf
 | tous les jours **02:00** | vzdump de toutes les VM/CT **sauf la 102**, mode snapshot | → `pbs` |
 | tous les jours **03:00** | prune : `keep-daily=7 keep-weekly=4 keep-monthly=6` | PBS |
 | samedi **03:30** | vzdump de la VM 102 seule (hors datastore), `keep-last=4` | → `nas-vm` |
+| dimanche **03:00** | vzdump des **pré-productions 103 et 104** (exclues du quotidien), `prune-backups keep-last=1` — une seule copie, décision du 14/09/2026 ([20-mytim-staging.md](20-mytim-staging.md)) | → `pbs` |
 | dimanche **04:00** | vérification des sauvegardes non vérifiées de plus de 30 j | PBS |
 | samedi **04:30** | copie de `/conf/config.xml` d'OPNsense | → `nas-vm` |
 | dimanche **05:30** | ramasse-miettes du datastore | PBS |
@@ -232,7 +233,8 @@ sont avalés.
 
 ### Pourquoi la VM 102 est exclue de la tâche quotidienne
 
-Le job quotidien porte `exclude 102`. Ce n'est pas un oubli : **PBS ne peut pas se
+Le job quotidien porte `exclude 102,103,104` (103/104 : pré-productions, job
+hebdomadaire dédié ci-dessus). Ce n'est pas un oubli : **PBS ne peut pas se
 sauvegarder dans son propre datastore.**
 
 Constaté à la première exécution, le 14/08/2026 à 02:00. En mode `snapshot`,

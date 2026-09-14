@@ -142,7 +142,7 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 | `hds-1-tim`, `rappro-cmsi` | `46.105.64.17` | ⚠️ |
 | `timfact`, `www3` | `77.158.128.112` | facturation ? ⚠️ (via l'accès SFR TELLIS) |
 | `bureau` | `82.127.36.38` + AAAA Orange (TTL 60) | accès du bureau 📋 |
-| `*.staging`, `app-staging`, `gestion-staging` | `79.137.100.185` | pré-production 📋 |
+| `*.staging`, `app-staging`, `gestion-staging` | `57.130.34.122` (proxy-tim ; `79.137.100.185` jusqu'au 14/09/2026) | pré-production MyTIM, VM 103 📋 → [20](20-mytim-staging.md) |
 | `test-01`…`test-09` | `37.59.114.69` | ⚠️ |
 
 ### `teleimagerie.net` — web, redirections et mail
@@ -171,7 +171,7 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 | `sftp`, `vpn-angers` | `37.61.243.246` | droit sur le WAN pfSense TELLIS 📋 → [13](13-tellis.md) |
 | `venus` | `77.158.128.112` + `37.61.243.245` | RIS VENUS du DC TELLIS 📋 → [13](13-tellis.md) |
 | `app`, `gestion` | `146.59.233.170` | gestion 📋 |
-| `*.staging`, `app-staging`, `gestion-staging`, `preprod-app`, `preprod-gestion` | `79.137.100.184` | pré-production 📋 |
+| `*.staging`, `app-staging`, `gestion-staging`, `preprod-app`, `preprod-gestion` | `57.130.34.122` (proxy-tim ; `79.137.100.184` jusqu'au 14/09/2026) | pré-production MyISOTEAM, VM 104 📋 → [20](20-mytim-staging.md) |
 | `preprod-facturation` | `46.105.64.17` | ⚠️ (même IP que `hds-1-tim`) |
 | `espace`, `www.espace` | redirection OVH → `https://telimet.sharepoint.com/` | SharePoint « telimet » 📋 |
 | `www` | CNAME `pointing.wixdns.net` | site vitrine Wix |

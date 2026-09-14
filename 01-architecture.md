@@ -94,7 +94,9 @@ Sur le VLAN 400, les machines sont allouées par dizaines : `.1` passerelle
 (OPNsense), `.10` proxy-tim (CT 201), `.20` PBS (VM 102, sortie APT), `.30`
 headscale (CT 202), `.40` pacs03 (PACS de secours, bare-metal Windows GRA3
 raccordé au vRack — [15-pacs-secours.md](15-pacs-secours.md)), `.50` keycloak
-(CT 203), `.60` zabbix (CT 204), `.70` odoo (VM 101). **Exception aux dizaines : `.2`, `.3` et `.4` sont les pattes
+(CT 203), `.60` zabbix (CT 204), `.70` odoo (VM 101), `.80` mytim-staging (VM 103) et
+`.90` myisoteam-staging (VM 104) — les deux pré-productions,
+[20-mytim-staging.md](20-mytim-staging.md). **Exception aux dizaines : `.2`, `.3` et `.4` sont les pattes
 d'administration des hyperviseurs** pve1, pve2 et pve3 — posées le 27/08/2026
 pour pve1 puis étendues aux trois le 31/08/2026, pour permettre
 l'administration par VPN sans passer par Internet
