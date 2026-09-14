@@ -236,8 +236,10 @@ jusqu'à l'applicatif depuis le 11/09** ([17-zabbix.md](17-zabbix.md#vue-pacs-ti
 la supervision rend ces points visibles, elle n'en corrige aucun. Par
 destinataire :
 
-- **Philips** : tempête de plantages `svstream.exe`/`svdser.exe` (3 à 56 par
-  jour depuis au moins le 12/08, `svdser` — le serveur DICOM — 5 fois le 10/09),
+- **Philips** : tempête de plantages `svstream.exe` (3 à 56 par jour depuis au
+  moins le 12/08 ; `svdser.exe` est sorti du point le 14/09 : Philips indique
+  que le serveur DICOM se termine seul après quelques minutes d'inactivité,
+  l'alerte Zabbix a été retirée),
   `Watchdog_SvMax` cassé, Mirth muet sur 8014 (keystore `appdata\keystore.jks`
   invalide, serveur web jamais démarré depuis le 19/08 — cause relevée le 11/09),
   règle Auto-Router « copy to VIACLUSTER » en échec en boucle, tablespace

@@ -994,3 +994,37 @@ par `-Command ". .\script.ps1 -Param a,b,c"`.
 **Leçon** — Tester un script `.ps1` **exactement comme sa notice dit de le
 lancer** (`powershell -File …`), pas en le sourçant dans une console : les deux
 n'analysent pas les arguments de la même façon.
+
+## 41. Un seuil de disponibilité à 3 min sonne à chaque reboot planifié, et un vidage de plantage n'est pas toujours un plantage
+
+**Symptôme** — Deux séries de mails High « pour rien » en septembre 2026.
+Les dimanches 07 et 14/09 vers 02:30, quatre mails par serveur syngo.via :
+« Unavailable by ICMP ping », « SCP DICOM (tcp/104) INJOIGNABLE », « Web
+syngo / IIS (tcp/443) INJOIGNABLE », plus l'Average RDP — chaque problème
+refermé après 0 à 2 minutes. Le 11/09, cinq mails « PLANTAGE du serveur DICOM
+svdser.exe sur TIMWFMCORE » en dix heures, le lendemain de la pose du
+déclencheur.
+
+**Cause** — Deux faits que la supervision ignorait. Les deux syngo.via
+**redémarrent chaque dimanche vers 02:27-02:31** (1 à 2 minutes d'arrêt, visible
+dans le journal des événements Zabbix) : un seuil `max(…,3m)=0` ou
+`max(icmpping,#3)=0` est en dessous de ce qu'un reboot planifié dure. Et les
+vidages de `svdser.exe` sont **normaux selon Philips** : le serveur DICOM se
+termine de lui-même après quelques minutes sans activité, ce que le journal
+`Application Error 1000` enregistre comme un plantage.
+
+**Résolution** — Le 14/09/2026, seuils de disponibilité des deux syngo portés à
+**15 minutes** (sondes TCP `max(…,15m)=0` ; le déclencheur ICMP hérité du
+gabarit, dont l'expression ne se modifie pas au niveau de l'hôte, est désactivé
+sur l'hôte et doublé d'un High propre `max(icmpping,15m)=0`) par
+[`scripts/zabbix-provision-syngo.py`](scripts/zabbix-provision-syngo.py) ; le
+High `svdser.exe` supprimé et son retrait inscrit dans
+[`scripts/zabbix-provision-timwfmcore.py`](scripts/zabbix-provision-timwfmcore.py)
+(`RETIRES`) pour qu'une relance ne le recrée pas. Les Average sans mail
+(svstream en rafale, courbe `crashes/`) restent.
+
+**Leçon** — Avant de poser un seuil de disponibilité, **regarder une semaine de
+journal Zabbix** pour repérer les arrêts planifiés (reboot hebdomadaire,
+sauvegarde, purge) et fixer le seuil au-dessus. Et un compteur de plantages ne
+vaut que si l'éditeur a confirmé que ce sont des plantages : demander avant de
+mettre un High dessus.

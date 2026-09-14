@@ -37,9 +37,11 @@ Choix de conception, expliqués ici pour ne pas être défaits plus tard :
     constatés le 11/09/2026 : archivelogs toutes les 3 h (logs back_archive.ok_*),
     copie complète des datafiles le vendredi (COPY\\DF_*), DBInfo quotidien ;
   - plantages : eventlog[] limité à la source « Application Error » id 1000
-    (10 à 60 événements/jour), High si svdser.exe (le serveur DICOM : chaque
-    plantage coupe les associations en cours), Average si svstream.exe en
-    rafale. Le dossier crashes/ donne la courbe de tendance ;
+    (10 à 60 événements/jour), Average si svstream.exe en rafale. Le dossier
+    crashes/ donne la courbe de tendance. Le High « svdser.exe » posé le 11/09
+    a été RETIRÉ le 14/09/2026 (5 mails le 11/09) : Philips indique que ces
+    vidages sont normaux, le serveur DICOM se termine de lui-même après
+    quelques minutes sans activité — RETIRES le supprime s'il existe encore ;
   - contrôles internes du PACS (Imaginet System Check, 15 scripts perl toutes
     les 15 min) : le PACS s'auto-surveille mais personne ne lisait le résultat.
     logrt[] sur system_checks\\, restreint aux quatre contrôles utiles — le
@@ -127,6 +129,13 @@ SYSCHECK = (f'logrt["{LOG}\\system_checks\\log_system_check_.*\\.log",'
 # volume, libellé, seuil High, seuil de retour (en % utilisé)
 DISQUE = ("G:", "BACKUP", 95, 90)
 
+# déclencheurs posés par une version antérieure du script et retirés depuis
+# (description exacte, motif) — supprimés s'ils existent encore
+RETIRES = (
+    (f"PLANTAGE du serveur DICOM svdser.exe sur {HOST} (coupe les receptions en cours)",
+     "Philips, 14/09/2026 : svdser.exe se termine seul apres quelques minutes sans activite"),
+)
+
 
 def zbx(method, params):
     req = urllib.request.Request(
@@ -196,6 +205,15 @@ def ensure_trigger(desc, expr, prio, recovery=None):
     return True
 
 
+def retirer_trigger(desc, motif):
+    t = zbx("trigger.get", {"filter": {"description": [desc]}, "output": ["triggerid"]})
+    if t:
+        zbx("trigger.delete", [x["triggerid"] for x in t])
+        print(f"  declencheur retire ({motif}) : {desc}")
+        return True
+    return False
+
+
 def hotes():
     hid = host_id()
     iid = interface_id(hid)
@@ -254,9 +272,6 @@ def hotes():
     ensure_item(hid, {"name": "Journal Application : plantages (Application Error 1000)",
                       "key_": EVENTLOG, "type": 7, "value_type": 2, "delay": "1m",
                       "history": "30d"})
-    if ensure_trigger(f"PLANTAGE du serveur DICOM svdser.exe sur {HOST} (coupe les receptions en cours)",
-                      f'find(/{HOST}/{EVENTLOG},15m,"regexp","svdser.exe")=1', 4):
-        print("  plantage svdser.exe -> High (se referme 15 min apres le dernier)")
     if ensure_trigger(f"Plantages svstream.exe en rafale sur {HOST} (>= 10 en 24 h)",
                       f'count(/{HOST}/{EVENTLOG},24h,"regexp","svstream.exe")>=10', 3):
         print("  rafale svstream.exe -> Average")
@@ -274,6 +289,10 @@ def hotes():
     if ensure_trigger(f"Controle interne du PACS en CRITICAL (mirth, patient data ou storage) sur {HOST}",
                       f'find(/{HOST}/{SYSCHECK},1h,"regexp","(check_mirth|check_patient_data|check_storage).pl ended with errors: .CRITICAL.")=1', 3):
         print("  mirth/patient data/storage CRITICAL -> Average")
+
+    # --- declencheurs retires depuis (idempotent) ---------------------------
+    for desc, motif in RETIRES:
+        retirer_trigger(desc, motif)
 
 
 def disque():
