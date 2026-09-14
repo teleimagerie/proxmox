@@ -10,14 +10,14 @@ $TTL 3600
         IN A     213.186.33.5
         IN TXT     "v=spf1 include:mx.ovh.com include:_spf.google.com include:spf.mailjet.com ~all"
         IN TXT     "1|www.teleimagerie.net"
-*.staging        IN A     79.137.100.185
+*.staging        IN A     57.130.34.122
 _4e7786b66ba4c76bdfb3256e41fdee62  10800 IN CNAME     4df794485501a7e86bcba112a56e02de.afe584645649ec2a1c2adcf2e8da7992.499f54495732406346be.comodoca.com.
 api        IN A     162.19.25.107
 api        IN AAAA     2001:41d0:304:200::2c84
 api1        IN A     162.19.25.107
 api1        IN AAAA     2001:41d0:304:200::2c84
 app        IN A     51.210.24.59
-app-staging        IN A     79.137.100.185
+app-staging        IN A     57.130.34.122
 auth     60 IN A     57.130.34.122
 bastion        IN A     51.38.189.223
 bureau     60 IN A     82.127.36.38
@@ -35,7 +35,7 @@ facturation        IN A     213.186.33.5
 facturation     60 IN TXT     "4|https://app.teleimagerie.net"
 ftp        IN CNAME     teleimagerie.net.
 gestion        IN A     51.210.24.59
-gestion-staging        IN A     79.137.100.185
+gestion-staging        IN A     57.130.34.122
 gestion2        IN A     46.105.57.169
 google._domainkey        IN TXT     "v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC8itURRyfZqXqi38ptdmeypOnnOLCVQDMhDL0y4OCA0UkV45fR/1LGBxMz3N5ARqHi0PXR/Vql8uQiVxryleBlzVHuGiCi/78YUiG1ObvvA6y5UD1PPt1k+8Io9txIQJgHUdIvVU7fqV7qAohrMrSJwocJCb44AMe7W3WtPmeSwwIDAQAB"
 gru        IN A     213.186.33.5
