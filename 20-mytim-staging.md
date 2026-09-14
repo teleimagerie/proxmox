@@ -219,8 +219,8 @@ est la **résiliation des dédiés**, pas la bascule.
 
 - [ ] extinction des dédiés (`systemctl poweroff`) après quelques jours de recul,
   puis **résiliation OVH** de `ns3240118` et `ns3240079` — à la main de l'admin ;
-- [ ] `bascule-staging.py ttl3600` après résiliation ;
-- [ ] fusionner `feat/staging-proxmox` dans `main` du dépôt gestion ;
+- [x] `bascule-staging.py ttl3600` — fait le 14/09 à 10:33 UTC, sans attendre la résiliation (bascule validée, aucun retour arrière envisagé) ;
+- [x] `feat/staging-proxmox` fusionnée dans `main` du dépôt gestion (`28d57036`, 14/09) ;
 - [ ] **SFTP GRU** (`81.255.38.171:2222`, compte `sftp_timgru_test`) : **filtre par IP
   source**, vérifié le 14/09 — joignable depuis l'ancien dédié `79.137.100.185`,
   refusé depuis les VM (sortie `57.130.34.121`), depuis pve1 et depuis le poste.
