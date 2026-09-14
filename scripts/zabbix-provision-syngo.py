@@ -30,6 +30,22 @@ Mécanique :
   - rien d'autre n'est touché : « No SNMP data collection », ICMP loss et
     response time restent en Warning (sans mail).
 
+Interfaces réseau (14/09/2026, second temps) : la découverte SNMP du gabarit
+remontait 35 à 37 « interfaces » par serveur — commutateurs virtuels Hyper-V
+(vSwitch/vEthernet nat et WSL), pseudo-interfaces des pilotes de filtrage
+(WFP, QoS Packet Scheduler), tunnels Teredo/ISATAP et miniports « Local Area
+Connection* N » — et une dizaine d'Average « Link down » restaient ouverts en
+permanence, ou se rouvraient à chaque reboot. Le filtre du gabarit porte sur
+ifDescr, que Windows remplit avec le nom du pilote ; le libellé utile est
+ifAlias ({#IFALIAS}, entre parenthèses dans le nom des items). On surcharge
+donc {$NET.IF.IFALIAS.NOT_MATCHES} (« CHANGE_IF_NEEDED » dans le gabarit) par
+une macro d'hôte : il ne reste que « HPE Network Port 10G 1 » (câblé) et
+« 10G 2 » (non câblé, en 2 stable : « Link down » ne sonne que sur un
+changement). Les items exclus deviennent « ressources perdues » et sont
+supprimés par Zabbix 7 jours plus tard (lifetime du gabarit) ; entre-temps
+leurs déclencheurs « Link down » sont désactivés et les problèmes ouverts
+fermés à la main (manual_close autorisé par le gabarit).
+
 Usage : zabbix-provision-syngo.py {hotes|check}
 """
 import json
@@ -43,6 +59,9 @@ DELAI = "15m"
 # port, sévérité attendue (4 = High -> mail, 3 = Average) — telles que posées le 02/09
 SONDES = ((104, 4), (443, 4), (3389, 3))
 ICMP_TEMPLATE = "Unavailable by ICMP ping"
+# ifAlias des interfaces exclues de la découverte (PCRE, sensible à la casse)
+IFALIAS_EXCLUS = r"vSwitch|vEthernet|Local Area Connection\*|LightWeight Filter|QoS Packet Scheduler|Loopback|Hyper-V"
+MACRO_IFALIAS = "{$NET.IF.IFALIAS.NOT_MATCHES}"
 
 
 def zbx(method, params):
@@ -106,6 +125,51 @@ def hotes():
         if ensure_trigger(desc, f"max(/{host}/icmpping,{DELAI})=0", 4):
             print(f"  High pose : {desc}")
 
+        interfaces(host, hid)
+
+
+def interfaces(host, hid):
+    """Filtre de découverte sur ifAlias, découverte relancée, bruit résiduel éteint."""
+    import re
+    import time
+    m = zbx("usermacro.get", {"hostids": [hid], "filter": {"macro": [MACRO_IFALIAS]},
+                              "output": ["hostmacroid", "value"]})
+    changee = False
+    if not m:
+        zbx("usermacro.create", {"hostid": hid, "macro": MACRO_IFALIAS, "value": IFALIAS_EXCLUS,
+                                 "description": "14/09/2026 : commutateurs virtuels Hyper-V, pilotes de filtrage, tunnels et miniports exclus (ne reste que les ports HPE 10G)"})
+        print(f"  macro {MACRO_IFALIAS} posee")
+        changee = True
+    elif m[0]["value"] != IFALIAS_EXCLUS:
+        zbx("usermacro.update", {"hostmacroid": m[0]["hostmacroid"], "value": IFALIAS_EXCLUS})
+        print(f"  macro {MACRO_IFALIAS} mise a jour")
+        changee = True
+    # découverte relancée tout de suite (task « execute now » sur la règle de l'hôte).
+    # Piège (14/09/2026) : lancée dans la foulée de la macro, la découverte
+    # tourne avec l'ancien cache de configuration (CacheUpdateFrequency 10 s)
+    # et ne filtre rien — constaté sur .98 ; on attend le rafraîchissement.
+    lld = zbx("discoveryrule.get", {"hostids": [hid], "filter": {"key_": ["net.if.discovery"]},
+                                    "output": ["itemid"]})
+    if lld:
+        if changee:
+            time.sleep(15)
+        zbx("task.create", [{"type": 6, "request": {"itemid": lld[0]["itemid"]}}])
+    # déclencheurs « Link down » des interfaces exclues : désactivés, problèmes fermés
+    exclu = re.compile(IFALIAS_EXCLUS)
+    for t in zbx("trigger.get", {"hostids": [hid], "search": {"description": "Link down"},
+                                 "output": ["triggerid", "description", "status", "value"]}):
+        alias = t["description"].split("(", 1)[1].rsplit(")", 1)[0] if "(" in t["description"] else ""
+        if not exclu.search(alias):
+            continue
+        if t["status"] == "0":
+            zbx("trigger.update", {"triggerid": t["triggerid"], "status": 1})
+            print(f"  Link down desactive : {alias}")
+        if t["value"] == "1":
+            for e in zbx("problem.get", {"objectids": [t["triggerid"]], "output": ["eventid"]}):
+                zbx("event.acknowledge", {"eventids": [e["eventid"]], "action": 1,
+                                          "message": "interface virtuelle exclue de la decouverte le 14/09/2026"})
+                print(f"  probleme ferme : {t['description']}")
+
 
 def check():
     for host in HOSTS:
@@ -121,6 +185,10 @@ def check():
         for i in zbx("item.get", {"hostids": [hid], "output": ["key_", "lastvalue", "state", "error"]}):
             if i["key_"] == "icmpping" or i["key_"].startswith("net.tcp.service"):
                 print(f"  {i['key_']:32} = {i['lastvalue']}" + (f"  NON SUPPORTE {i['error']}" if i["state"] == "1" else ""))
+        ifs = zbx("item.get", {"hostids": [hid], "output": ["name", "lastvalue"], "search": {"key_": "net.if.status"}})
+        print(f"  interfaces decouvertes : {len(ifs)}")
+        for i in ifs:
+            print(f"    {i['lastvalue']:>2}  {i['name'].split(': ')[0]}")
         pbs = zbx("problem.get", {"hostids": [hid], "output": ["name", "severity"]})
         print(f"  problemes ouverts : {len(pbs)}")
         for p in pbs:

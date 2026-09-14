@@ -1028,3 +1028,13 @@ journal Zabbix** pour repérer les arrêts planifiés (reboot hebdomadaire,
 sauvegarde, purge) et fixer le seuil au-dessus. Et un compteur de plantages ne
 vaut que si l'éditeur a confirmé que ce sont des plantages : demander avant de
 mettre un High dessus.
+
+Dans la foulée, le bruit « Link down » des mêmes syngo (35 pseudo-interfaces
+Hyper-V, WSL, pilotes de filtrage et tunnels par serveur) a été filtré par une
+macro d'hôte `{$NET.IF.IFALIAS.NOT_MATCHES}` — le filtre `IFDESCR` du gabarit
+ne voit que le nom du pilote sous Windows, le libellé utile est `ifAlias`. Deux
+sous-pièges : la découverte relancée par `task.create` juste après la macro
+tourne avec l'ancien cache de configuration (10 s) et ne filtre rien ; et un
+filtre qui exclut des interfaces laisse leurs problèmes ouverts et leurs
+déclencheurs actifs jusqu'à la purge à 7 jours — les désactiver et fermer les
+problèmes soi-même.
