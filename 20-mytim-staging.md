@@ -182,8 +182,8 @@ aucune écriture sur la base Isoteam depuis le 31/07 (dump de 09:25 UTC valide).
 | 10:18:36 | `bascule-staging.py ttl60` — 8 enregistrements (2 zones) passent de 3600 (défaut de zone) à 60 |
 | 10:20:08 | `bascule-staging.py switch` — A → `57.130.34.122` ; aucun AAAA n'existait |
 | 10:20:15 | `1.1.1.1` et `8.8.8.8` répondent déjà `57.130.34.122` (TTL 60) pour les 8 noms ; chemin réel (sans `--resolve`) : `/login` 200 par la VIP, certificat valide |
-| 10:20 → 11:20 | dédiés laissés **allumés et servants** pour les résolveurs à cache chaud (TTL 3600 pris avant 10:18) — staging sans utilisateur, la base TIM des dédiés est de toute façon abandonnée |
-| ≥ 11:20 | gel des dédiés (`docker compose stop`) **à faire** une fois l'heure de cache écoulée — puis extinction et résiliation (reste à faire) |
+| 10:20 → 10:28 | dédiés laissés servants quelques minutes (résolveurs à cache chaud, TTL 3600 pris avant 10:18) |
+| ~10:28 | **gel des dédiés** par l'admin (`docker compose stop` sur `.185` et `.184`, 0 conteneur) — sans attendre la fin de l'heure de cache, staging sans utilisateur ; les noms publics répondent 200 par la VIP juste après |
 
 Choix assumé, inverse d'Odoo : pas de gel *avant* la bascule. Rien n'écrivait sur
 les dédiés (aucune requête en 90 min, base Isoteam figée depuis juillet), et
@@ -217,7 +217,6 @@ est la **résiliation des dédiés**, pas la bascule.
 
 ## Reste à faire
 
-- [ ] **gel des dédiés** (`cd /srv/gestion && sudo docker compose -f compose.yaml -f compose.prod.yaml --profile staging stop` sur `ubuntu@79.137.100.185` et `.184`) à partir de 11:20 UTC le 14/09 ;
 - [ ] extinction des dédiés (`systemctl poweroff`) après quelques jours de recul,
   puis **résiliation OVH** de `ns3240118` et `ns3240079` — à la main de l'admin ;
 - [ ] `bascule-staging.py ttl3600` après résiliation ;
