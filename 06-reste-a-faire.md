@@ -461,17 +461,26 @@ pièges n° 43 et 44). Ce qui reste :
 
 ---
 
-## 14. Coupure OVH du 06/10/2026 — pve1 et pve2 (baie GRA0404C03A), 07:30-14:00 Paris
+## 14. Coupure OVH du 06/10/2026 — pve1 et pve2 (baie GRA0404C03A), 08:00-16:00 Paris
 
-Maintenance OVH annoncée sur la baie qui porte **pve1 et pve2** : les deux
-serveurs seront coupés de **07:30 à 14:00 heure de Paris** (05:30-12:00 UTC,
-les nœuds sont en UTC) le **mardi 6 octobre 2026**. Décision du 16/09/2026 :
+Maintenance OVH annoncée (ticket du 15/09, page de statut
+`network.status-ovhcloud.com/incidents/zrxwkrw66fk2`) sur la baie qui porte
+**pve1 et pve2** (`ns3245256`, `ns3245278`) : créneau **06:00-14:00 UTC**, soit
+**08:00-16:00 heure de Paris** (les nœuds sont en UTC), le **mardi 6 octobre
+2026**. OVH précise que les serveurs de la baie seront **arrêtés proprement**
+au début de la fenêtre (« gracefully shut down beforehand ») et indisponibles
+toute sa durée. Décision du 16/09/2026 :
 **variante A**, évacuation avant la coupure — le test 7 a montré qu'un
 reset court ne déclenche pas le fencing mais qu'une coupure de six heures le
 déclencherait, avec 3 à 5 min d'indisponibilité par service porté
 ([05-tests-ha.md](05-tests-ha.md#test-7--perte-de-gra3--reboot-planifié-double-coupure-matérielle-isolation-durable-15092026)).
 Évacués à froid, les deux nœuds ne portent plus rien : la coupure ne teste que
 Ceph et le quorum, qui tolèrent la perte de deux nœuds (`size=4`, 3/5).
+L'arrêt propre annoncé par OVH aurait, seul, déclenché `shutdown_policy=migrate`
+(migration à chaud des VM HA, arrêt/relance des CT) — mais **deux nœuds
+arrêtés à la même minute** par un opérateur qui ne connaît pas notre cluster,
+ce n'est pas un scénario à laisser se produire : on évacue avant, et on ne
+compte pas sur l'heure exacte (« beforehand » peut vouloir dire avant 06:00 UTC).
 
 Ce que le cluster aura pendant six heures et demie : pve3 (64 Go), pve4 et
 pve5 (32 Go chacun) pour ~69 Go de RAM d'invités — ça tient. Chaque PG
@@ -479,9 +488,10 @@ n'aura plus que **deux répliques** (pve3 + un nœud GRA3) : une panne
 supplémentaire pendant la fenêtre (pve3, ou GRA3) bloquerait une partie des
 I/O. Risque accepté, fenêtre courte, rien d'autre ne sera touché ce jour-là.
 
-Rappels posés dans l'agenda de l'admin (06:30 et 14:00).
+Rappels posés dans l'agenda de l'admin (07:00 et 16:00 Paris).
 
-**Avant, entre 06:30 et 07:15 Paris (04:30-05:15 UTC)** — la sauvegarde
+**Avant, entre 07:00 et 07:40 Paris (05:00-05:40 UTC)**, donc vingt minutes
+de marge sur le début annoncé — la sauvegarde
 quotidienne de 02:00 UTC est finie depuis longtemps, celle de la VM PBS est
 le samedi. Depuis pve3 par le tailnet (`ssh root@100.72.0.7`), pour ne
 dépendre ni de wg0 ni d'un nœud qui va tomber :
@@ -506,14 +516,15 @@ OSD up, nœuds) lancée par `systemd-run --unit=coupure-ovh
 --property=StandardOutput=append:/root/coupure-ovh.log`. Les deux nœuds
 restent allumés et membres du quorum jusqu'à ce qu'OVH les coupe.
 
-**Pendant** : rien à faire. Attendu sur la sonde à 07:30 : `nodes=3`, puis
+**Pendant** : rien à faire. Attendu sur la sonde vers 08:00 Paris : `nodes=3`, puis
 `osd=6 up` après ~20 s avec un gel d'I/O de quelques secondes (re-peering,
 mesuré 7 s au test 7), `ceph_notactive=0` en permanence, toutes les URL à
 200. **Ne rien relancer à la main**, même si un nœud semble revenir avant
 l'heure : attendre la fin annoncée par OVH. Si OVH fait un arrêt propre
 plutôt qu'une coupure, `shutdown_policy=migrate` n'a rien à migrer.
 
-**Après, dès 14:00 Paris (12:00 UTC) et la fin annoncée par OVH** :
+**Après, dès 16:00 Paris (14:00 UTC) et la fin annoncée par OVH** — si les
+serveurs ne sont pas rallumés d'eux-mêmes, les démarrer depuis l'espace client :
 
 ```bash
 pvecm status | grep -E "Nodes|Quorate"               # 5 / Yes ; sinon attendre le boot (~3 min)
