@@ -423,9 +423,10 @@ pièges n° 43 et 44). Ce qui reste :
   --restrict-ciphers` : 24 clés en `aes256k`, `auth_allowed_ciphers` réduit à
   `aes256k`, `mon_auth_allow_insecure_key false`, journal
   `cephx-key-migration.json` détruit après contrôle des accès (RBD depuis
-  trois nœuds, 9 invités, 12 URL publiées). Reste `HEALTH_WARN
-  AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE`, qui **expire seul en quelques
-  heures** (TTL des tickets) — vérifier `ceph health` = `HEALTH_OK` le 16/09.
+  trois nœuds, 9 invités, 12 URL publiées). Le dernier avertissement
+  (`AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE`, tickets tournants) a expiré seul
+  dans la soirée : **`HEALTH_OK` constaté le 15/09/2026 à 22 h**, 20 démons en
+  20.2.4, 24 clés `aes256k`, `size 4`, MAX AVAIL 1,5 Tio, ±5 % par hôte.
 - ✅ ~~Ajouter `pve4`/`pve5` aux redirect URIs du client OIDC `proxmox`~~ — fait
   par l'admin le 15/09/2026 au soir ([16-keycloak.md](16-keycloak.md)).
 - ✅ ~~Tester la porte tailnet de pve4/pve5 depuis un appareil admin~~ — fait
