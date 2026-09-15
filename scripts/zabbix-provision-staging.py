@@ -17,13 +17,24 @@ Objets gérés, sur le patron des autres invités du cluster :
     l'IP de connexion forcée à 10.40.0.10 — piège n° 32 : depuis le CT 204,
     la VIP .122 mène à la GUI d'OPNsense. Un seul hôte par certificat
     wildcard suffit (gestion. et mailer. portent le même certificat).
-  La vue hyperviseur (CPU, RAM, disque, état) vient déjà de la découverte
-  « Proxmox VE by HTTP » de l'hôte cluster-pve, rien à faire.
+  La vue hyperviseur (CPU, RAM, disque, état) vient de la découverte
+  « Proxmox VE by HTTP » de l'hôte cluster-pve.
+  - hyperviseur : les deux VM tournent sans balloon (balloon: 0) — l'API PVE
+    remonte alors mem = memhost (RSS du processus QEMU), soit 101 % de maxmem
+    en permanence, et le High « high memory usage » du gabarit ne se ferme
+    jamais (82 mails en 24 h le 14/09, rappel horaire d'ALERTE HAUTE). Macro
+    contextuelle {$PVE.VM.MEMORY.PUSE.MAX.WARN:"qemu/N"} = 200 sur
+    cluster-pve : 100 (le choix fait pour PBS) est atteignable ici, 200 non.
+    Les problèmes ouverts sont fermés s'ils ne se ferment pas seuls.
+  - seuils : la mémoire réelle des VM (agent, vm.memory.utilization) porte un
+    High propre « > 90 % pendant 1 h », retour sous 85 % sur 30 min ; les
+    Average du gabarit Linux restent, sans mail.
 
-Usage : zabbix-provision-staging.py {hotes|certs|check}
+Usage : zabbix-provision-staging.py {hotes|certs|hyperviseur|seuils|check}
 """
 import json
 import sys
+import time
 import urllib.request
 
 API = "http://127.0.0.1:8080/api_jsonrpc.php"
@@ -41,6 +52,10 @@ CERTS = (
     ("cert-staging-tim", "Certificat *.staging.teleimagerie.net", "app.staging.teleimagerie.net"),
     ("cert-staging-isoteam", "Certificat *.staging.isoteam.mn", "app.staging.isoteam.mn"),
 )
+# balloon 0 -> memhost >= maxmem : 100 est atteignable, 200 ne l'est pas
+VM_SANS_BALLOON = ("qemu/103", "qemu/104")
+MACRO_MEM = '{$PVE.VM.MEMORY.PUSE.MAX.WARN:"%s"}'
+SEUIL_MEM = "Memoire reelle > 90 % depuis 1 h"
 
 
 def zbx(method, params):
@@ -97,7 +112,75 @@ def certs():
         print(f"{host} cree ({fqdn} via {PROXY_IP})")
 
 
+def host_id(host):
+    h = zbx("host.get", {"filter": {"host": [host]}})
+    if not h:
+        sys.exit(f"hote introuvable: {host}")
+    return h[0]["hostid"]
+
+
+def hyperviseur():
+    """Faux signal mémoire de l'hyperviseur neutralisé sur cluster-pve (macro contextuelle)."""
+    hid = host_id("cluster-pve")
+    changee = False
+    for ctx in VM_SANS_BALLOON:
+        macro = MACRO_MEM % ctx
+        m = zbx("usermacro.get", {"hostids": [hid], "filter": {"macro": [macro]},
+                                  "output": ["hostmacroid", "value"]})
+        if not m:
+            zbx("usermacro.create", {"hostid": hid, "macro": macro, "value": "200",
+                                     "description": "15/09/2026 : VM sans balloon, l'API PVE remonte memhost (101 % de maxmem en permanence) ; memoire reelle suivie par l'agent"})
+            print(f"  macro {macro} posee a 200")
+            changee = True
+        elif m[0]["value"] != "200":
+            zbx("usermacro.update", {"hostmacroid": m[0]["hostmacroid"], "value": "200"})
+            print(f"  macro {macro} mise a jour a 200")
+            changee = True
+    if changee:
+        time.sleep(15)  # cache de configuration (piege n. 41)
+    # les problemes doivent se fermer seuls a l'evaluation suivante (item a 1 min) ;
+    # sinon fermeture manuelle (manual_close autorise par le gabarit depuis le 29/08)
+    for essai in range(3):
+        ouverts = [p for p in zbx("problem.get", {"hostids": [hid], "output": ["eventid", "name"]})
+                   if "high memory usage" in p["name"] and any(f"({c})" in p["name"] for c in VM_SANS_BALLOON)]
+        if not ouverts:
+            break
+        if essai < 2:
+            time.sleep(60)
+            continue
+        for p in ouverts:
+            zbx("event.acknowledge", {"eventids": [p["eventid"]], "action": 1,
+                                      "message": "VM sans balloon : faux signal hyperviseur, macro a 200 le 15/09/2026"})
+            print(f"  probleme ferme : {p['name']}")
+
+
+def seuils():
+    """High propre sur la mémoire réelle vue par l'agent : > 90 % pendant 1 h, retour sous 85 %."""
+    for host, _, _ in HOTES:
+        hid = host_id(host)
+        if zbx("trigger.get", {"hostids": [hid], "filter": {"description": [SEUIL_MEM]}}):
+            continue
+        zbx("trigger.create", {
+            "description": SEUIL_MEM, "priority": 4, "manual_close": 1,
+            "expression": f"min(/{host}/vm.memory.utilization,1h)>90",
+            "recovery_mode": 1,
+            "recovery_expression": f"max(/{host}/vm.memory.utilization,30m)<85"})
+        print(f"  {host}: declencheur « {SEUIL_MEM} » cree")
+
+
 def check():
+    hid = host_id("cluster-pve")
+    for ctx in VM_SANS_BALLOON:
+        m = zbx("usermacro.get", {"hostids": [hid], "filter": {"macro": [MACRO_MEM % ctx]}, "output": ["value"]})
+        print(f"cluster-pve: {MACRO_MEM % ctx} = {m[0]['value'] if m else 'ABSENTE'}")
+    mem = [p["name"] for p in zbx("problem.get", {"hostids": [hid], "output": ["name"]}) if "memory" in p["name"]]
+    print("cluster-pve: problemes memoire ouverts:", mem or "aucun")
+    for host, _, _ in HOTES:
+        for t in zbx("trigger.get", {"hostids": [host_id(host)], "filter": {"description": [SEUIL_MEM]},
+                                     "output": ["value", "status"]}):
+            print(f"{host}: « {SEUIL_MEM} » status={t['status']} value={t['value']}")
+        it = zbx("item.get", {"host": host, "filter": {"key_": ["vm.memory.utilization"]}, "output": ["lastvalue"]})
+        print(f"{host}: vm.memory.utilization = {it[0]['lastvalue'][:5] if it else '?'} %")
     for host, _, _ in HOTES + CERTS:
         h = zbx("host.get", {"filter": {"host": [host]}, "selectInterfaces": ["ip", "available"]})
         if not h:
@@ -110,7 +193,8 @@ def check():
 
 
 if __name__ == "__main__":
-    actions = {"hotes": hotes, "certs": certs, "check": check}
+    actions = {"hotes": hotes, "certs": certs, "hyperviseur": hyperviseur,
+               "seuils": seuils, "check": check}
     if len(sys.argv) != 2 or sys.argv[1] not in actions:
         sys.exit(__doc__)
     actions[sys.argv[1]]()

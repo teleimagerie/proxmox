@@ -439,8 +439,9 @@ dans la base : couverts par le dump 01:15 + PBS 02:00.
 **Partent en mail** : quorum perdu · API PVE injoignable · nœud hors-ligne ·
 `:8006` injoignable par nœud · VM/CT arrêté · `HEALTH_ERR` (Disaster) · OSD
 down/out · **vm-storage ≥ 85 %** (nearfull — le template officiel pré-alerte
-en Warning à 80) · mémoire nœud ≥ 90 % · mémoire invité ≥ 95 % (sauf VM 100 et 102 : faux
-signal hyperviseur, voir les pièges ci-dessous) · disque LXC
+en Warning à 80) · mémoire nœud ≥ 90 % · mémoire invité ≥ 95 % (sauf VM 100, 102, 103
+et 104 : faux signal hyperviseur, voir les pièges ci-dessous) · **mémoire réelle des
+VM 103/104 > 90 % pendant 1 h** (agent, retour sous 85 %) · disque LXC
 ≥ 90 % · FS des VM (`pbs` dont `/mnt/datastore/tim`, `odoo`) ≥ 90 % ·
 certificat < 14 j ou invalide · tâche vzdump en échec ou sauvegarde absente ·
 verify/GC/prune PBS en échec ou absents
@@ -448,6 +449,13 @@ verify/GC/prune PBS en échec ou absents
 élevés, `HEALTH_WARN` (état *attendu* pendant une perte de nœud — le
 « nœud hors-ligne » a déjà sonné), redémarrages, agent injoignable (l'arrêt
 de l'invité sonne déjà via l'API).
+
+L'action « ALERTE HAUTE » **escalade sans fin** : période 1 h, étape 1 → ∞,
+deux destinataires. Tant qu'un problème High reste ouvert, le mail est renvoyé
+toutes les heures — un faux positif jamais refermé coûte ~48 mails par jour
+(constaté le 14/09, piège n° 42). Choix conservé le 15/09/2026 : le rappel
+horaire est voulu pour les vraies alertes ; c'est le faux positif qu'il faut
+éteindre, pas la répétition.
 
 **Chaîne validée en réel le 29/08** : seuil nearfull abaissé temporairement →
 problème High à 19:40:29 → **mails partis vers support@ et mcapon@** (statut
@@ -483,6 +491,24 @@ problème High à 19:40:29 → **mails partis vers support@ et mcapon@** (statut
   désactivé de la VM 100 a suivi pve2 → pve3). La mémoire réelle de PBS reste
   surveillée par l'agent interne de l'hôte `pbs` (seuil 95 %), le datastore
   par le trigger FS ≥ 90 %.
+- **VM 103/104 sans balloon : l'hyperviseur les voit à 101 %.** Les deux
+  pré-productions ont été créées avec `balloon: 0` (fiche 20). Sans pilote
+  balloon, l'API PVE remonte `mem = memhost`, la taille du processus QEMU sur
+  l'hôte : 8,68 Go pour `maxmem` 8,59 Go, **101 % en permanence** (mémoire
+  réelle vue par l'agent dans la VM : 19-20 %, CPU 1 %). Le High « high memory
+  usage » ne s'est jamais refermé et l'escalade horaire a produit **82 mails
+  en 24 h** le 14/09 (40 pour la VM 104, 42 pour la 103). Le « 100 » posé
+  pour PBS **ne suffit pas** ici, la valeur le dépasse : macro contextuelle
+  `{$PVE.VM.MEMORY.PUSE.MAX.WARN:"qemu/103"}` et `"qemu/104"` = **200** sur
+  `cluster-pve`, posée le 15/09/2026 par
+  [scripts/zabbix-provision-staging.py](scripts/zabbix-provision-staging.py)
+  (`hyperviseur`, idempotent) — les deux problèmes se sont refermés seuls dans
+  la minute (expression résolue `>200`). La mémoire réelle porte un High
+  propre « Mémoire réelle > 90 % depuis 1 h » (`min(vm.memory.utilization,1h)
+  > 90`, retour `max(…,30m) < 85`) posé sur les hôtes agents par le même script
+  (`seuils`). Alternative non retenue : activer le balloon (`qm set N --balloon
+  8192`, égal à `memory` donc sans réduction, seulement les statistiques) — la
+  vue hyperviseur redeviendrait vraie, mais au prix d'un arrêt/relance des VM.
 - La règle `tcp/10050 depuis 10.40.0.60` a été ajoutée au firewall dédié de
   la VM PBS ([configs/firewall-102-pbs.fw](configs/firewall-102-pbs.fw)) ; ufw
   d'odoo autorise la même source.

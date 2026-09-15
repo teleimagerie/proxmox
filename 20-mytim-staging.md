@@ -20,7 +20,7 @@ RAM réellement utilisés) : `ns3240118.ip-79-137-100.eu` (`79.137.100.185`,
 | Base | MySQL 8.4 en conteneur, **copie de la prod** (dump OVH du 14/09/2026, 27 Go) | MySQL 8.4 en conteneur, reprise de l'ancien staging (500 Ko) |
 | HA | **aucune** — c'est du staging (décision du 14/09/2026) | idem |
 | Sauvegarde | **hebdomadaire, une seule copie** (dimanche 03:00, `keep-last=1`, exclues du job quotidien) — [10-sauvegardes.md](10-sauvegardes.md) | idem |
-| Supervision | agent Zabbix 2 (7.0.30) passif + découverte PVE + `cert-staging-tim` — [17-zabbix.md](17-zabbix.md) | idem, `cert-staging-isoteam` |
+| Supervision | agent Zabbix 2 (7.0.30) passif + découverte PVE + `cert-staging-tim` — [17-zabbix.md](17-zabbix.md). ⚠️ Sans balloon, l'hyperviseur voit la RAM à 101 % en permanence : faux signal neutralisé le 15/09 (macro à 200), la mémoire réelle porte un High « > 90 % pendant 1 h » côté agent ([piège n° 42](07-pieges.md#42-une-vm-sans-balloon-est-toujours-pleine-pour-lhyperviseur-et-une-escalade-sans-fin-transforme-un-faux-positif-en-80-mails)) | idem, `cert-staging-isoteam` |
 
 **Choix structurants**, repris de la [migration Odoo](18-odoo.md) : VM QEMU plutôt
 que CT (Docker), Ubuntu 24.04 identique à la source (le provisioning Ansible du

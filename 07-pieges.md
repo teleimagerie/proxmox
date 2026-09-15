@@ -1038,3 +1038,45 @@ tourne avec l'ancien cache de configuration (10 s) et ne filtre rien ; et un
 filtre qui exclut des interfaces laisse leurs problèmes ouverts et leurs
 déclencheurs actifs jusqu'à la purge à 7 jours — les désactiver et fermer les
 problèmes soi-même.
+
+## 42. Une VM sans balloon est toujours pleine pour l'hyperviseur, et une escalade sans fin transforme un faux positif en 80 mails
+
+**Symptôme** — À partir du 14/09/2026, un mail High « Proxmox VE: VM
+[pve1/myisoteam-staging (qemu/104)] high memory usage — Current use: 8.09 GB
+of 8 GB » revient **toutes les heures**, et son jumeau pour la VM 103. Dans les
+VM, `free` et l'agent Zabbix donnent 19-20 % de mémoire utilisée et 1 % de CPU.
+Relevé de l'API Zabbix : 142 mails « ALERTE HAUTE » sur 7 jours, dont 82 pour
+ces deux VM en 24 h.
+
+**Cause** — Deux mécanismes empilés. Les pré-productions ont été créées avec
+`balloon: 0` ; sans pilote balloon, QEMU ne remonte pas la mémoire de
+l'invité et l'API PVE renvoie `mem = memhost`, la taille du processus QEMU sur
+l'hôte — 8 684 253 184 octets pour `maxmem` 8 589 934 592, soit **101 %** en
+permanence dès que l'invité a touché toute sa RAM (cache de pages Linux). Le
+déclencheur du gabarit « Proxmox VE by HTTP »
+(`min(mem,5m)/last(maxmem)*100 > {$PVE.VM.MEMORY.PUSE.MAX.WARN:"qemu/N"}`,
+95) est donc vrai sans discontinuer. Ensuite, l'action « ALERTE HAUTE »
+escalade **sans limite** (période 1 h, étape 1 → ∞, deux destinataires) : un
+problème jamais refermé, c'est un mail par heure et par destinataire jusqu'à
+la fin des temps. Une temporisation « seulement si ça dure plus d'1 h » n'aurait
+rien changé : la condition est vraie tout le temps.
+
+**Résolution** — Le 15/09/2026, macro contextuelle
+`{$PVE.VM.MEMORY.PUSE.MAX.WARN:"qemu/103"}` et `"qemu/104"` = **200** sur
+`cluster-pve`, posée par
+[`scripts/zabbix-provision-staging.py`](scripts/zabbix-provision-staging.py)
+(`hyperviseur`, idempotent) — le « 100 » choisi pour PBS (piège du cache disque,
+[17-zabbix.md](17-zabbix.md#pièges-propres-à-ce-montage)) est atteignable ici,
+200 non. Les deux problèmes se sont refermés seuls dans la minute. Le vrai
+besoin — être prévenu si la mémoire **réelle** reste haute longtemps — est
+porté par un High propre sur les hôtes agents : `min(vm.memory.utilization,1h)
+> 90`, retour à la normale sous 85 % sur 30 min (`seuils`). L'escalade horaire
+d'ALERTE HAUTE est conservée : elle est utile pour une vraie panne, et c'est
+désormais écrit dans la fiche 17.
+
+**Leçon** — Pour une VM sans balloon (OPNsense, les pré-productions), la
+mémoire vue par l'hyperviseur **n'est pas une mesure** : la neutraliser
+d'emblée à la création de l'hôte et ne regarder que l'agent. Et quand un mail
+« revient sans arrêt », chercher d'abord pourquoi le problème ne se ferme pas,
+avant de toucher à la répétition : une escalade infinie n'est un défaut que
+sur un faux positif.
