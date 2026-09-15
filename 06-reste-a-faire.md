@@ -458,3 +458,78 @@ pièges n° 43 et 44). Ce qui reste :
 - 📋 Mettre à jour la `Documentation` de la fiche 12 (périmètre HDS) : les deux
   datacentres GRA4 et GRA3 portent désormais des données de santé
   (répliques Ceph).
+
+---
+
+## 14. Coupure OVH du 06/10/2026 — pve1 et pve2 (baie GRA0404C03A), 07:30-14:00 Paris
+
+Maintenance OVH annoncée sur la baie qui porte **pve1 et pve2** : les deux
+serveurs seront coupés de **07:30 à 14:00 heure de Paris** (05:30-12:00 UTC,
+les nœuds sont en UTC) le **mardi 6 octobre 2026**. Décision du 16/09/2026 :
+**variante A**, évacuation avant la coupure — le test 7 a montré qu'un
+reset court ne déclenche pas le fencing mais qu'une coupure de six heures le
+déclencherait, avec 3 à 5 min d'indisponibilité par service porté
+([05-tests-ha.md](05-tests-ha.md#test-7--perte-de-gra3--reboot-planifié-double-coupure-matérielle-isolation-durable-15092026)).
+Évacués à froid, les deux nœuds ne portent plus rien : la coupure ne teste que
+Ceph et le quorum, qui tolèrent la perte de deux nœuds (`size=4`, 3/5).
+
+Ce que le cluster aura pendant six heures et demie : pve3 (64 Go), pve4 et
+pve5 (32 Go chacun) pour ~69 Go de RAM d'invités — ça tient. Chaque PG
+n'aura plus que **deux répliques** (pve3 + un nœud GRA3) : une panne
+supplémentaire pendant la fenêtre (pve3, ou GRA3) bloquerait une partie des
+I/O. Risque accepté, fenêtre courte, rien d'autre ne sera touché ce jour-là.
+
+Rappels posés dans l'agenda de l'admin (06:30 et 14:00).
+
+**Avant, entre 06:30 et 07:15 Paris (04:30-05:15 UTC)** — la sauvegarde
+quotidienne de 02:00 UTC est finie depuis longtemps, celle de la VM PBS est
+le samedi. Depuis pve3 par le tailnet (`ssh root@100.72.0.7`), pour ne
+dépendre ni de wg0 ni d'un nœud qui va tomber :
+
+```bash
+timeout 15 ceph -s | grep -E "health|pgs"            # HEALTH_OK, 33 active+clean, sinon on n'évacue pas
+ceph osd set noout                                   # sinon les 4 OSD passent out après 10 min : ~280 Gio déplacés puis ramenés
+ssh root@10.40.0.60 'python3 /root/zabbix-noeud-maintenance.py off pve1 pve2'   # 4 déclencheurs, le reste sonne toujours
+ha-manager crm-command node-maintenance enable pve1  # headscale + keycloak : ~14 s de coupure chacun
+watch -n5 'ha-manager status | grep -E "pve1|service"'   # attendre : plus rien sur pve1, tout « started »
+ssh pve1 'qm list; pct list'                         # 0 running (les invités hors HA ne bougent pas seuls)
+timeout 15 ceph -s | grep pgs                        # active+clean avant le second
+ha-manager crm-command node-maintenance enable pve2  # proxy-tim ~14 s, Odoo et PBS ~1 s
+watch -n5 'ha-manager status | grep -E "pve2|service"'
+ssh pve2 'qm list; pct list'
+ha-manager status | grep -E "^service"               # tout started sur pve3/pve4/pve5
+```
+
+Puis la sonde du test 7 (`/root/sonde-gra3.sh` sur pve3, à recréer si absent :
+Odoo, headscale, staging, `pacs-secours…/xaconsolepacs/`, PG non actifs,
+OSD up, nœuds) lancée par `systemd-run --unit=coupure-ovh
+--property=StandardOutput=append:/root/coupure-ovh.log`. Les deux nœuds
+restent allumés et membres du quorum jusqu'à ce qu'OVH les coupe.
+
+**Pendant** : rien à faire. Attendu sur la sonde à 07:30 : `nodes=3`, puis
+`osd=6 up` après ~20 s avec un gel d'I/O de quelques secondes (re-peering,
+mesuré 7 s au test 7), `ceph_notactive=0` en permanence, toutes les URL à
+200. **Ne rien relancer à la main**, même si un nœud semble revenir avant
+l'heure : attendre la fin annoncée par OVH. Si OVH fait un arrêt propre
+plutôt qu'une coupure, `shutdown_policy=migrate` n'a rien à migrer.
+
+**Après, dès 14:00 Paris (12:00 UTC) et la fin annoncée par OVH** :
+
+```bash
+pvecm status | grep -E "Nodes|Quorate"               # 5 / Yes ; sinon attendre le boot (~3 min)
+corosync-cfgtool -n | grep -c connected              # 8
+timeout 15 ceph -s | grep -E "mon:|osd:|pgs:"        # 5 mons, 10 up, puis 33 active+clean (quelques minutes de backfill des écritures de la matinée)
+ha-manager crm-command node-maintenance disable pve1
+ha-manager crm-command node-maintenance disable pve2
+ceph osd unset noout
+ssh root@10.40.0.60 'python3 /root/zabbix-noeud-maintenance.py on pve1 pve2'
+systemctl stop coupure-ovh                           # sonde
+for n in 1 2; do ssh pve$n 'uptime -s; pvesm status | grep -c active; tailscale ip -4'; done   # 5 stockages, tailnet
+```
+
+Les services restent où le CRM les a posés (pool banalisé) ; rééquilibrer à
+la main si pve3 porte trop (`ha-manager crm-command migrate`). Consigner les
+mesures de la sonde dans la fiche 05 (test 8) et cocher ce paragraphe.
+
+Retour arrière avant la coupure : `node-maintenance disable` sur les deux,
+`ceph osd unset noout`, `zabbix-noeud-maintenance.py on` — cinq minutes.
