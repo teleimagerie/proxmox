@@ -320,8 +320,9 @@ en réel : le téléphone du poste d'administration (`z-fold4-de-matthieu`,
 Android, `100.72.0.1`) puis le poste Windows/WSL2 (`lenovo-mca2`,
 `100.72.0.3`), tous deux sous `admin`, sans expiration ; puis le nouveau
 poste `zenbook-mca` (`100.72.0.10`) le 15/09/2026, **par OIDC** donc sous le
-user `matt` (voir le groupe `group:admin` ci-dessous — `lenovo-mca2`, hors
-ligne depuis début septembre, peut être supprimé). Constaté au passage :
+user `matt` (voir le groupe `group:admin` ci-dessous). `lenovo-mca2`, hors
+ligne depuis début septembre, a été **supprimé le 15/09/2026**
+(`headscale nodes delete -i 5 --force`) : `100.72.0.3` est libre. Constaté au passage :
 les deux appareils admin **ne se voient pas** dans `tailscale status` —
 aucun flux `admin ↔ admin` n'étant autorisé, headscale ne les présente même
 pas l'un à l'autre. C'est voulu, pas une panne.
