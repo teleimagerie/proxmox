@@ -264,6 +264,45 @@ Les 50 Go ajoutés ne coûteront leurs 150 Go bruts (`size=3`) qu'à mesure du
 remplissage — la contrainte réelle du pool est la somme des plafonds si toutes
 les images se remplissaient, pas la somme des tailles déclarées.
 
+## Redémarrage des deux VM (15/09/2026)
+
+Les deux VM traînaient un `/var/run/reboot-required` posé le **14/09 à 09:13**
+par le provisioning Ansible (`libc6`, `linux-image-6.8.0-139-generic`,
+`linux-base`) : noyau `-139` installé, `-138` en service, pas de livepatch.
+Sans rapport avec l'extension du disque, relevé à cette occasion.
+
+**`sudo reboot` seul suffit** : les conteneurs sont en `unless-stopped` et
+`docker` est `enabled` au boot, tout remonte sans intervention. Ne **pas**
+faire de `docker compose stop` avant — `unless-stopped` mémorise l'arrêt
+manuel et laisserait les conteneurs à terre au démarrage suivant (il faudrait
+un `docker compose start`). Si l'on veut vraiment border MySQL, le geste juste
+est `systemctl stop docker` (arrête le service, ne marque aucun conteneur),
+jamais `compose stop`.
+
+Le point de vigilance envisagé — `StopTimeout` du conteneur non défini, donc
+10 s par défaut avant `SIGKILL`, potentiellement court pour vider le buffer
+pool des 27 Go de la 103 — **ne s'est pas matérialisé** : MySQL a redémarré
+sur un `ready for connections` sans rejeu de journal InnoDB.
+
+Fait une VM à la fois, en commençant par la 104 (base de 500 Ko, si quelque
+chose casse c'est là que ça coûte le moins) :
+
+| | VM 104 | VM 103 |
+|---|---|---|
+| SSH revenu | ~12 s | ~15 s |
+| Conteneurs `healthy` | 5 (3 avec healthcheck) | **8/8** en ~50 s |
+| Noyau | `-138` → **`-139`** | idem |
+| `reboot-required` | levé | levé |
+
+Vérifié après coup : `/login` **200** sur les trois noms (`app.` et `gestion.`
+staging TIM, `app.` staging Isoteam), disque de la 103 toujours à 145 Go / 49 %,
+cluster `HEALTH_OK`. Coupure réelle : quelques dizaines de secondes par VM, sans
+utilisateur.
+
+`unattended-upgrades` ne redémarre pas ces VM ; le drapeau ne se reposera qu'au
+prochain lot de mises à jour. Un redémarrage hebdomadaire automatique (dimanche
+avant la sauvegarde de 03:00, comme les syngo.via) reste à décider.
+
 ## Reste à faire
 
 - [ ] extinction des dédiés (`systemctl poweroff`) après quelques jours de recul,
@@ -284,7 +323,4 @@ les images se remplissaient, pas la somme des tailles déclarées.
   que `make deploy-tim-staging` redevienne suffisant ;
 - [ ] consigner dans la revue HDS ([12-architecture-hds.md](12-architecture-hds.md))
   que les copies de prod des staging sont désormais sur le cluster ;
-- [ ] **redémarrage en attente sur la VM 103** (relevé le 15/09) : `libc6`,
-  `linux-image-6.8.0-139-generic`, `linux-base` — le noyau courant est le `-138`.
-  Sans rapport avec l'extension du disque ; à planifier avec la 104 (vérifier
-  son état au passage).
+- [x] **redémarrage des deux VM** — fait le 15/09 (voir ci-dessous).
