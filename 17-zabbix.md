@@ -84,7 +84,7 @@ le SPF, la configuration voyage dans le dump).
 | `TIM-VENUS1-AP` | **actif** (65 items) + ICMP et sondes TCP | `192.168.111.63` par `wg2` | ✅ **raccordé le 05/09/2026** — voir [§ RIS VENUS](#serveurs-ris-venus-de-tellis--agent-actif-05092026) |
 | `TIM-VENUS2-IF` | idem (60 items) | `192.168.111.64` par `wg2` | ✅ idem |
 | `TIM-VENUS3-DB` | idem (63 items) | `192.168.111.65` par `wg2` | ✅ idem |
-| `DICOMPROXY` | **sans agent** : ICMP + 3 sondes TCP | `192.168.101.103` par `wg2` | ✅ **raccordé le 09/09/2026** — voir [§ ProxyVia](#proxyvia--sans-agent-sondes-tcp--icmp-09092026) |
+| `DICOMPROXY` | **sans agent** : ICMP + 2 sondes TCP (9104, 8443 ; la sonde 5432 retirée le 15/09) | `192.168.101.103` par `wg2` | ✅ **raccordé le 09/09/2026** — voir [§ ProxyVia](#proxyvia--sans-agent-sondes-tcp--icmp-09092026) |
 | `CMSI-LES-HERBIERS` | 1 item, quasi mort | pas vu en 3 min | toujours muet — à trancher (supprimer ?) |
 
 Pas de proxy Zabbix, pas de traps SNMP (trapper désactivé), pas de JMX/IPMI,
@@ -307,14 +307,23 @@ méthode syngo (SNMP)**. On supervise par le seul chemin déjà ouvert.
 | Mode | **sans agent, sans SNMP** : uniquement le gabarit `ICMP Ping` et des *simple checks* TCP. `.103` (bloc syngo) est la cible ; `.58` est la patte imagerie, pas une cible de sonde |
 | Gabarit | `ICMP Ping` **seul** — il fournit `icmpping` et le déclencheur High « *Unavailable by ICMP ping* ». Aucun autre gabarit posé, donc **pas de clé `icmpping` en double** (le piège des hôtes SNMP ne s'applique pas ici) |
 | Interface | une interface agent est déclarée bien qu'**aucun agent** ne tourne : elle sert d'ancre `{HOST.CONN}` aux *simple checks*. ⚠️ Même piège que VENUS/syngo : par l'API, il faut porter `interfaceid` explicitement sur chaque *simple check*, sinon « non supporté » |
-| Sondes TCP | *simple checks* `net.tcp.service[tcp,,PORT]` à la minute, déclencheur `max(…,3m)=0` : **`9104`** (l'AET `DP_EC`, le répartiteur, **High**), **`5432`** (PostgreSQL `registry` dont le proxy dépend, **High**), **`8443`** (portail admin, Average). Le mail ne part qu'en High |
+| Sondes TCP | *simple checks* `net.tcp.service[tcp,,PORT]` à la minute, déclencheur `max(…,3m)=0` : **`9104`** (l'AET `DP_EC`, le répartiteur, **High**), **`8443`** (portail admin, Average). Le mail ne part qu'en High. ~~**`5432`** (PostgreSQL `registry`, High)~~ **retirée le 15/09/2026** : Siemens a fermé le port au réseau (voir ci-dessous) |
 | Secrets | **aucun** : ni agent, ni communauté SNMP, ni jeton propre à l'hôte |
-| Vérifié | 09/09/2026 : `icmpping` = 1 et les trois sondes = 1, **aucun item non supporté**, données fraîches, **0 problème ouvert**. Aucune régression sur les hôtes existants |
+| Vérifié | 09/09/2026 : `icmpping` = 1 et les trois sondes = 1, **aucun item non supporté**, données fraîches, **0 problème ouvert**. Aucune régression sur les hôtes existants. 15/09/2026 : `icmpping` = 1, 9104 et 8443 = 1, item 5432 absent, **0 problème ouvert** |
 
-> ⚠️ **La sonde `5432` n'est pas une caution.** Elle ne fait qu'ouvrir la socket ;
-> le fait que ce port réponde depuis le réseau est justement le **défaut n°1 parti
-> en ticket Siemens** (base `registry` joignable sans mot de passe, données
-> patients — voir [13-tellis.md § ProxyVia](13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026)).
+> ⚠️ **La sonde `5432` n'était pas une caution, et elle a fini par mesurer la
+> correction.** Elle ne faisait qu'ouvrir la socket ; or le fait que ce port
+> réponde depuis le réseau était justement le **défaut n°1 parti en ticket
+> Siemens** (base `registry` joignable sans mot de passe, données patients — voir
+> [13-tellis.md § ProxyVia](13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026)).
+> **Le 15/09/2026, Siemens a corrigé** (`listen_addresses = 'localhost'`, `pg_hba`
+> durci, PostgreSQL et `dp-ec` redémarrés à 16:14, sans reboot) : la sonde est
+> passée à 0 et le High « PostgreSQL registry (tcp/5432) INJOIGNABLE » a sonné à
+> 16:18 (problème 485585) alors que le proxy travaillait normalement (9104 et 8443
+> = 1, ICMP = 1, examens reçus). La sonde est **retirée** par le script (tuple
+> `RETIREES` : suppression idempotente de l'item, qui emporte le déclencheur et
+> ferme le problème). La base n'est plus observable de l'extérieur, et c'est le
+> but — [piège n° 45](07-pieges.md#45-une-sonde-sur-un-port-dont-on-demande-la-fermeture-sonne-le-jour-où-léditeur-corrige).
 
 Provisionné par [`scripts/zabbix-provision-dicomproxy.py`](scripts/zabbix-provision-dicomproxy.py)
 (idempotent, sur le patron de `zabbix-provision-venus.py`), exécuté sur le CT 204.

@@ -27,10 +27,15 @@ Choix de conception, expliqués ici pour ne pas être défaits plus tard :
     L'adresse (.103) est celle du bloc syngo — même /28 que .98/.100, déjà
     supervisés ; .58 est la patte imagerie, pas une cible de sonde.
 
-Le port 5432 est volontairement classé High : le proxy dépend de la base
-registry pour son mapping patient->serveur. Le fait que ce port réponde depuis
-le réseau est par ailleurs le défaut n°1 signalé à Siemens — la sonde ne s'y
-authentifie pas, elle ne fait qu'ouvrir la socket.
+Le port 5432 (PostgreSQL registry) a été sondé du 09/09 au 15/09/2026, en
+High : le proxy dépend de la base pour son mapping patient->serveur. Mais le
+fait que ce port réponde depuis le réseau était le défaut n°1 signalé à
+Siemens, et l'éditeur l'a corrigé le 15/09 (listen_addresses = 'localhost',
+pg_hba durci, PostgreSQL redémarré à 16:14) : la sonde est passée à 0 et le
+High a sonné à 16:18 — l'alerte mesurait la correction attendue. La sonde est
+retirée (RETIREES) : la base n'est plus observable de l'extérieur, et c'est
+voulu ; « hotes » supprime l'item, ce qui emporte son déclencheur et le
+problème ouvert. Ne pas sonder un port dont on demande la fermeture.
 
 Usage : zabbix-provision-dicomproxy.py {hotes|check}
 """
@@ -50,9 +55,10 @@ ROLE = "Siemens syngo.via - repartiteur DICOM"
 # port, nom du service, sévérité (4 = High -> mail, 3 = Average)
 SONDES = (
     (9104, "DicomProxy DP_EC (repartiteur DICOM)", 4),
-    (5432, "PostgreSQL registry (mapping patient->serveur)", 4),
     (8443, "Portail admin Tomcat", 3),
 )
+# ports sondés autrefois, dont l'item (et donc le déclencheur) doit disparaître
+RETIREES = (5432,)  # PostgreSQL registry : n'écoute plus que localhost depuis le 15/09/2026
 
 
 def zbx(method, params):
@@ -153,11 +159,21 @@ def hotes():
         desc = f"{service} (tcp/{port}) INJOIGNABLE sur {HOST}"
         if ensure_trigger(desc, f"max(/{HOST}/{cle},3m)=0", prio):
             print(f"  sonde tcp/{port} ({service}) -> {'High' if prio == 4 else 'Average'}")
+    for port in RETIREES:
+        cle = f"net.tcp.service[tcp,,{port}]"
+        ex = zbx("item.get", {"hostids": [hid], "output": ["itemid"],
+                              "filter": {"key_": [cle]}})
+        if ex:  # supprime aussi le déclencheur et ferme le problème qu'il portait
+            zbx("item.delete", [ex[0]["itemid"]])
+            print(f"  sonde tcp/{port} retiree")
 
 
 def check():
     hid = host_id(HOST)
     cles = ["icmpping"] + [f"net.tcp.service[tcp,,{p}]" for p, _, _ in SONDES]
+    for p in RETIREES:
+        if zbx("item.get", {"hostids": [hid], "filter": {"key_": [f"net.tcp.service[tcp,,{p}]"]}}):
+            print(f"{HOST:12} sonde tcp/{p} ENCORE PRESENTE (lancer « hotes »)")
     items = zbx("item.get", {"hostids": [hid],
                              "output": ["key_", "lastvalue", "lastclock", "state"],
                              "filter": {"key_": cles}})

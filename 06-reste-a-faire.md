@@ -202,29 +202,41 @@ C'est une **appliance gérée par Siemens** : on ne touche pas à sa configurati
 **les cinq points sont adressés par un ticket éditeur** (contenu rédigé, ouverture
 du ticket à la main de TIM). Par priorité :
 
-1. **⛔ Base PostgreSQL `registry` joignable depuis le LAN sans mot de passe.**
-   Le service écoute `0.0.0.0:5432` et, depuis le réseau via `192.168.101.103`,
-   une connexion `psql` aboutit **sans authentification** pour le compte applicatif
-   `dicom` **et pour le superutilisateur `postgres`** (vérifié le 09/09). La table
-   `location` contient des **identités patients** (nom, date de naissance, sexe,
-   numéro d'accession). Toute machine du bloc `192.168.101.96/28` peut lire et
-   écrire cette base. Demander à Siemens la configuration supportée (écoute sur
-   `localhost` et/ou mot de passe) — le proxy accède à la base en `localhost`.
-2. **Horloge en retard d'environ 10 minutes.** `System clock synchronized: no` ;
-   NTP actif mais ne résout plus `*.pool.ntp.org`, les DNS déclarés
-   (`192.168.150.1`, `192.168.250.1`) étant injoignables. Horodatage DICOM et
-   journaux qui dérivent.
-3. **Redémarrage en attente** depuis le 05/08/2026 (noyau) et **439 jours
-   d'uptime** — convenir d'une fenêtre.
+1. ✅ ~~**Base PostgreSQL `registry` joignable depuis le LAN sans mot de passe.**~~
+   **Corrigé par Siemens le 15/09/2026** : `listen_addresses = 'localhost'`,
+   `pg_hba.conf` durci (une connexion locale demande un mot de passe), PostgreSQL
+   et `dp-ec` redémarrés à 16:14 sans reboot ni interruption du flux. Le port 5432
+   ne répond plus depuis le réseau — ce qui a fait sonner la sonde Zabbix, retirée
+   depuis ([17-zabbix.md](17-zabbix.md#proxyvia--sans-agent-sondes-tcp--icmp-09092026)).
+   Pour mémoire, le défaut d'origine : écoute `0.0.0.0:5432`, `psql` sans
+   authentification pour `dicom` et `postgres` depuis `192.168.101.103`, table
+   `location` avec identités patients.
+2. ⚠️ **Horloge : remise à l'heure, pas synchronisée.** Le 15/09 à 23:47 l'écart
+   mesuré est de −0,3 s (contre ~10 min de retard le 09/09) : Siemens a remis la
+   pendule à l'heure (`timesyncd` relancé à 10:23). Mais `System clock
+   synchronized: no`, `Packet count: 0`, les DNS déclarés (`192.168.150.1`,
+   `192.168.250.1`) restent injoignables et `*.pool.ntp.org` ne résout pas :
+   la dérive reprendra (~1,4 s/jour observés). Demander un serveur NTP joignable
+   en IP (le pfSense `.110` ou `.59`, par exemple) plutôt qu'un nom.
+3. ⛔ **Redémarrage en attente** depuis le 05/08/2026 (`/var/run/reboot-required`,
+   noyau `5.10.0-35` en service pour `-46` installé, dix noyaux dans
+   `reboot-required.pkgs`) et **445 jours d'uptime** au 15/09 — inchangé, convenir
+   d'une fenêtre. Siemens n'a pas redémarré la VM lors de son intervention du 15/09.
 4. **Journaux DEBUG à 12 Go** (`/opt/dicomproxy/ec/log`, ~850 Mo/jour) — repasser
    en INFO en exploitation normale ?
-5. **Sauvegarde quotidienne incomplète** : le `tar` de `/opt/dicomproxy` n'inclut
-   **ni la base `registry`** (mapping patient→serveur) **ni la config du portail**.
+5. ⛔ **Sauvegarde quotidienne incomplète** — inchangé au 15/09 : le `tar` de 01:02
+   (`/backup/ec_dicomproxy_AAAAMMJJ.tgz`, 7,6 Mo, 39 entrées sous
+   `/opt/dicomproxy/ec` et `ssl` ; `ec_tomcat_*.tgz` 56 Mo à 01:01, 7 jours
+   conservés) n'inclut **ni la base `registry`** (mapping patient→serveur, aucun
+   `pg_dump` nulle part) **ni la config du portail**. Après le durcissement du 15/09
+   un `pg_dump` local demandera d'ailleurs le mot de passe applicatif : c'est à
+   Siemens de l'ajouter à sa chaîne.
 
 Depuis le 09/09 le serveur est **supervisé** ([17-zabbix.md](17-zabbix.md#proxyvia--sans-agent-sondes-tcp--icmp-09092026))
-par ICMP et trois sondes TCP (9104/5432/8443) depuis le CT 204. La supervision ne
-corrige aucun des points ci-dessus ; elle prévient si le répartiteur, sa base ou
-son portail tombent.
+par ICMP et deux sondes TCP (9104/8443) depuis le CT 204 — la sonde 5432 a été
+retirée le 15/09, le port étant fermé au réseau. La supervision ne corrige aucun
+des points ci-dessus ; elle prévient si le répartiteur ou son portail tombent. La
+base n'est plus observable sans agent.
 
 
 ### ⚠️ Vue PACS `TIMWFMCORE` — ce que l'audit du 11/09/2026 laisse ouvert

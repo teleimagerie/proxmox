@@ -442,16 +442,24 @@ vers TIMWFMCORE : le proxy travaille normalement.
 `.58` bloc imagerie, routes des sites par le pfSense `.59`.
 
 **Supervision** : hôte `DICOMPROXY` ajouté à Zabbix le 09/09 (ICMP + sondes TCP
-9104/5432/8443 depuis le CT 204) — [17-zabbix.md](17-zabbix.md#proxyvia--sans-agent-sondes-tcp--icmp-09092026).
+9104/8443 depuis le CT 204 ; la sonde 5432 a été retirée le 15/09, le port étant
+désormais fermé au réseau) — [17-zabbix.md](17-zabbix.md#proxyvia--sans-agent-sondes-tcp--icmp-09092026).
 
 > ⚠️ **Points de vigilance** (partis en ticket Siemens, l'appliance est gérée par
-> l'éditeur) : **PostgreSQL `registry` joignable depuis le LAN sans mot de passe**
-> — depuis le réseau via `.103`, `psql` aboutit sans authentification pour `dicom`
-> **et pour le superutilisateur `postgres`**, alors que la base contient des
-> identités patients (nom, date de naissance, sexe) ; **horloge en retard d'environ
-> 10 min** (NTP muet faute de DNS résolvant) ; **redémarrage en attente** depuis le
-> 05/08 et 439 jours sans reboot ; **12 Go de journaux DEBUG** ; **sauvegarde
-> quotidienne incomplète** (ni la base `registry`, ni la config du portail).
+> l'éditeur), état au **15/09/2026** :
+> ✅ ~~**PostgreSQL `registry` joignable depuis le LAN sans mot de passe**~~ —
+> **corrigé par Siemens le 15/09** (trois sessions SSH depuis `194.138.39.18`,
+> `postgresql.conf` et `pg_hba.conf` modifiés à 15:40, service redémarré à 16:14) :
+> `listen_addresses = 'localhost'`, le port 5432 ne répond plus depuis le réseau et
+> une connexion locale demande un mot de passe. Le proxy accède à la base en
+> `localhost`, aucune interruption constatée ;
+> ⚠️ **horloge** : remise à l'heure le 15/09 (écart −0,3 s mesuré à 23:47), mais
+> **toujours pas synchronisée** (`timesyncd` relancé à 10:23, `Packet count: 0`,
+> DNS `192.168.150.1`/`.250.1` toujours injoignables) — elle dérivera de nouveau ;
+> ⛔ **redémarrage en attente** depuis le 05/08, **445 jours** sans reboot, noyau
+> `-35` en service pour `-46` installé ; **12 Go de journaux DEBUG** ; ⛔ **sauvegarde
+> quotidienne incomplète** (le `tar` de 01:02 n'a que 39 entrées de `/opt/dicomproxy/ec`
+> et `ssl` : ni la base `registry`, ni la config du portail) — inchangé.
 
 #### `win-srv-tsplus` (`.102`) — la porte d'entrée des utilisateurs, inventorié le 02/09/2026
 

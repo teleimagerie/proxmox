@@ -1170,3 +1170,37 @@ release Ceph, même mineure : celle-ci change la couleur du cluster. Et le
 déclencheur Zabbix `HEALTH_ERR` (Disaster) ne distingue pas une panne d'un
 avertissement de sécurité : quand la cause est connue, `ceph health mute`
 avec durée est le bon geste pour ne pas noyer les vraies alertes.
+
+## 45. Une sonde sur un port dont on demande la fermeture sonne le jour où l'éditeur corrige
+
+**Contexte** — Le 09/09, l'inventaire de ProxyVia (`dicomproxy`,
+[13-tellis.md](13-tellis.md#dicomproxy-103--proxyvia-le-répartiteur-dicom-inventorié-le-09092026))
+avait trouvé PostgreSQL `registry` en écoute sur `0.0.0.0:5432` sans mot de passe :
+défaut n° 1 du ticket Siemens. Le même jour, la supervision sans agent de l'appliance
+a posé trois sondes TCP depuis le CT 204, dont une sur **5432**, en High, parce que
+« le proxy dépend de sa base ». La fiche disait bien que la sonde « n'est pas une
+caution », mais elle ne disait pas qu'elle deviendrait fausse.
+
+**Symptôme** — Le 15/09 à 16:18, mail Zabbix High « PostgreSQL registry (mapping
+patient->serveur) (tcp/5432) INJOIGNABLE sur DICOMPROXY » (problème 485585), avec
+`icmpping`, 9104 et 8443 toujours à 1.
+
+**Cause** — Siemens était en train de corriger : trois sessions SSH depuis
+`194.138.39.18`, `postgresql.conf` et `pg_hba.conf` modifiés à 15:40,
+`listen_addresses = 'localhost'`, PostgreSQL et `dp-ec` redémarrés à 16:14 (sans
+reboot, 445 jours d'uptime). Trois relevés à 0 plus tard, `max(…,3m)=0` a sonné.
+L'alerte mesurait exactement la fermeture demandée dans le ticket.
+
+**Résolution** — La sonde est retirée par
+[`scripts/zabbix-provision-dicomproxy.py`](scripts/zabbix-provision-dicomproxy.py)
+(tuple `RETIREES` : `item.delete` idempotent, qui emporte le déclencheur et ferme le
+problème sans passer par un acquittement). Vérifié : 0 problème ouvert, 9104 et
+8443 à 1, deuxième passe muette. La base n'est plus observable sans agent, et c'est
+voulu.
+
+**Leçon** — Quand on demande la fermeture d'un port, on ne pose pas de sonde dessus,
+ou alors on l'inverse (alerter s'il **répond**). Une sonde TCP ne dit pas « le
+service va bien », elle dit « la socket s'ouvre depuis ici » ; sur un port qui ne
+devrait pas être joignable, c'est un signal de sécurité, pas de disponibilité.
+Et avant de crier à la panne sur une alerte de port : regarder `last` et les dates
+des fichiers de configuration, l'éditeur passe sans prévenir.
