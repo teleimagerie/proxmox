@@ -169,7 +169,12 @@ enrôlés : `headscale preauthkeys expire --id <n>`.
 > (`admin@ → tag:pve:22,8006`, volontairement sans joker). Les journaux
 > `pveproxy` perdent aussi la source réelle sur ce chemin.
 
-### ✅ Test « porte 2 seule » — 01/09/2026
+### ✅ Test « porte 2 seule » — 01/09/2026, rejoué sur pve4/pve5 le 15/09/2026
+
+Rejoué le 15/09/2026 au soir depuis `zenbook-mca`, wg0 coupé : `ssh
+root@100.72.0.8` et `.9` répondent (`pve4`, `pve5`), `https://100.72.0.8:8006`
+en 200, chemin **direct** (`tailscale ping` : `via 79.137.100.184:41641 in
+18ms`) — la seconde porte vaut pour les cinq nœuds.
 
 **Protocole** : VPN wg0 coupé sur le poste d'administration, seul le client
 tailscale actif. Effets constatés, conformes au scénario de panne d'OPNsense :
@@ -313,7 +318,10 @@ pré-auth taguées : `headscale preauthkeys list|expire|delete --user <ID>`.
 Premiers appareils de production enrôlés le 25/08/2026, procédures vérifiées
 en réel : le téléphone du poste d'administration (`z-fold4-de-matthieu`,
 Android, `100.72.0.1`) puis le poste Windows/WSL2 (`lenovo-mca2`,
-`100.72.0.3`), tous deux sous `admin`, sans expiration. Constaté au passage :
+`100.72.0.3`), tous deux sous `admin`, sans expiration ; puis le nouveau
+poste `zenbook-mca` (`100.72.0.10`) le 15/09/2026, **par OIDC** donc sous le
+user `matt` (voir le groupe `group:admin` ci-dessous — `lenovo-mca2`, hors
+ligne depuis début septembre, peut être supprimé). Constaté au passage :
 les deux appareils admin **ne se voient pas** dans `tailscale status` —
 aucun flux `admin ↔ admin` n'étant autorisé, headscale ne les présente même
 pas l'un à l'autre. C'est voulu, pas une panne.
@@ -343,9 +351,21 @@ deny par défaut) donne à chaque type de client :
 
 | Client | Initie vers | Reçoit de |
 |---|---|---|
-| appareil `admin@` | `tag:gateway:*`, `tag:pacs:*` | personne — **pas non plus de trafic téléphone ↔ poste** (aucune règle `admin@ → admin@`, Taildrop désactivé) |
-| `tag:gateway` | `tag:pacs:104,11112` uniquement | `admin@` |
-| `tag:pacs` | rien | `tag:gateway` (ports DICOM), `admin@` |
+| appareil `group:admin` | `tag:gateway:*`, `tag:pacs:*`, `tag:pve:22,8006` | personne — **pas non plus de trafic téléphone ↔ poste** (aucune règle admin → admin, Taildrop désactivé) |
+| `tag:gateway` | `tag:pacs:104,11112` uniquement | `group:admin` |
+| `tag:pacs` | rien | `tag:gateway` (ports DICOM), `group:admin` |
+| `tag:pve` | rien | `group:admin` (22 et 8006 seulement) |
+
+**`group:admin` = `admin@` + `matt@`** depuis le 15/09/2026. Le user `admin`
+est l'enrôlement interactif historique ; `matt` est le user créé par
+headscale à la **première connexion OIDC réelle** (Keycloak, compte
+`mcapon@teleimagerie.net`) — le poste `zenbook-mca` (`100.72.0.10`) s'est
+enrôlé par le bouton OIDC et s'est retrouvé sous ce user, sans aucun pair
+visible tant que l'ACL ne connaissait qu'`admin@`. Les droits sont désormais
+portés par le groupe : chaque personne garde son identité, l'ajout d'un
+administrateur se fait en une ligne dans `groups`. Rechargement sans
+coupure : copie du fichier puis `systemctl reload headscale` (SIGHUP,
+« Policy reload completed with changes »), après `headscale policy check -f`.
 
 ---
 

@@ -271,9 +271,11 @@ Keycloak est en production ([16-keycloak.md](16-keycloak.md)) : realm `tim`,
 Proxmox VE, PBS, headscale, Odoo et MyTIM (prod TIM) raccordés en OIDC,
 brokering Google Workspace et SMTP Mailjet en place. Ce qui reste :
 
-- **Éprouver headscale par une connexion OIDC réelle** (PVE et PBS le sont
-  depuis le 27/08/2026, en SSO sur une même session) : un
-  `tailscale up --login-server https://headscale.teleimagerie.net` de test.
+- ✅ ~~Éprouver headscale par une connexion OIDC réelle~~ — faite le
+  15/09/2026 : le poste `zenbook-mca` s'est enrôlé par le bouton OIDC
+  (Keycloak, TOTP), user headscale `matt` créé à la volée. Piège rencontré :
+  l'ACL n'accordait qu'`admin@`, le poste ne voyait aucun pair — corrigé par
+  un `group:admin` = `admin@` + `matt@` ([11-headscale.md](11-headscale.md#organisation-du-tailnet)).
 - **Microsoft 365** (`isoteam.mn`) pourra suivre par la même mécanique que le
   brokering Google Workspace.
 - **MyTIM** : **validation pilotes** puis communication à tout l'interne TIM
@@ -345,7 +347,7 @@ mesuré : `direct 91.134.84.222:41641`, sans traverser OPNsense
 ([11-headscale.md](11-headscale.md#les-hyperviseurs--seconde-porte-dadministration-31082026)).
 Test « porte 2 seule » réussi le 01/09/2026 : wg0 coupé sur le poste, les
 3 nœuds restent joignables par le tailnet en SSH et 8006
-([11-headscale.md](11-headscale.md#test--porte-2-seule---01092026)).
+([11-headscale.md](11-headscale.md#test--porte-2-seule---01092026-rejoué-sur-pve4pve5-le-15092026)).
 
 ### ✅ Étape 3 — fermeture par vagues (31/08 et 01/09/2026)
 
@@ -426,10 +428,9 @@ pièges n° 43 et 44). Ce qui reste :
   heures** (TTL des tickets) — vérifier `ceph health` = `HEALTH_OK` le 16/09.
 - ✅ ~~Ajouter `pve4`/`pve5` aux redirect URIs du client OIDC `proxmox`~~ — fait
   par l'admin le 15/09/2026 au soir ([16-keycloak.md](16-keycloak.md)).
-- 📋 **Tester la porte tailnet de pve4/pve5 depuis un appareil admin** (`ssh
-  root@100.72.0.8` / `.9`) : les deux nœuds sont enrôlés et `online` dans
-  headscale, chemin non éprouvé de bout en bout le 15/09 (le poste WSL de la
-  session n'était pas membre du tailnet).
+- ✅ ~~Tester la porte tailnet de pve4/pve5 depuis un appareil admin~~ — fait
+  le 15/09/2026 au soir depuis `zenbook-mca`, wg0 coupé : SSH et 8006
+  répondent, chemin direct en 18 ms ([11-headscale.md](11-headscale.md#test--porte-2-seule---01092026-rejoué-sur-pve4pve5-le-15092026)).
 - ✅ ~~Tester la console KVM OVH de pve4 et pve5~~ — fait par l'admin le
   15/09/2026 au soir, mots de passe root rangés dans le gestionnaire de secrets.
 - 📋 **Rejouer un test HA** sur un nœud GRA3 (test 5 de [05-tests-ha.md](05-tests-ha.md))

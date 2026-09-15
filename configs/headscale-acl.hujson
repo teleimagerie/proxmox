@@ -3,11 +3,19 @@
   // Defaut : tout est refuse. Notamment : AUCUN trafic gateway <-> gateway.
   // Copie de reference : proxmox/configs/headscale-acl.hujson
 
+  // Administrateurs : le user local admin (enrolement interactif, 25/08/2026)
+  // et l identite OIDC Keycloak de l administrateur (user headscale « matt »,
+  // mcapon@teleimagerie.net, cree par la premiere connexion OIDC le 15/09/2026).
+  // Chaque personne garde son identite ; les droits s accordent au groupe.
+  "groups": {
+    "group:admin": ["admin@", "matt@"],
+  },
+
   // Qui a le droit de poser quel tag (cles pre-auth taguees ou --advertise-tags)
   "tagOwners": {
-    "tag:gateway": ["admin@"],   // passerelles DICOM des sites distants
-    "tag:pacs":    ["admin@"],   // serveurs heberges sur le cluster
-    "tag:pve":     ["admin@"],   // hyperviseurs : 2e porte d administration
+    "tag:gateway": ["group:admin"],   // passerelles DICOM des sites distants
+    "tag:pacs":    ["group:admin"],   // serveurs heberges sur le cluster
+    "tag:pve":     ["group:admin"],   // hyperviseurs : 2e porte d administration
   },
 
   "acls": [
@@ -16,8 +24,8 @@
     // A resserrer au port reel quand le PACS existera.
     { "action": "accept", "src": ["tag:gateway"], "dst": ["tag:pacs:104,11112"] },
 
-    // Administration : les postes du user admin joignent tout (SSH, web, DICOM).
-    { "action": "accept", "src": ["admin@"], "dst": ["tag:gateway:*", "tag:pacs:*"] },
+    // Administration : les postes des administrateurs joignent tout (SSH, web, DICOM).
+    { "action": "accept", "src": ["group:admin"], "dst": ["tag:gateway:*", "tag:pacs:*"] },
 
     // Hyperviseurs : seconde porte d administration, independante d OPNsense.
     // Volontairement PAS de joker ici — SSH et interface web uniquement — et
@@ -25,6 +33,6 @@
     // le tailnet. Le filtrage de cette porte repose ENTIEREMENT sur cette ACL :
     // les noeuds tournent en --tun=userspace-networking, le trafic leur arrive
     // depuis 127.0.0.1 et echappe donc a cluster.fw comme a fail2ban.
-    { "action": "accept", "src": ["admin@"], "dst": ["tag:pve:22,8006"] },
+    { "action": "accept", "src": ["group:admin"], "dst": ["tag:pve:22,8006"] },
   ],
 }
