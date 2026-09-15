@@ -506,9 +506,16 @@ problème High à 19:40:29 → **mails partis vers support@ et mcapon@** (statut
   la minute (expression résolue `>200`). La mémoire réelle porte un High
   propre « Mémoire réelle > 90 % depuis 1 h » (`min(vm.memory.utilization,1h)
   > 90`, retour `max(…,30m) < 85`) posé sur les hôtes agents par le même script
-  (`seuils`). Alternative non retenue : activer le balloon (`qm set N --balloon
-  8192`, égal à `memory` donc sans réduction, seulement les statistiques) — la
-  vue hyperviseur redeviendrait vraie, mais au prix d'un arrêt/relance des VM.
+  (`seuils`). Alternative examinée puis **écartée le 15/09/2026** : activer le
+  balloon (odoo et PBS l'ont, par défaut égal à `memory`, donc sans
+  réduction). Ça ne rendrait pas la vue hyperviseur vraie : avec balloon, PVE
+  compte `maxmem − free` de l'invité, cache de pages compris — le piège PBS
+  ci-dessus. La VM 103 a déjà 6,4 Go de cache pour 0,3 Go libre (1,6 Go
+  réellement utilisés) : la vue passerait de 101 % à ~96 %, le seuil 95
+  sonnerait encore et la macro resterait nécessaire, pour un arrêt/relance des
+  deux VM. Seul intérêt possible, un jour : un balloon minimum inférieur au
+  maximum (`--balloon 4096`) pour rendre de la RAM au nœud sous pression —
+  une autre intention, sans rapport avec la supervision.
 - La règle `tcp/10050 depuis 10.40.0.60` a été ajoutée au firewall dédié de
   la VM PBS ([configs/firewall-102-pbs.fw](configs/firewall-102-pbs.fw)) ; ufw
   d'odoo autorise la même source.
