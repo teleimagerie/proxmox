@@ -300,8 +300,10 @@ cluster `HEALTH_OK`. Coupure réelle : quelques dizaines de secondes par VM, san
 utilisateur.
 
 `unattended-upgrades` ne redémarre pas ces VM ; le drapeau ne se reposera qu'au
-prochain lot de mises à jour. Un redémarrage hebdomadaire automatique (dimanche
-avant la sauvegarde de 03:00, comme les syngo.via) reste à décider.
+prochain lot de mises à jour, et le redémarrage se fait alors à la main comme
+ici. **Pas de redémarrage hebdomadaire automatique** (décision du 15/09) : sur
+deux VM de staging sans utilisateur, la reprise manuelle au fil des lots suffit
+et évite un arrêt/relance périodique dont personne n'a besoin.
 
 ## Reste à faire
 
