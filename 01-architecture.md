@@ -239,7 +239,7 @@ public_network  10.200.0.0/24
 cluster_network 10.200.0.0/24     (mutualisé : inutile de séparer à 25 Gb/s)
 MON / MGR       5 / 5 (un par nœud, GRA3 compris)
 OSD             10 (deux par nœud, 738 Gio chacun, classe ssd)
-cephx           aes256k (rotation du 15/09/2026, piège n° 44) sauf client.admin
+cephx           aes256k seul (rotation complète du 15/09/2026, piège n° 44)
 ```
 
 Pool applicatif **`vm-storage`** : **`size=4`, `min_size=2`** depuis le

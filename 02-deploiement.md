@@ -237,3 +237,8 @@ suivi, en une après-midi :
    carte régénérée. Zabbix : aucun problème High ouvert, `HEALTH_WARN`
    volontaire (piège n° 44). Non fait : test KVM OVH des deux nœuds, SSO
    Keycloak (redirect URIs), redémarrage noyau de pve1-3 — [06 §13](06-reste-a-faire.md#13-extension-du-cluster-à-gra3-pve4pve5---faite-le-15092026-suites).
+6. **Le soir même** : redémarrage de pve1, pve2, pve3 sur le noyau 7.0.14-17
+   (maintenance HA un nœud à la fois, 33-75 s d'évacuation, 167-223 s de
+   retour), puis fin de la migration cephx — clé admin en attente,
+   consommateurs rafraîchis, confirmation et restriction à `aes256k`.
+   Non fait : KVM OVH et porte tailnet de pve4/pve5, SSO Keycloak, test HA GRA3.

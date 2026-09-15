@@ -408,19 +408,22 @@ Les deux ex-dédiés de staging sont pve4 et pve5 ([01-architecture.md](01-archi
 journal dans [02-deploiement.md](02-deploiement.md#extension-à-cinq-nœuds--15-septembre-2026),
 pièges n° 43 et 44). Ce qui reste :
 
-- ⚠️ **Redémarrer pve1, pve2 et pve3 sur le noyau 7.0.14-17** (installé le
-  15/09 avec la mise à niveau 9.2.20 / Ceph 20.2.4, non chargé). Un nœud à la
-  fois, par `ha-manager crm-command node-maintenance enable` — rappel : les
-  CT (201-204) migrent par arrêt/relance, ~14 s de coupure chacun.
-- ⚠️ **Terminer la migration cephx** (piège n° 44) : `client.admin` est encore en
-  `aes`, d'où un `HEALTH_WARN` permanent. Préalable : que **tous les processus
-  QEMU** aient été relancés sur la librbd 20.2.4 (les VM tournaient déjà
-  pendant la mise à jour) — une migration à chaud de chaque VM suffit, à
-  faire dans la même fenêtre que les redémarrages ci-dessus. Puis, sur pve1 :
-  `pve-cephx-rotate-service-keys --rotate-admin-key --apply`, contrôle
-  `pveceph auth status`, et enfin `ceph mon set auth_allowed_ciphers aes256k`
-  + `ceph config set mon mon_auth_allow_insecure_key false`. Garder
-  `/etc/pve/priv/cephx-key-migration.json` jusque-là.
+- ✅ ~~Redémarrer pve1, pve2 et pve3 sur le noyau 7.0.14-17~~ — **fait le
+  15/09/2026 au soir**, un nœud à la fois en maintenance HA : évacuation en
+  33-75 s, retour en 167-223 s, Ceph `active+clean` avant chaque suivant. Les
+  services ont changé de nœud au gré du CRM (pool banalisé) : OPNsense sur
+  pve1, proxy-tim/Odoo/PBS sur pve2, Zabbix sur pve5, headscale/keycloak sur
+  pve1 — aucun n'a été renvoyé de force.
+- ✅ ~~Terminer la migration cephx~~ — **faite le 15/09/2026 au soir** : clé
+  `client.admin` mise en attente (`--rotate-admin-key --apply`), consommateurs
+  rafraîchis par les redémarrages ci-dessus et une migration aller-retour des
+  VM 103/104 (14-319 ms), puis `--apply --confirm-all-clients-refreshed
+  --restrict-ciphers` : 24 clés en `aes256k`, `auth_allowed_ciphers` réduit à
+  `aes256k`, `mon_auth_allow_insecure_key false`, journal
+  `cephx-key-migration.json` détruit après contrôle des accès (RBD depuis
+  trois nœuds, 9 invités, 12 URL publiées). Reste `HEALTH_WARN
+  AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE`, qui **expire seul en quelques
+  heures** (TTL des tickets) — vérifier `ceph health` = `HEALTH_OK` le 16/09.
 - ⚠️ **Ajouter `https://pve4.infra.teleimagerie.net:8006/*` et `pve5` aux redirect URIs
   du client OIDC `proxmox`** du realm `tim` ([16-keycloak.md](16-keycloak.md)) —
   `kcadm.sh config credentials` puis `kcadm update clients/<id>` sur le CT 203 ;

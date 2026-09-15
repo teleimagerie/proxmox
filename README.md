@@ -100,11 +100,10 @@ sur le cluster. Voir [04-securite.md](04-securite.md#secrets--où-ils-vivent).
 ```
 tim-cluster  ·  5 nœuds (GRA4 ×3 + GRA3 ×2 depuis le 15/09)  ·  quorum 3/5
                          Corosync 2 anneaux · 8 liens
-Proxmox VE 9.2.20        (Debian 13 Trixie ; noyau 7.0.14-17 sur pve4/5,
-                         7.0.14-11 sur pve1-3 — redémarrage en attente)
+Proxmox VE 9.2.20        (Debian 13 Trixie, noyau 7.0.14-17 sur les 5 nœuds)
 Ceph Tentacle 20.2.4     10 OSD · 5 MON · 7,2 Tio bruts · size 4 / min_size 2
-                         → MAX AVAIL 1,5 Tio · clés cephx aes256k sauf
-                         client.admin (HEALTH_WARN volontaire, 06 §13)
+                         → MAX AVAIL 1,5 Tio · cephx aes256k seul (migration
+                         terminée le 15/09 au soir)
 Réseau                   vRack 25 Gb/s · bridge VLAN-aware · jumbo MTU 9000 validé
                          GRA3 ↔ GRA4 compris (0,15-0,3 ms)
                          VLAN 100 Corosync · 200 Ceph · 300 infra · 400 LAN VM

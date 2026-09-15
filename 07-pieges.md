@@ -1155,14 +1155,15 @@ MGR/OSD des nouveaux nœuds (le MGR pve5, créé avant ce réglage, est né en
 `aes` et a dû être tourné à part : `--only mgr.pve5`). Entre-temps,
 `ceph health mute AUTH_INSECURE_SERVICE_KEY_TYPE 2h` a refermé le Disaster.
 
-Reste **volontairement** en `HEALTH_WARN` : `client.admin` (et sa copie
-`/etc/pve/priv/ceph/vm-storage.keyring`, lue par chaque QEMU) est encore en
-`aes`. Le tourner (`--rotate-admin-key`) suppose que **chaque processus QEMU
-ait été relancé** sur la librbd 20.2.4 — les VM en cours d'exécution ont
-chargé l'ancienne bibliothèque avant la mise à jour. À faire en fenêtre
-planifiée, après migration à chaud de toutes les VM ; puis `auth_allowed_ciphers
-aes256k` et `mon_auth_allow_insecure_key false` ferment les deux derniers
-avertissements ([06-reste-a-faire.md](06-reste-a-faire.md)).
+`client.admin` a été traité le soir même, en fenêtre : `--rotate-admin-key
+--apply` met la nouvelle clé **en attente** (les deux restent valides), les
+consommateurs sont rafraîchis par les redémarrages des nœuds (migration des
+VM, restart des CT) et une migration aller-retour des VM restées en place,
+le plan à blanc rend « Ready for confirmation », puis `--apply
+--confirm-all-clients-refreshed --restrict-ciphers` retire l'ancienne clé
+et n'autorise plus que `aes256k`. Ne pas confirmer tant que le plan à blanc
+liste des sessions sur l'ancienne clé : un consommateur oublié perdrait ses
+I/O au retrait.
 
 **Leçon** — Lire les notes de version **avant** une mise à jour de point
 release Ceph, même mineure : celle-ci change la couleur du cluster. Et le
