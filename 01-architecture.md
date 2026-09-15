@@ -265,7 +265,7 @@ ceph osd crush rule dump replicated_rule | grep -A1 chooseleaf   # attendu : "ty
 
 ## Dimensionnement
 
-### Disque
+### Capacité disque
 
 ```
 10 OSD × 738,4 Gio           = 7,2 Tio bruts
