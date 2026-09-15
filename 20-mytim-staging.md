@@ -13,7 +13,7 @@ RAM réellement utilisés) : `ns3240118.ip-79-137-100.eu` (`79.137.100.185`,
 |---|---|---|
 | Rôle | staging TIM (`BASE_SITE=tim`) | staging Isoteam (`BASE_SITE=isoteam`) |
 | Adresse | `10.40.0.80/24` (`vmbr1` **tag 400**), gw + DNS `10.40.0.1` | `10.40.0.90/24`, idem |
-| Ressources | 2 vCPU `host`, 8 Go (sans ballooning), 100 Go Ceph `vm-storage`, `onboot` | idem |
+| Ressources | 2 vCPU `host`, 8 Go (sans ballooning), **150 Go** Ceph `vm-storage` (100 à la création, étendu le 15/09), `onboot` | idem, 100 Go |
 | OS | Ubuntu 24.04 cloud-init (`noble-server-cloudimg-amd64.img` de `nas-vm`), `qemu-guest-agent` | idem |
 | Noms publics | `app.`, `gestion.` (legacy), `mailer.` (Mailpit) `.staging.teleimagerie.net` | `.staging.isoteam.mn` |
 | Alias 301 | `app-staging`, `gestion-staging` | `app-staging`, `gestion-staging`, `preprod-app`, `preprod-gestion` |
@@ -207,13 +207,62 @@ est la **résiliation des dédiés**, pas la bascule.
   joignable depuis le VPN sur `10.40.0.80:3306` (le conteneur publie le port sur
   la VM ; plus d'accès direct depuis Internet).
 - Rafraîchir la base depuis la prod : `docs/technique/staging-proxmox.md` du dépôt.
-- Espace disque : 100 Go dont ~30 Go de base, ~35 Go d'images/cache de build,
-  5 Go de `/srv` — `check-disk` du deploy refuse au-delà de 90 % ; `docker system
-  prune` au besoin.
+- Espace disque : **150 Go sur la VM 103** (portés de 100 à 150 le 15/09, voir
+  plus bas), 100 Go sur la 104 — `check-disk` du deploy refuse au-delà de 90 %.
+  Relevé du 15/09 sur la 103 : 70 Go utilisés dont **64 Go de `/var/lib/docker`,
+  presque entièrement le volume MySQL** (67,8 Go de volumes locaux), contre
+  2,9 Go d'images et 1 Go de cache de build. **`docker system prune` ne rend donc
+  presque rien ici** (Docker annonce 0 % récupérable, ~235 Mo) : sur ces VM le
+  disque se libère en purgeant la base ou les binlogs, pas le cache Docker.
 - **Binlogs MySQL** : l'import du dump en a produit 22 Go (purgés le 14/09 à mi-import,
   disque à 70 %) ; `binlog_expire_logs_seconds=86400` posé par `SET PERSIST`
   (survit aux redémarrages, `mysqld-auto.cnf` du volume) sur les deux VM — 1 jour
   au lieu de 30, un staging n'a pas de réplication à rejouer.
+
+## Disque de la VM 103 porté à 150 Go (15/09/2026)
+
+Le disque de 100 Go, dimensionné avant l'import de la base, était à **73 %**
+(`/dev/sda1` ext4, 96 Go utiles, 70 Go occupés, 26 Go libres) — soit ~16 Go
+avant le refus du `check-disk` Ansible à 90 %. La base est une copie de la prod
+rafraîchie périodiquement : elle grossit, et chaque rafraîchissement demande
+transitoirement de la place. `docker system prune` n'était pas une issue (voir
+ci-dessus : 0 % récupérable).
+
+Marge Ceph au moment de la décision : pool `vm-storage` à **12,61 %**,
+`MAX AVAIL` 1,1 Tio, `HEALTH_OK` — les 150 Go bruts (`size=3`) ne pèsent rien
+face à la cible de 1,22 Tio.
+
+**+50 Go plutôt que +100** : l'occupation retombe sous la moitié, et l'opération
+étant sans retour arrière (`qm resize` ne réduit pas une image RBD, ext4 ne
+rétrécit pas à chaud), on n'immobilise pas d'espace « au cas où ». **La VM 104
+n'est pas touchée** : sa base fait 500 Ko contre 27 Go pour la 103.
+
+Fait **à chaud, sans redémarrage ni coupure** — `scsihw: virtio-scsi-single`,
+`sda1` dernière partition du GPT, pas de LVM. Procédure générique dans
+[03-exploitation.md](03-exploitation.md#agrandir-le-disque-dune-vm) :
+
+```bash
+qm resize 103 scsi0 +50G                 # depuis pve1
+sudo growpart /dev/sda 1 && sudo resize2fs /dev/sda1   # dans la VM
+```
+
+`growpart` a étendu `sda1` par la fin (`start` inchangé à 2099200,
+`size` 207615967 → 312473567 secteurs, soit exactement +50 Gio) et `resize2fs`
+a redimensionné l'ext4 monté (13 → 19 `desc_blocks`). Résultat :
+**145 Go utiles, 70 Go occupés, 75 Go libres, 49 %** — de 26 à 75 Go de marge.
+
+Vérifié dans la foulée : `parted` sans avertissement GPT (table de secours
+réécrite), 8 conteneurs `healthy` (php, **3 workers Messenger** — `notifier`,
+`priority`, `retryable` —, mailer, database, rabbitmq, redis), `/login` **200**
+en 246 ms, cluster `HEALTH_OK`. Le `retryable_worker` vient du déploiement du
+14/09 depuis `feat/staging-proxmox` : la fiche n'en décrivait que deux, hérités
+des dédiés OVH.
+
+Côté Ceph, le pool n'a bougé que de **12,61 à 12,74 %** : le provisionnement
+fin RBD n'alloue que l'écrit, `qm resize` ne relève que le plafond de l'image.
+Les 50 Go ajoutés ne coûteront leurs 150 Go bruts (`size=3`) qu'à mesure du
+remplissage — la contrainte réelle du pool est la somme des plafonds si toutes
+les images se remplissaient, pas la somme des tailles déclarées.
 
 ## Reste à faire
 
@@ -234,4 +283,8 @@ est la **résiliation des dédiés**, pas la bascule.
   `-e '{"services":[…]}'`. Remettre `staging` au niveau de `main` (fusion) pour
   que `make deploy-tim-staging` redevienne suffisant ;
 - [ ] consigner dans la revue HDS ([12-architecture-hds.md](12-architecture-hds.md))
-  que les copies de prod des staging sont désormais sur le cluster.
+  que les copies de prod des staging sont désormais sur le cluster ;
+- [ ] **redémarrage en attente sur la VM 103** (relevé le 15/09) : `libc6`,
+  `linux-image-6.8.0-139-generic`, `linux-base` — le noyau courant est le `-138`.
+  Sans rapport avec l'extension du disque ; à planifier avec la 104 (vérifier
+  son état au passage).
