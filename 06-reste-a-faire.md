@@ -424,18 +424,14 @@ pièges n° 43 et 44). Ce qui reste :
   trois nœuds, 9 invités, 12 URL publiées). Reste `HEALTH_WARN
   AUTH_INSECURE_ROTATING_SERVICE_KEY_TYPE`, qui **expire seul en quelques
   heures** (TTL des tickets) — vérifier `ceph health` = `HEALTH_OK` le 16/09.
-- ⚠️ **Ajouter `https://pve4.infra.teleimagerie.net:8006/*` et `pve5` aux redirect URIs
-  du client OIDC `proxmox`** du realm `tim` ([16-keycloak.md](16-keycloak.md)) —
-  `kcadm.sh config credentials` puis `kcadm update clients/<id>` sur le CT 203 ;
-  sans cela le bouton SSO de l'interface web de pve4/pve5 échoue
-  (`invalid redirect_uri`). Le realm local `pve` (`matt` + TOTP) fonctionne.
+- ✅ ~~Ajouter `pve4`/`pve5` aux redirect URIs du client OIDC `proxmox`~~ — fait
+  par l'admin le 15/09/2026 au soir ([16-keycloak.md](16-keycloak.md)).
 - 📋 **Tester la porte tailnet de pve4/pve5 depuis un appareil admin** (`ssh
   root@100.72.0.8` / `.9`) : les deux nœuds sont enrôlés et `online` dans
   headscale, chemin non éprouvé de bout en bout le 15/09 (le poste WSL de la
   session n'était pas membre du tailnet).
-- ⚠️ **Tester la console KVM OVH** de pve4 et pve5 (mot de passe root reçu par
-  mail à l'installation, à ranger dans le gestionnaire de secrets) — fait sur
-  pve1-3 le 31/08, pas encore sur les deux nouveaux.
+- ✅ ~~Tester la console KVM OVH de pve4 et pve5~~ — fait par l'admin le
+  15/09/2026 au soir, mots de passe root rangés dans le gestionnaire de secrets.
 - 📋 **Rejouer un test HA** sur un nœud GRA3 (test 5 de [05-tests-ha.md](05-tests-ha.md))
   et **mesurer la perte de GRA3** (pve4 + pve5 coupés par l'espace client) :
   quorum 3/5 attendu, PG `active+undersized` sans blocage — c'est la mesure

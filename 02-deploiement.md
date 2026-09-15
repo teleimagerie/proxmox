@@ -241,4 +241,5 @@ suivi, en une après-midi :
    (maintenance HA un nœud à la fois, 33-75 s d'évacuation, 167-223 s de
    retour), puis fin de la migration cephx — clé admin en attente,
    consommateurs rafraîchis, confirmation et restriction à `aes256k`.
-   Non fait : KVM OVH et porte tailnet de pve4/pve5, SSO Keycloak, test HA GRA3.
+   KVM OVH de pve4/pve5 et redirect URIs Keycloak faits par l'admin dans la
+   foulée. Non fait : porte tailnet de pve4/pve5 depuis un appareil admin, test HA GRA3.

@@ -113,7 +113,7 @@ HA                       7 ressources : vm:100 à vm:102 · ct:201 à ct:204
 Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
                          admin VPN-only depuis le 01/09 (8006/22/3128 fermés
                          à Internet) · 2 portes : wg0 + tailnet · KVM OVH testé
-                         (pve1-3 ; pas encore sur pve4/5)
+                         sur les 5 nœuds
 Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
                          WireGuard wg0 nomades · wg2 site-à-site TELLIS (51822)
 Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
@@ -185,6 +185,6 @@ perte d'un nœud. Voir [01-architecture.md](01-architecture.md#dimensionnement).
    fermeture du 01/09/2026 il faut **une porte VPN pour l'utiliser** : wg0, ou
    le tailnet (`ssh root@100.72.0.6`), qui a l'avantage de ne pas dépendre
    d'OPNsense. **L'issue de secours ultime est désormais la console KVM/IPMI
-   OVH** — testée et validée le 31/08/2026 sur pve1-3 (pas encore sur pve4/5,
-   mot de passe root reçu par mail OVH à l'installation), procédure et identifiants dans
+   OVH** — testée et validée le 31/08/2026 sur pve1-3 et le 15/09/2026 sur
+   pve4/5, procédure et identifiants dans
    [04-securite.md](04-securite.md#console-kvmipmi-ovh--laccès-de-dernier-recours).
