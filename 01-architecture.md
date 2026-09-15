@@ -2,49 +2,61 @@
 
 ## Matériel
 
-Trois serveurs dédiés OVHcloud **identiques**, tous au datacenter **GRA4**
-(co-localisation indispensable à la latence Ceph).
+Cinq serveurs dédiés OVHcloud de la gamme Advance (EPYC 4004), en **deux
+gabarits** et **deux datacentres de Gravelines** : trois à **GRA4** (pve1-3,
+depuis le 11/08/2026) et deux à **GRA3** (pve4-5, depuis le 15/09/2026 — les
+ex-dédiés de staging, [20-mytim-staging.md](20-mytim-staging.md)). Le vRack
+s'étend entre les deux salles ; latence mesurée GRA3 ↔ GRA4 : **0,15-0,3 ms**,
+jumbo 9000 validé, ce qui rend Ceph inter-DC tenable.
 
-| | |
-|---|---|
-| CPU | AMD EPYC 4344P — 8c/16t, 3,8 / 5,3 GHz, **1 socket** |
-| RAM | 64 Go DDR5 5200 |
-| Disques | 2 × 960 Go NVMe (894,3 Gio utiles), soft RAID — pas de carte RAID |
-| Réseau | 1 NIC publique + 1 NIC vRack **25 Gb/s** (DAC) |
+| | **pve1-3 (GRA4)** | **pve4-5 (GRA3)** |
+|---|---|---|
+| CPU | AMD EPYC 4344P — 8c/16t, 3,8 / 5,3 GHz | AMD EPYC 4244P — 6c/12t, 3,8 / 5,1 GHz |
+| RAM | 64 Go DDR5 5200 | **32 Go** DDR5 5200 |
+| Disques | 2 × 960 Go NVMe (894,3 Gio utiles), soft RAID — pas de carte RAID | idem (Samsung `MZQL2960HCJR`) |
+| Réseau | 1 NIC publique + 1 NIC vRack **25 Gb/s** (DAC) | idem, Broadcom BCM57502, `enp1s0f0np0` / `enp1s0f1np1` |
+| Baie | — | **la même** pour les deux : `GRA0329A05C` (panne de baie = perte de 2 nœuds, tolérée) |
 
-Modèles NVMe observés : Micron `MTFDKCC960TGP` (pve1, pve2) et
-`Micron_7450_MTFDKCC960TFR` (pve3). Sans incidence, mais explique la différence
-de nommage des interfaces réseau.
+Modèles NVMe observés : Micron `MTFDKCC960TGP` (pve1, pve2),
+`Micron_7450_MTFDKCC960TFR` (pve3), Samsung `MZQL2960HCJR` (pve4, pve5). Sans
+incidence, mais explique la différence de nommage des interfaces réseau.
 
 ## Inventaire des nœuds — table de correspondance
 
 **Le tableau de référence.** Trois nommages coexistent : celui d'OVH (`ns…`,
-utilisé dans l'espace client et les tickets), le nôtre (`pve1/2/3`, utilisé par
+utilisé dans l'espace client et les tickets), le nôtre (`pve1` à `pve5`, utilisé par
 le cluster) et le FQDN public (`*.infra.teleimagerie.net`, utilisé par les
 certificats et l'interface web).
 
-| | **pve1** | **pve2** | **pve3** |
-|---|---|---|---|
-| **Nom OVH** | `ns3245256.ip-91-134-84.eu` | `ns3245278.ip-51-68-240.eu` | `ns3258339.ip-51-68-240.eu` |
-| **FQDN public** | `pve1.infra.teleimagerie.net` | `pve2.infra.teleimagerie.net` | `pve3.infra.teleimagerie.net` |
-| **IP publique** | `91.134.84.222/32` | `51.68.240.48/32` | `51.68.240.191/32` |
-| vRack 100 — Corosync | `10.100.0.11/24` | `10.100.0.12/24` | `10.100.0.13/24` |
-| vRack 200 — Ceph | `10.200.0.11/24` | `10.200.0.12/24` | `10.200.0.13/24` |
-| vRack 300 — VM (`vmbr1`) | `10.30.0.11/24` | `10.30.0.12/24` | `10.30.0.13/24` |
-| NIC publique (`vmbr0`) | `enp8s0f0np0` | `enp8s0f0np0` | **`enp2s0f0np0`** |
-| NIC vRack | `enp8s0f1np1` | `enp8s0f1np1` | **`enp2s0f1np1`** |
-| OSD Ceph | `osd.0`, `osd.1` | `osd.2`, `osd.3` | `osd.4`, `osd.5` |
-| ID Corosync | 1 | 2 | 3 |
+| | **pve1** | **pve2** | **pve3** | **pve4** | **pve5** |
+|---|---|---|---|---|---|
+| Datacentre | GRA4 | GRA4 | GRA4 | **GRA3** | **GRA3** |
+| **Nom OVH** | `ns3245256.ip-91-134-84.eu` | `ns3245278.ip-51-68-240.eu` | `ns3258339.ip-51-68-240.eu` | `ns3240079.ip-79-137-100.eu` (ID 1726600) | `ns3240118.ip-79-137-100.eu` (ID 1726601) |
+| **FQDN public** | `pve1.infra.teleimagerie.net` | `pve2.infra…` | `pve3.infra…` | `pve4.infra…` | `pve5.infra…` |
+| **IP publique** | `91.134.84.222/32` | `51.68.240.48/32` | `51.68.240.191/32` | `79.137.100.184/32` | `79.137.100.185/32` |
+| vRack 100 — Corosync | `10.100.0.11/24` | `10.100.0.12/24` | `10.100.0.13/24` | `10.100.0.14/24` | `10.100.0.15/24` |
+| vRack 200 — Ceph | `10.200.0.11/24` | `10.200.0.12/24` | `10.200.0.13/24` | `10.200.0.14/24` | `10.200.0.15/24` |
+| vRack 300 — infra (`vmbr1.300`) | `10.30.0.11/24` | `10.30.0.12/24` | `10.30.0.13/24` | `10.30.0.14/24` | `10.30.0.15/24` |
+| vRack 400 — patte admin | `10.40.0.2` | `10.40.0.3` | `10.40.0.4` | `10.40.0.5` | `10.40.0.6` |
+| Tailnet | `100.72.0.6` | `100.72.0.5` | `100.72.0.7` | `100.72.0.8` | `100.72.0.9` |
+| NIC publique (`vmbr0`) | `enp8s0f0np0` | `enp8s0f0np0` | **`enp2s0f0np0`** | `enp1s0f0np0` | `enp1s0f0np0` |
+| NIC vRack | `enp8s0f1np1` | `enp8s0f1np1` | **`enp2s0f1np1`** | `enp1s0f1np1` | `enp1s0f1np1` |
+| OSD Ceph | `osd.0`, `osd.1` | `osd.2`, `osd.3` | `osd.4`, `osd.5` | `osd.6`, `osd.7` | `osd.8`, `osd.9` |
+| ID Corosync | 1 | 2 | 3 | 4 | 5 |
 
-Passerelle publique commune : **`100.64.0.1`** sur les trois nœuds.
+Passerelle publique commune : **`100.64.0.1`** sur les cinq nœuds.
 
 ### Repères pour ne pas se tromper de machine
 
 - **Le dernier octet vRack donne le numéro du nœud** : `.11` = pve1, `.12` = pve2,
-  `.13` = pve3. Vrai sur les trois VLAN.
+  `.13` = pve3, `.14` = pve4, `.15` = pve5. Vrai sur les trois VLAN.
 - **pve1 est le seul en `91.134.84.x`.** pve2 et pve3 sont tous deux en
   `51.68.240.x` et ne se distinguent que par le dernier octet (`.48` contre
-  `.191`) — c'est là que se produisent les confusions.
+  `.191`) — c'est là que se produisent les confusions. pve4 et pve5 partagent
+  `79.137.100.x` (`.184` contre `.185`) : **le plus bas des deux est pve4**.
+- **pve4 et pve5 ont 32 Go, pas 64** : le CRM peut y relancer n'importe quelle
+  ressource HA (aucune règle d'affinité, décision du 15/09/2026) — ne pas y
+  empiler de grosses VM.
 - Les noms OVH `ns3245256` et `ns3245278` ne diffèrent que par leurs deux
   derniers chiffres. **Vérifier avant toute action destructive** :
   ```bash
@@ -53,9 +65,10 @@ Passerelle publique commune : **`100.64.0.1`** sur les trois nœuds.
 
 ### Deux pièges de configuration
 
-> **pve3 ne nomme pas ses interfaces comme les deux autres** (`enp2s0…` contre
-> `enp8s0…`), à cause d'un modèle de NVMe et d'une carte mère différents. Tout
-> script touchant au réseau doit **détecter** le nom, jamais le supposer.
+> **Les nœuds ne nomment pas leurs interfaces de la même façon** (`enp8s0…`
+> pve1-2, `enp2s0…` pve3, `enp1s0…` pve4-5), à cause de cartes mères
+> différentes. Tout script touchant au réseau doit **détecter** le nom, jamais
+> le supposer.
 
 > Les IP publiques sont en **`/32`** avec une passerelle hors sous-réseau
 > (`100.64.0.1`). C'est la configuration OVH standard : ne pas « corriger » en
@@ -96,9 +109,10 @@ headscale (CT 202), `.40` pacs03 (PACS de secours, bare-metal Windows GRA3
 raccordé au vRack — [15-pacs-secours.md](15-pacs-secours.md)), `.50` keycloak
 (CT 203), `.60` zabbix (CT 204), `.70` odoo (VM 101), `.80` mytim-staging (VM 103) et
 `.90` myisoteam-staging (VM 104) — les deux pré-productions,
-[20-mytim-staging.md](20-mytim-staging.md). **Exception aux dizaines : `.2`, `.3` et `.4` sont les pattes
-d'administration des hyperviseurs** pve1, pve2 et pve3 — posées le 27/08/2026
-pour pve1 puis étendues aux trois le 31/08/2026, pour permettre
+[20-mytim-staging.md](20-mytim-staging.md). **Exception aux dizaines : `.2` à `.6` sont les pattes
+d'administration des hyperviseurs** pve1 à pve5 — posées le 27/08/2026
+pour pve1, étendues aux trois le 31/08/2026 et aux deux nœuds GRA3 le
+15/09/2026, pour permettre
 l'administration par VPN sans passer par Internet
 ([04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026)).
 Ces pattes n'ont **pas de passerelle** (la route par défaut reste publique) et
@@ -126,21 +140,24 @@ ne lui est pas assigné — une VM compromise ne peut pas injecter dans Corosync
 dans Ceph. C'est ce qui a motivé le choix du bridge VLAN-aware plutôt qu'un bridge
 classique, qui aurait laissé fuiter tous les VLAN vers toutes les VM.
 
-Dernier octet : **`.11` = pve1, `.12` = pve2, `.13` = pve3** sur chaque VLAN.
+Dernier octet : **`.11` = pve1 … `.15` = pve5** sur chaque VLAN.
 
 **Jumbo frames validés** en conditions réelles sur le VLAN 200 :
-`ping -M do -s 8972` passe entre les trois nœuds. Ne pas relever le MTU du
-VLAN 100 : Corosync veut de la latence basse, pas du débit.
+`ping -M do -s 8972` passe entre les cinq nœuds, **GRA3 ↔ GRA4 compris**
+(contrôle bloquant fait le 15/09/2026 avant tout OSD à GRA3). Ne pas relever
+le MTU du VLAN 100 : Corosync veut de la latence basse, pas du débit.
 
 ### Corosync : deux anneaux
 
 ```
-ring0 : 10.100.0.11/12/13     (vRack, dédié, faible latence)
+ring0 : 10.100.0.11 … .15      (vRack, dédié, faible latence)
 ring1 : IP publiques           (secours si le vRack tombe)
 ```
 
 `link_mode: passive`. Les deux anneaux sont vérifiés `connected` par
-`corosync-cfgtool -n`. Trois nœuds ⇒ quorum de 2, **aucun QDevice nécessaire**.
+`corosync-cfgtool -n` (8 liens par nœud). Cinq nœuds ⇒ quorum de 3, **aucun
+QDevice nécessaire** ; la perte de deux nœuds quelconques est tolérée, celle
+des trois nœuds de GRA4 ne l'est pas (les deux de GRA3 restent seuls à 2/5).
 
 ### Résolution de noms
 
@@ -217,18 +234,29 @@ Détail complet dans [10-sauvegardes.md](10-sauvegardes.md).
 
 ```
 fsid            08c111f7-4af0-46dc-bc3b-9ca7f358a80f
-version         Tentacle 20.2.2
+version         Tentacle 20.2.4 (depuis le 15/09/2026 ; 20.2.2 avant)
 public_network  10.200.0.0/24
 cluster_network 10.200.0.0/24     (mutualisé : inutile de séparer à 25 Gb/s)
-MON / MGR       3 / 3 (un par nœud)
-OSD             6 (deux par nœud, 738 Gio chacun, classe ssd)
+MON / MGR       5 / 5 (un par nœud, GRA3 compris)
+OSD             10 (deux par nœud, 738 Gio chacun, classe ssd)
+cephx           aes256k (rotation du 15/09/2026, piège n° 44) sauf client.admin
 ```
 
-Pool applicatif **`vm-storage`** : `size=3`, `min_size=2`, `pg_autoscale_mode=on`
-(l'autoscaler a ramené `pg_num` de 128 à 32, comportement normal à vide).
+Pool applicatif **`vm-storage`** : **`size=4`, `min_size=2`** depuis le
+15/09/2026 (`size=3` avant), `pg_autoscale_mode=on`.
+
+**Pourquoi quatre répliques et pas une règle CRUSH par datacentre.** Avec
+`size=4` sur le domaine `host` et cinq hôtes, chaque PG vit sur quatre hôtes
+sur cinq : la perte de **deux hôtes quelconques** — donc de GRA3 entier, ou de
+la baie `GRA0329A05C` — laisse au moins deux répliques, `min_size` est
+satisfait, les I/O continuent. Une règle « deux répliques par datacentre »
+donnerait la même tolérance mais bornerait la capacité sur les quatre OSD de
+GRA3. Coût : quatre écritures réseau par bloc au lieu de trois, et ~1,8 Tio
+utilisables au lieu de ~2,4 en `size=3` — arbitrage tranché le 15/09/2026
+pour que « cinq nœuds = deux pannes tolérées » soit vrai.
 
 **Domaine de défaillance CRUSH = `host`** — vérifié explicitement. Avec deux OSD
-par nœud, c'est ce qui garantit que les trois répliques atterrissent sur trois
+par nœud, c'est ce qui garantit que les quatre répliques atterrissent sur quatre
 machines distinctes. Point le plus critique de toute la configuration Ceph :
 
 ```bash
@@ -240,17 +268,18 @@ ceph osd crush rule dump replicated_rule | grep -A1 chooseleaf   # attendu : "ty
 ### Disque
 
 ```
-6 OSD × 738,4 Gio            = 4,3 Tio bruts
-÷ 3 répliques                = 1,44 Tio utilisables   (MAX AVAIL annoncé : 1,4 Tio)
-× 0,85 (seuil nearfull)      ≈ 1,22 Tio à ne pas dépasser en pratique
+10 OSD × 738,4 Gio           = 7,2 Tio bruts
+÷ 4 répliques                = 1,80 Tio utilisables   (MAX AVAIL annoncé : 1,5 Tio)
+× 0,85 (seuil nearfull)      ≈ 1,53 Tio à ne pas dépasser en pratique
 ```
 
-Auquel s'ajoutent **700 Gio sur `nas-vm`** (NAS-HA). Capacité VM totale
-≈ **1,9 Tio**, mais les deux stockages ne se valent pas :
+(Avant le 15/09/2026 : 6 OSD, 3 répliques, 1,22 Tio pratiques.) Auquel
+s'ajoutent **700 Gio sur `nas-vm`** (NAS-HA). Capacité VM totale ≈ **2,2 Tio**,
+mais les deux stockages ne se valent pas :
 
 | | Ceph `vm-storage` | NAS `nas-vm` |
 |---|---|---|
-| Capacité pratique | 1,22 Tio | 700 Gio |
+| Capacité pratique | 1,53 Tio | 700 Gio |
 | Support | NVMe local, 25 Gb/s | SSD distant, bande passante mutualisée |
 | Latence | locale | 1,68 ms (Gravelines ↔ Roubaix) |
 | Débit mesuré | — | 171 Mo/s écriture, 477 Mo/s lecture |
@@ -260,28 +289,32 @@ Ne pas poser sur `nas-vm` une base de données ni un PACS.
 
 ### Mémoire
 
-Par nœud, sur 64 Go :
+| Poste | pve1-3 (64 Go) | pve4-5 (32 Go) |
+|---|---|---|
+| 2 OSD × `osd_memory_target` 4 Go | 8 Go | 8 Go |
+| MON + MGR | ~3 Go | ~2 Go |
+| Hôte, noyau, pmxcfs | ~3 Go | ~3 Go |
+| **Disponible pour les VM** | **~50 Go** | **~19 Go** |
 
-| Poste | Réservé |
-|---|---|
-| 2 OSD × `osd_memory_target` 4 Go | 8 Go |
-| MON + MGR | ~3 Go |
-| Hôte, noyau, pmxcfs | ~3 Go |
-| **Disponible pour les VM** | **~50 Go** |
+**Plafond à respecter : ~140 Go de RAM VM cumulée** (3 × 50 + 2 × 19 = 188 Go
+moins le plus gros nœud, pour absorber la perte d'un nœud de 64 Go). Au-delà,
+la promesse HA devient fausse le jour de la panne. Et **32 Go, ce n'est pas
+64** : aucune règle d'affinité n'empêche le CRM de relancer OPNsense, PBS ou
+Odoo à GRA3 — surveiller la mémoire des nœuds GRA3 dans Zabbix.
 
-**Plafond à respecter : ~100 Go de RAM VM cumulée sur les 3 nœuds.** Au-delà,
-deux nœuds ne peuvent plus porter la charge des trois et la promesse HA devient
-fausse le jour de la panne.
+## Conséquence structurelle de la topologie 3 + 2
 
-## Conséquence structurelle du choix à 3 nœuds
+Depuis le 15/09/2026, avec `size=4`, `min_size=2` et cinq hôtes :
 
-Avec `size=3` et un domaine de défaillance `host`, la perte d'un nœud laisse
-Ceph **durablement dégradé** : il ne reste que deux hôtes, donc aucun
-emplacement pour recréer la troisième réplique.
+- **perte d'un nœud** : Ceph se répare seul (il reste quatre hôtes pour quatre
+  répliques), `HEALTH_WARN` le temps du backfill ;
+- **perte de deux nœuds** — GRA3 entier, la baie `GRA0329A05C`, ou deux
+  nœuds de GRA4 : chaque PG garde ≥ 2 répliques, les I/O continuent
+  (`active+undersized`), quorum PVE 3/5 et MON 3/5 conservés ; Ceph reste
+  dégradé tant qu'un quatrième hôte manque ;
+- **perte de GRA4** (trois nœuds) : quorum perdu (2/5), Ceph sans quorum MON
+  — arrêt total, comme avant l'extension. GRA3 n'est pas un site de secours,
+  c'est de la capacité et une tolérance à deux pannes.
 
-- Les VM continuent de fonctionner (`min_size=2` satisfait)
-- `ceph -s` affiche `HEALTH_WARN`, les PG passent `active+undersized+degraded`
-- Le mot **`active`** est ce qui compte : les I/O ne sont pas bloquées
-- La resynchronisation se fait seule au retour du nœud (< 1 min mesurée à vide)
-
-C'est le comportement attendu de cette topologie, pas une avarie.
+Le mot **`active`** dans l'état des PG est ce qui compte : les I/O ne sont pas
+bloquées. Ne pas toucher à `min_size` pour « réparer ».

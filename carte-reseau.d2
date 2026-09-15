@@ -1,4 +1,4 @@
-# Carte réseau du cluster tim-cluster — 3 VM, 4 conteneurs, 3 nœuds.
+# Carte réseau du cluster tim-cluster — 5 VM, 4 conteneurs, 5 nœuds.
 #
 # FICHIER GÉNÉRÉ par scripts/genere-carte.py — ne pas éditer à la main.
 # L'inventaire vient de l'API Proxmox ; les zones, rôles et cloisonnements
@@ -112,6 +112,8 @@ vlan400: "VLAN 400 — 10.40.0.0/24\nLAN des machines" {
   keycloak: "keycloak\nCT 203 · pve1\n10.40.0.50" { class: [machine] }
   zabbix: "zabbix\nCT 204 · pve3\n10.40.0.60" { class: [machine] }
   odoo: "odoo\nVM 101 · pve2\n10.40.0.70" { class: [machine] }
+  mytim_staging: "mytim-staging\nVM 103 · pve1\n10.40.0.80" { class: [machine] }
+  myisoteam_staging: "myisoteam-staging\nVM 104 · pve1\n10.40.0.90" { class: [machine] }
   pacs03: "pacs03\nhors cluster\n10.40.0.40" { class: [machine; externe] }
 }
 
@@ -130,6 +132,8 @@ opnsense -> vlan400.headscale: "→ 10.40.0.30" { class: [flux] }
 vlan400.proxy_tim -> vlan400.keycloak: "proxy_pass" { class: [flux] }
 vlan400.proxy_tim -> vlan400.zabbix: "proxy_pass" { class: [flux] }
 vlan400.proxy_tim -> vlan400.odoo: "proxy_pass" { class: [flux] }
+vlan400.proxy_tim -> vlan400.mytim_staging: "proxy_pass" { class: [flux] }
+vlan400.proxy_tim -> vlan400.myisoteam_staging: "proxy_pass" { class: [flux] }
 vlan400.proxy_tim -> vlan400.pacs03: "proxy_pass" { class: [flux] }
 
 vlan400 -> vlan300: "bloqué — LAN → 10.30.0.0/24" { class: [bloque] }
@@ -138,9 +142,11 @@ vlan400 -> vlan200_100: "bloqué — LAN → Ceph et Corosync" { class: [bloque]
 noeuds: "Hyperviseurs — ils portent tous les invités ci-dessus" {
   class: [zone]
   direction: right
-  pve1: "pve1\n3 invités" { class: [machine] }
+  pve1: "pve1\n5 invités" { class: [machine] }
   pve2: "pve2\n2 invités" { class: [machine] }
   pve3: "pve3\n2 invités" { class: [machine] }
+  pve4: "pve4\n0 invités" { class: [machine] }
+  pve5: "pve5\n0 invités" { class: [machine] }
 }
 
 etat: "✓ Aucun écart — conforme à topologie.yml" { style.fill: "#EDF3E2"; style.stroke: "#5F7F2E"; style.font-color: "#3F5720" }

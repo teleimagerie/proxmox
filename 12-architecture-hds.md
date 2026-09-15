@@ -15,10 +15,10 @@ nouveau hors des interconnexions entre les deux sites.
 
 | | **DC OVH** | **DC TELLIS** |
 |---|---|---|
-| Lieu | Gravelines, GRA4 | ⚠️ à documenter |
+| Lieu | Gravelines — GRA4 (pve1-3) et GRA3 (pve4-5 depuis le 15/09/2026, pacs03) | ⚠️ à documenter |
 | Opérateur | nous (serveurs dédiés OVHcloud) | prestataire — ⚠️ identité et contrat à documenter |
 | Rôle | infrastructure transverse : pare-feu, reverse proxy, VPN, sauvegardes, authentification, supervision, ERP | production imagerie : PACS Philips, Syngo Via, RIS VENUS, passerelles IA, téléradiologie IMADIS |
-| IP publiques | bloc `57.130.34.120/29` + les 3 nœuds | `37.61.243.246` (WAN pfSense) |
+| IP publiques | bloc `57.130.34.120/29` + les 5 nœuds | `37.61.243.246` (WAN pfSense) |
 | Documentation | fichiers [01](01-architecture.md) à [11](11-headscale.md) + [15](15-pacs-secours.md), [16](16-keycloak.md) | [13-tellis.md](13-tellis.md) |
 
 > **Périmètre HDS** : l'hébergement de données de santé impose des hébergeurs
@@ -120,7 +120,7 @@ les zones, registrars et serveurs autoritaires dans
 | `syngo.teleimagerie.net`, `syngo.isoteam.mn` | `57.130.34.122` | redirections 301 vers `syngo-via.*` |
 | `syngo-via.teleimagerie.net`, `syngo-via.isoteam.mn` | `57.130.34.122` → relais TLS → TSplus (DC TELLIS) | portail et RemoteApp Syngo Via |
 | `headscale.teleimagerie.net` | `57.130.34.123` | plan de contrôle du tailnet |
-| `pve{1,2,3}.infra.teleimagerie.net` | IP publiques des nœuds | administration du cluster |
+| `pve{1..5}.infra.teleimagerie.net` | IP publiques des nœuds | administration du cluster |
 
 ---
 

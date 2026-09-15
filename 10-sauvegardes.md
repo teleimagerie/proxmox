@@ -19,7 +19,7 @@ que de la panne matérielle.
 | Service | `zpool-130899` |
 | Adresse | **`10.201.13.43`** |
 | Capacité | 3000 Gio, disques **SSD** |
-| Datacenter | **`rbx` (Roubaix)** — le cluster est à **GRA4 (Gravelines)** |
+| Datacenter | **`rbx` (Roubaix)** — le cluster est à **Gravelines (GRA4 et GRA3)** |
 | Protocole | NFS (v4.2 côté client) |
 | Option souscrite | snapshots distants vers un second datacenter |
 
@@ -42,7 +42,9 @@ un incident Gravelines n'emporte pas les sauvegardes.
 | — | 500 Gio | — | laissé libre pour les snapshots ZFS OVH |
 
 ACL sur les deux partitions, en `readwrite` : `91.134.84.222` (pve1),
-`51.68.240.48` (pve2), `51.68.240.191` (pve3).
+`51.68.240.48` (pve2), `51.68.240.191` (pve3), et depuis le 15/09/2026
+`79.137.100.184` (pve4) et `79.137.100.185` (pve5) — posées **avant** la
+jonction des nouveaux nœuds, sans quoi `nas-pbs`/`nas-vm` y restent `inactive`.
 
 Snapshots ZFS armés côté OVH — **en lecture seule et hors de portée du cluster,
 donc opposables à un ransomware** :

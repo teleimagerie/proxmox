@@ -4,11 +4,13 @@ enable: 1
 policy_in: DROP
 policy_out: ACCEPT
 
-[IPSET cluster] # Les 3 hyperviseurs : IP publiques + tous les reseaux vRack
+[IPSET cluster] # Les 5 hyperviseurs (pve1-3 GRA4, pve4-5 GRA3 depuis le 15/09/2026) : IP publiques + tous les reseaux vRack
 
 91.134.84.222
 51.68.240.48
 51.68.240.191
+79.137.100.184
+79.137.100.185
 10.100.0.0/24
 10.200.0.0/24
 10.30.0.0/24

@@ -15,7 +15,7 @@
 
 meta:
   cluster: tim-cluster
-  datacenter: OVHcloud GRA4
+  datacenter: OVHcloud GRA4 (pve1-3) + GRA3 (pve4-5, depuis le 15/09/2026)
   vrack: pn-1165892
   entree_unique: pve1        # seul nœud raccordé au VLAN 400 (vmbr1.400)
 

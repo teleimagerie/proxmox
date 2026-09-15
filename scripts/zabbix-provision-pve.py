@@ -13,11 +13,12 @@ Objets gérés :
   - hôte cluster-pve : template officiel « Proxmox VE by HTTP » + macros
     (URL pve1, token zabbix@pve!monitoring, stockage Warning à 80) ;
   - template « TIM Cluster PVE » : Ceph via /cluster/ceph/status (santé,
-    OSD) + déclencheurs, joignabilité :8006 des trois nœuds (simple checks) ;
+    OSD) + déclencheurs, joignabilité :8006 des cinq nœuds (simple checks —
+    pve4/pve5 ajoutés le 15/09/2026, extension du cluster à GRA3) ;
   - retouches du template officiel : « Not running », disque LXC, mémoire
     (nœud/LXC/VM) relevés en High ; manual_close sur les mémoire ;
   - déclencheur High « vm-storage >= 85 % (nearfull Ceph) » ;
-  - 9 hôtes certificats (template « Website certificate by Zabbix agent 2 »,
+  - 11 hôtes certificats (template « Website certificate by Zabbix agent 2 »,
     macro expiry 14 j, trigger d'expiration en High) — l'IP de connexion
     force 10.40.0.10/.30 pour éviter le piège n° 32 ;
   - hôtes agents des invités (créés une fois, listés ici pour mémoire) ;
@@ -37,7 +38,7 @@ GROUP = "Infrastructure PVE"
 TPL = "TIM Cluster PVE"
 PVE_TPL = "Proxmox VE by HTTP"
 CERT_TPL = "Website certificate by Zabbix agent 2"
-NODES = ("pve1", "pve2", "pve3")
+NODES = ("pve1", "pve2", "pve3", "pve4", "pve5")   # pve4/pve5 (GRA3) : 15/09/2026
 
 
 def zbx(method, params):
@@ -176,6 +177,8 @@ def certs():
         ("cert-pve1", "pve1.infra.teleimagerie.net", "8006", None),
         ("cert-pve2", "pve2.infra.teleimagerie.net", "8006", None),
         ("cert-pve3", "pve3.infra.teleimagerie.net", "8006", None),
+        ("cert-pve4", "pve4.infra.teleimagerie.net", "8006", None),   # 15/09/2026
+        ("cert-pve5", "pve5.infra.teleimagerie.net", "8006", None),   # 15/09/2026
     ]
     for host, fqdn, port, ip in sites:
         if zbx("host.get", {"filter": {"host": [host]}}):

@@ -13,7 +13,7 @@ RAM réellement utilisés) : `ns3240118.ip-79-137-100.eu` (`79.137.100.185`,
 |---|---|---|
 | Rôle | staging TIM (`BASE_SITE=tim`) | staging Isoteam (`BASE_SITE=isoteam`) |
 | Adresse | `10.40.0.80/24` (`vmbr1` **tag 400**), gw + DNS `10.40.0.1` | `10.40.0.90/24`, idem |
-| Ressources | 2 vCPU `host`, 8 Go (sans ballooning), 100 Go Ceph `vm-storage`, `onboot` | idem |
+| Ressources | 2 vCPU `host`, 8 Go (sans ballooning), 100 Go Ceph `vm-storage`, `onboot` — **sur pve4 (GRA3) depuis le 15/09/2026** (migrée à chaud, 121 ms) | idem, **sur pve5** (20 ms) |
 | OS | Ubuntu 24.04 cloud-init (`noble-server-cloudimg-amd64.img` de `nas-vm`), `qemu-guest-agent` | idem |
 | Noms publics | `app.`, `gestion.` (legacy), `mailer.` (Mailpit) `.staging.teleimagerie.net` | `.staging.isoteam.mn` |
 | Alias 301 | `app-staging`, `gestion-staging` | `app-staging`, `gestion-staging`, `preprod-app`, `preprod-gestion` |
@@ -217,8 +217,10 @@ est la **résiliation des dédiés**, pas la bascule.
 
 ## Reste à faire
 
-- [ ] extinction des dédiés (`systemctl poweroff`) après quelques jours de recul,
-  puis **résiliation OVH** de `ns3240118` et `ns3240079` — à la main de l'admin ;
+- [x] ~~extinction puis résiliation des dédiés~~ — **réutilisés** : réinstallés en
+  Proxmox VE 9 le 15/09/2026 et intégrés au cluster comme **pve4** (`ns3240079`,
+  `.184`) et **pve5** (`ns3240118`, `.185`) — [01-architecture.md](01-architecture.md).
+  Le retour arrière de la bascule staging est **clos** depuis cette date ;
 - [x] `bascule-staging.py ttl3600` — fait le 14/09 à 10:33 UTC, sans attendre la résiliation (bascule validée, aucun retour arrière envisagé) ;
 - [x] `feat/staging-proxmox` fusionnée dans `main` du dépôt gestion (`28d57036`, 14/09) ;
 - [ ] **SFTP GRU** (`81.255.38.171:2222`, compte `sftp_timgru_test`) : **filtre par IP

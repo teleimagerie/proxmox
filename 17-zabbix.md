@@ -415,11 +415,11 @@ supervise le cluster qui l'héberge, par **l'API PVE en HTTPS**, avec un token
 
 | Vue | Source | Contenu |
 |---|---|---|
-| Cluster | template officiel **Proxmox VE by HTTP** (hôte `cluster-pve`) | quorum, API, découverte des 3 nœuds (CPU, RAM, load, iowait, FS racine, swap, réseau), stockages, **les 7 VM/CT** (statut, CPU, RAM, disque LXC, réseau) |
+| Cluster | template officiel **Proxmox VE by HTTP** (hôte `cluster-pve`) | quorum, API, découverte des 5 nœuds (pve4/pve5 découverts seuls le 15/09/2026 ; simple checks `:8006` et hôtes `cert-pve4/5` ajoutés par le script) (CPU, RAM, load, iowait, FS racine, swap, réseau), stockages, **les 7 VM/CT** (statut, CPU, RAM, disque LXC, réseau) |
 | Ceph | template maison **TIM Cluster PVE** (`/cluster/ceph/status`, même token) | `HEALTH_*`, OSD up/in/total |
 | Nœuds (indépendant du point d'entrée API) | simple checks | `:8006` joignable sur chaque nœud |
 | Invités (vue interne) | **agents dans les 9 invités** | Linux by Zabbix agent (201, 202, 203, 101, 102, 204, **103 et 104** depuis le 14/09/2026 — [scripts/zabbix-provision-staging.py](scripts/zabbix-provision-staging.py)) · FreeBSD by Zabbix agent (OPNsense, plugin `os-zabbix7-agent`, écoute `10.40.0.1:10050` seule) |
-| Certificats | 11 hôtes `cert-*`, template Website certificate by Zabbix agent 2 | zabbix, auth, pacs-secours, odoo, syngo, headscale, **staging-tim, staging-isoteam** (wildcards, 14/09) + `pveX:8006` — expiration < 14 j |
+| Certificats | 13 hôtes `cert-*`, template Website certificate by Zabbix agent 2 | zabbix, auth, pacs-secours, odoo, syngo, headscale, **staging-tim, staging-isoteam** (wildcards, 14/09) + `pveX:8006` — expiration < 14 j |
 | Sauvegardes | template TIM (API PVE par nœud + API PBS, token `zabbix@pbs!monitoring`) | échec **et absence** de vzdump, verify/GC/prune PBS — [§ dédié](#supervision-des-sauvegardes--depuis-le-30082026) |
 
 Tableau de bord **« Cluster PVE »** (partagé) : état instantané (quorum, Ceph,
@@ -467,6 +467,13 @@ problème High à 19:40:29 → **mails partis vers support@ et mcapon@** (statut
   invalide dans Zabbix bannirait `57.130.34.121` = toute la sortie VLAN 400.
   Toujours valider un nouveau token par `curl` **avant** de le poser en macro.
   Vérifié : 0 ban après le déploiement.
+- **`HEALTH_ERR` ne veut pas toujours dire panne** : la mise à jour Ceph 20.2.4 du
+  15/09/2026 a fait passer le cluster en `HEALTH_ERR` sur des contrôles de
+  clés cephx (`AUTH_INSECURE_*`), PG tous `active+clean` — un Disaster et son
+  mail sont partis. Quand la cause est connue, `ceph health mute <check> 2h`
+  referme le problème le temps de la correction ([piège n° 44](07-pieges.md#44-ceph-2024-passe-en-health_err-sur-les-clés-aes--et-zabbix-envoie-un-disaster)).
+  Depuis, le cluster est en `HEALTH_WARN` **volontaire** (clé `client.admin`
+  encore en `aes`) jusqu'à la fenêtre de [06 §13](06-reste-a-faire.md#13-extension-du-cluster-à-gra3-pve4pve5---faite-le-15092026-suites).
 - **Le template n'interroge que pve1** (`{$PVE.URL.HOST}`) : si pve1 meurt,
   « API service not available » sonne mais la vue cluster est aveugle le temps
   de la bascule — les simple checks `:8006` par nœud et les agents internes

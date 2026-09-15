@@ -103,7 +103,7 @@ recoupements de noms, pas des vérifications sur machine.
 
 | Nom | Rôle | L'état réel se lit dans |
 |---|---|---|
-| `pve{1,2,3}.infra` | administration des nœuds | [README](README.md#les-3-serveurs), [04](04-securite.md#tls) |
+| `pve{1..5}.infra` | administration des nœuds (`pve4/pve5` créés le 15/09/2026 par `scripts/ovh-dns.py`) | [README](README.md#les-5-serveurs), [04](04-securite.md#tls) |
 | `headscale` | plan de contrôle du tailnet | [11-headscale.md](11-headscale.md) |
 | `pacs-secours`, `syngo`, `syngo-via` | proxy — bascule faite le 26/08/2026 (`syngo-via` en direct, volontairement) | [09-proxy-tim.md](09-proxy-tim.md#bascule-dns-du-26082026) |
 
@@ -228,7 +228,7 @@ Relevé du 25/08/2026 (`dig -x @1.1.1.1`) :
 
 | IP | PTR | Commentaire |
 |---|---|---|
-| `91.134.84.222`, `51.68.240.48`, `51.68.240.191` | `ns….ip-91-134-84.eu` / `ns….ip-51-68-240.eu` | défauts OVH des nœuds, jamais personnalisés |
+| `91.134.84.222`, `51.68.240.48`, `51.68.240.191`, `79.137.100.184`, `79.137.100.185` | `ns….ip-91-134-84.eu` / `ns….ip-51-68-240.eu` / `ns….ip-79-137-100.eu` | défauts OVH des nœuds, jamais personnalisés |
 | `57.130.34.121`–`123` | `ip12N.ip-57-130-34.eu` | défauts OVH du bloc public |
 | `51.75.203.20` | `vps-f89a8456.vps.ovh.net` | l'ancien VPS — **résilié le 29/08/2026**, l'IP ne nous appartient plus |
 | `188.165.77.137` | `ns3062628.ip-188-165-77.eu` | backend PACS (`pacs03`) |
@@ -248,7 +248,7 @@ propriétaires ; ici, seulement la dépendance DNS de chacun.
 
 | Certificat | Challenge | Dépendance DNS | Détail |
 |---|---|---|---|
-| `pve{1,2,3}.infra` | DNS-01 (plugin ovh) | écrit des TXT dans `teleimagerie.net` | [04](04-securite.md#tls) |
+| `pve{1..5}.infra` | DNS-01 (plugin ovh) | écrit des TXT dans `teleimagerie.net` | [04](04-securite.md#tls) |
 | `syngo-teleimagerie` | DNS-01 (acme.sh sur pve1) | TXT dans `teleimagerie.net` | [09](09-proxy-tim.md#certificats) |
 | `syngo-isoteam` | DNS-01 (acme.sh sur pve1) | TXT dans **`isoteam.mn`** | [09](09-proxy-tim.md#certificats) |
 | `pacs-secours` (certbot CT 201) | HTTP-01 | l'A pointe sur le proxy depuis le 26/08/2026 — renouvellement débloqué (prochain vers la mi-septembre) | [09](09-proxy-tim.md#bascule-dns-du-26082026) |

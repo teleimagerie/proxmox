@@ -98,7 +98,7 @@ et [configs/headscale-acl.hujson](configs/headscale-acl.hujson).
 | user `tagged-devices` (synthétique) | créé par headscale | propriétaire de tous les nœuds tagués — le tag remplace le user comme identité (constaté le 25/08/2026) |
 | `tag:gateway` | passerelles DICOM | n'atteint que `tag:pacs:104,11112` |
 | `tag:pacs` | tag déclaré dans l'ACL, aucun nœud ne le porte à ce jour | n'initie rien |
-| **`tag:pve`** (31/08/2026) | **les 3 hyperviseurs** — `pve1` `100.72.0.6`, `pve2` `100.72.0.5`, `pve3` `100.72.0.7` | seconde porte d'administration : joignables par `admin@` sur **22 et 8006 seulement**, n'initient rien |
+| **`tag:pve`** (31/08/2026, étendu le 15/09/2026) | **les 5 hyperviseurs** — `pve1` `100.72.0.6`, `pve2` `100.72.0.5`, `pve3` `100.72.0.7`, `pve4` `100.72.0.8`, `pve5` `100.72.0.9` | seconde porte d'administration : joignables par `admin@` sur **22 et 8006 seulement**, n'initient rien |
 
 L'ACL est en **deny par défaut** : aucune règle n'autorise le trafic
 passerelle ↔ passerelle, et c'est voulu. Matrice **vérifiée le 15/08/2026** avec
@@ -116,7 +116,9 @@ Les ports 104/11112 sont les ports DICOM usuels.
 
 ### Les hyperviseurs — seconde porte d'administration (31/08/2026)
 
-Les 3 nœuds sont enrôlés **en mode userspace**, pour servir de porte
+Les nœuds sont enrôlés **en mode userspace** (pve1-3 le 31/08/2026, pve4-5 le
+15/09/2026 par la même procédure, clé pré-auth réutilisable d'une heure
+expirée ensuite), pour servir de porte
 d'administration indépendante d'OPNsense (la première porte, le VPN nomade
 wg0, est portée par la VM 100 : si elle ne redémarre pas, il faut un autre
 chemin pour la réparer). Procédure, identique sur chaque nœud :

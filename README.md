@@ -1,7 +1,8 @@
 # Cluster Proxmox `tim-cluster` — documentation
 
-Cluster de virtualisation haute disponibilité à 3 nœuds, stockage Ceph répliqué
-synchrone, hébergé chez OVHcloud (datacenter GRA4).
+Cluster de virtualisation haute disponibilité à **5 nœuds** (3 à GRA4, 2 à GRA3
+depuis le 15/09/2026), stockage Ceph répliqué synchrone sur les deux
+datacentres, hébergé chez OVHcloud à Gravelines.
 
 **Déployé le 11 août 2026.** État : **en production**. Neuf machines y tournent :
 le pare-feu OPNsense (VM 100), le reverse proxy `proxy-tim` (CT 201), le
@@ -19,19 +20,24 @@ dans [13-tellis.md](13-tellis.md).
 
 ---
 
-## Les 3 serveurs
+## Les 5 serveurs
 
-| | **pve1** | **pve2** | **pve3** |
-|---|---|---|---|
-| **Nom OVH** | `ns3245256.ip-91-134-84.eu` | `ns3245278.ip-51-68-240.eu` | `ns3258339.ip-51-68-240.eu` |
-| **FQDN** | `pve1.infra.teleimagerie.net` | `pve2.infra.teleimagerie.net` | `pve3.infra.teleimagerie.net` |
-| **IP publique** | `91.134.84.222` | `51.68.240.48` | `51.68.240.191` |
-| Corosync (VLAN 100) | `10.100.0.11` | `10.100.0.12` | `10.100.0.13` |
-| Ceph (VLAN 200) | `10.200.0.11` | `10.200.0.12` | `10.200.0.13` |
-| VM (VLAN 300) | `10.30.0.11` | `10.30.0.12` | `10.30.0.13` |
+| | **pve1** | **pve2** | **pve3** | **pve4** | **pve5** |
+|---|---|---|---|---|---|
+| Datacentre | GRA4 | GRA4 | GRA4 | **GRA3** | **GRA3** |
+| **Nom OVH** | `ns3245256.ip-91-134-84.eu` | `ns3245278.ip-51-68-240.eu` | `ns3258339.ip-51-68-240.eu` | `ns3240079.ip-79-137-100.eu` | `ns3240118.ip-79-137-100.eu` |
+| **FQDN** | `pve1.infra.teleimagerie.net` | `pve2.infra…` | `pve3.infra…` | `pve4.infra…` | `pve5.infra…` |
+| **IP publique** | `91.134.84.222` | `51.68.240.48` | `51.68.240.191` | `79.137.100.184` | `79.137.100.185` |
+| Corosync (VLAN 100) | `10.100.0.11` | `10.100.0.12` | `10.100.0.13` | `10.100.0.14` | `10.100.0.15` |
+| Ceph (VLAN 200) | `10.200.0.11` | `10.200.0.12` | `10.200.0.13` | `10.200.0.14` | `10.200.0.15` |
+| VM (VLAN 300) | `10.30.0.11` | `10.30.0.12` | `10.30.0.13` | `10.30.0.14` | `10.30.0.15` |
+| RAM | 64 Go | 64 Go | 64 Go | **32 Go** | **32 Go** |
 
-Repère : **le dernier octet vRack = le numéro du nœud**. Et pve1 est le seul en
-`91.134.84.x` — pve2 et pve3 partagent `51.68.240.x`, c'est là qu'on se trompe.
+Repère : **le dernier octet vRack = le numéro du nœud**. pve1 est le seul en
+`91.134.84.x`, pve2 et pve3 partagent `51.68.240.x` (c'est là qu'on se trompe),
+pve4 et pve5 partagent `79.137.100.x` et ne diffèrent que par `.184`/`.185`.
+pve4 et pve5 sont les **ex-dédiés de staging** réinstallés le 15/09/2026
+([20-mytim-staging.md](20-mytim-staging.md)).
 
 Détail complet (NIC, OSD, ID Corosync) dans
 [01-architecture.md](01-architecture.md#inventaire-des-nœuds--table-de-correspondance).
@@ -40,8 +46,8 @@ Détail complet (NIC, OSD, ID Corosync) dans
 
 | | |
 |---|---|
-| **VPN obligatoire** | depuis le 01/09/2026, l'administration n'est plus joignable depuis Internet. Deux portes : **VPN nomade wg0** (le nom `pveN.infra` résout alors en `10.40.0.2/.3/.4`) ou **tailnet** (`100.72.0.6` pve1, `.5` pve2, `.7` pve3) — [04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026) |
-| Interface web | `https://pve{1,2,3}.infra.teleimagerie.net:8006` (VPN monté) |
+| **VPN obligatoire** | depuis le 01/09/2026, l'administration n'est plus joignable depuis Internet. Deux portes : **VPN nomade wg0** (le nom `pveN.infra` résout alors en `10.40.0.2/.3/.4/.5/.6`) ou **tailnet** (`100.72.0.6` pve1, `.5` pve2, `.7` pve3, `.8` pve4, `.9` pve5) — [04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026) |
+| Interface web | `https://pve{1..5}.infra.teleimagerie.net:8006` (VPN monté) |
 | Compte | `matt` / realm *Proxmox VE authentication server* (**pas** `matt@pve` dans le champ nom) |
 | Second facteur | TOTP obligatoire sur `matt@pve` et `root@pam`, 10 clés de secours chacun |
 | SSH | `ssh root@pve1.infra.teleimagerie.net` (clé `~/.ssh/id_ed25519` uniquement) |
@@ -62,7 +68,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
 | [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
 | [06-reste-a-faire.md](06-reste-a-faire.md) | Points ouverts : sauvegardes, VPN site-à-site, DC TELLIS, authentification |
-| [07-pieges.md](07-pieges.md) | **Les 42 pièges rencontrés et leur résolution** |
+| [07-pieges.md](07-pieges.md) | **Les 44 pièges rencontrés et leur résolution** |
 | [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
 | [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
 | [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
@@ -76,7 +82,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [18-odoo.md](18-odoo.md) | **ERP Odoo** : migration VPS → VM 101 terminée le 29/08 (récit de bascule chiffré, sauvegardes 3 niveaux, restauration testée) |
 | [20-mytim-staging.md](20-mytim-staging.md) | **Pré-productions MyTIM / MyISOTEAM** : VM 103/104 derrière proxy-tim (TLS terminé au proxy, wildcards DNS-01), migrées des dédiés OVH le 14/09 — sans HA, sauvegarde hebdo une copie, récit de bascule, retour arrière |
 | [19-carte-reseau.md](19-carte-reseau.md) | **Carte réseau régénérable** : `make carte` interroge l'API Proxmox, confronte aux intentions de `topologie.yml` et réécrit le schéma — les écarts aux règles sont peints en rouge sur la carte |
-| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (DNS via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche — passe aussi sous WDAC/*ConstrainedLanguage*), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation), `installer-zabbix-agent-windows.ps1` (agent Zabbix 2 en mode actif sur un serveur Windows : MSI signé vérifié, configuration, règle pare-feu, récupération du service — rejouable), `zabbix-provision-venus.py` (hôtes, sondes et déclencheurs des trois serveurs RIS VENUS, idempotent), `zabbix-provision-dicomproxy.py` (hôte ProxyVia sans agent : ICMP + sondes TCP 9104/5432/8443 depuis le CT 204, idempotent), `zabbix-provision-timwfmcore.py` (supervision applicative de la Vue PACS : sondes TCP, services critiques en High, fraîcheur RMAN, plantages, contrôles internes du PACS — idempotent), `zabbix-provision-syngo.py` (deux syngo.via : temporisation à 15 min des alertes de disponibilité, les serveurs redémarrant chaque dimanche ~02:30, et filtre des interfaces réseau sur `ifAlias` pour ne garder que les ports HPE 10G — idempotent), `installer-openssh-windows.ps1` (OpenSSH serveur par clé sur un serveur Windows : installation native ou MSI, clé administrateur avec ACL, mot de passe interdit, port 22 limité au VPN nomade — rejouable), `controle-liens.py` (ancres des fiches : signale les liens morts et le titre le plus proche — `make liens`), `genere-carte.py` (carte réseau depuis l'API Proxmox — voir `make aide`), `bascule-staging.py` (bascule DNS des pré-productions, deux zones et huit enregistrements : `status|ttl60|switch|revert|ttl3600`), `deploy-staging-teleimagerie.sh` / `deploy-staging-isoteam.sh` (hooks acme.sh des wildcards `*.staging.*` vers le CT 201), `unbound-overrides-staging.py` (overrides split-horizon des noms staging sur OPNsense, idempotent), `zabbix-provision-staging.py` (hôtes agents et certificats des VM 103/104 ; faux signal mémoire hyperviseur des VM sans balloon neutralisé par macro, High « mémoire réelle > 90 % pendant 1 h » côté agent — idempotent) |
+| `scripts/` | `enroll-totp.py` (enrôlement TOTP sûr), `ovh-dns.py` (enregistrements A `pve{1..5}.infra` via API OVH), `ovh-nasha.py` (partitions et ACL du NAS-HA, cinq nœuds), `unbound-overrides-pve.py` (overrides Unbound `pveN.infra → patte VLAN 400` des cinq hyperviseurs, idempotent, à exécuter sur OPNsense), `stun-tailnode.py` (sonde STUN headscale), `inventaire-windows.ps1` (relevé matériel/logiciel d'un serveur Windows, sortie Markdown prête pour une fiche — passe aussi sous WDAC/*ConstrainedLanguage*), `parefeu-pacs03.ps1` (verrouillage pare-feu de pacs03, rejouable après réinstallation), `installer-zabbix-agent-windows.ps1` (agent Zabbix 2 en mode actif sur un serveur Windows : MSI signé vérifié, configuration, règle pare-feu, récupération du service — rejouable), `zabbix-provision-venus.py` (hôtes, sondes et déclencheurs des trois serveurs RIS VENUS, idempotent), `zabbix-provision-dicomproxy.py` (hôte ProxyVia sans agent : ICMP + sondes TCP 9104/5432/8443 depuis le CT 204, idempotent), `zabbix-provision-timwfmcore.py` (supervision applicative de la Vue PACS : sondes TCP, services critiques en High, fraîcheur RMAN, plantages, contrôles internes du PACS — idempotent), `zabbix-provision-syngo.py` (deux syngo.via : temporisation à 15 min des alertes de disponibilité, les serveurs redémarrant chaque dimanche ~02:30, et filtre des interfaces réseau sur `ifAlias` pour ne garder que les ports HPE 10G — idempotent), `installer-openssh-windows.ps1` (OpenSSH serveur par clé sur un serveur Windows : installation native ou MSI, clé administrateur avec ACL, mot de passe interdit, port 22 limité au VPN nomade — rejouable), `controle-liens.py` (ancres des fiches : signale les liens morts et le titre le plus proche — `make liens`), `genere-carte.py` (carte réseau depuis l'API Proxmox — voir `make aide`), `bascule-staging.py` (bascule DNS des pré-productions, deux zones et huit enregistrements : `status|ttl60|switch|revert|ttl3600`), `deploy-staging-teleimagerie.sh` / `deploy-staging-isoteam.sh` (hooks acme.sh des wildcards `*.staging.*` vers le CT 201), `unbound-overrides-staging.py` (overrides split-horizon des noms staging sur OPNsense, idempotent), `zabbix-provision-staging.py` (hôtes agents et certificats des VM 103/104 ; faux signal mémoire hyperviseur des VM sans balloon neutralisé par macro, High « mémoire réelle > 90 % pendant 1 h » côté agent — idempotent) |
 | `topologie.yml` | Intentions d'architecture — zones, rôles, cloisonnements, règles vérifiées à chaque génération de la carte. **Seul fichier de la carte à éditer à la main** |
 | `configs/` | Copie des configurations en production, pour comparaison ou restauration |
 
@@ -92,10 +98,15 @@ sur le cluster. Voir [04-securite.md](04-securite.md#secrets--où-ils-vivent).
 ## État en une page
 
 ```
-tim-cluster  ·  3 nœuds  ·  quorum 2/3  ·  Corosync 2 anneaux
-Proxmox VE 9.2.10        (Debian 13 Trixie, noyau 7.0.14-11-pve)
-Ceph Tentacle 20.2.2     HEALTH_OK · 6 OSD · 4,3 Tio bruts → 1,4 Tio utilisables
+tim-cluster  ·  5 nœuds (GRA4 ×3 + GRA3 ×2 depuis le 15/09)  ·  quorum 3/5
+                         Corosync 2 anneaux · 8 liens
+Proxmox VE 9.2.20        (Debian 13 Trixie ; noyau 7.0.14-17 sur pve4/5,
+                         7.0.14-11 sur pve1-3 — redémarrage en attente)
+Ceph Tentacle 20.2.4     10 OSD · 5 MON · 7,2 Tio bruts · size 4 / min_size 2
+                         → MAX AVAIL 1,5 Tio · clés cephx aes256k sauf
+                         client.admin (HEALTH_WARN volontaire, 06 §13)
 Réseau                   vRack 25 Gb/s · bridge VLAN-aware · jumbo MTU 9000 validé
+                         GRA3 ↔ GRA4 compris (0,15-0,3 ms)
                          VLAN 100 Corosync · 200 Ceph · 300 infra · 400 LAN VM
                          non tagué = bloc public 57.130.34.120/29
 HA                       7 ressources : vm:100 à vm:102 · ct:201 à ct:204
@@ -103,6 +114,7 @@ HA                       7 ressources : vm:100 à vm:102 · ct:201 à ct:204
 Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
                          admin VPN-only depuis le 01/09 (8006/22/3128 fermés
                          à Internet) · 2 portes : wg0 + tailnet · KVM OVH testé
+                         (pve1-3 ; pas encore sur pve4/5)
 Pare-feu VM              OPNsense 26.1.6 (VM 100) · WAN 57.130.34.121
                          WireGuard wg0 nomades · wg2 site-à-site TELLIS (51822)
 Site distant             DC TELLIS (prestataire) · pfSense 37.61.243.246
@@ -147,10 +159,10 @@ ERP                      Odoo 17 (VM 101, Ubuntu 24.04 + Docker) · odoo.teleima
                          en production depuis le 29/08 · VPS résilié le 30/08
 ```
 
-**Capacité réellement exploitable** : ~1,36 Tio de disque Ceph (seuil `nearfull` à
-85 %), **700 Gio de plus sur le NAS** pour le stockage froid, et **~100 Go de RAM
-VM cumulée** sur tout le cluster si l'on veut pouvoir absorber la perte d'un nœud.
-Voir [01-architecture.md](01-architecture.md#dimensionnement).
+**Capacité réellement exploitable** : ~1,5 Tio de disque Ceph (seuil `nearfull` à
+85 %, 4 répliques), **700 Gio de plus sur le NAS** pour le stockage froid, et
+**~140 Go de RAM VM cumulée** sur tout le cluster si l'on veut pouvoir absorber la
+perte d'un nœud. Voir [01-architecture.md](01-architecture.md#dimensionnement).
 
 ---
 
@@ -163,14 +175,17 @@ Voir [01-architecture.md](01-architecture.md#dimensionnement).
    Refaire une restauration de test après toute évolution majeure.
    Voir [10-sauvegardes.md](10-sauvegardes.md).
 
-2. **Avec 3 nœuds, Ceph ne se répare pas seul.** La perte d'un nœud laisse le cluster
-   en `HEALTH_WARN` dégradé — les VM tournent, mais aucune 3ᵉ réplique n'est recréée
-   faute d'un 4ᵉ hôte. C'est normal, pas une avarie.
+2. **Cinq nœuds sur deux datacentres, quatre répliques.** Depuis le 15/09/2026, la
+   perte de **deux nœuds quelconques** (GRA3 entier compris) laisse deux répliques
+   par PG : les I/O continuent, le quorum PVE (3/5) et MON (3/5) tiennent. Ceph
+   se répare seul après la perte d'un nœud (il reste quatre hôtes pour quatre
+   répliques). La perte de GRA4 (trois nœuds) reste fatale, comme avant.
 
 3. **La clé SSH `~/.ssh/id_ed25519` ne suffit plus seule.** Elle reste
    indispensable (désactiver un TOTP perdu, réparer un firewall), mais depuis la
    fermeture du 01/09/2026 il faut **une porte VPN pour l'utiliser** : wg0, ou
    le tailnet (`ssh root@100.72.0.6`), qui a l'avantage de ne pas dépendre
    d'OPNsense. **L'issue de secours ultime est désormais la console KVM/IPMI
-   OVH** — testée et validée le 31/08/2026, procédure et identifiants dans
+   OVH** — testée et validée le 31/08/2026 sur pve1-3 (pas encore sur pve4/5,
+   mot de passe root reçu par mail OVH à l'installation), procédure et identifiants dans
    [04-securite.md](04-securite.md#console-kvmipmi-ovh--laccès-de-dernier-recours).

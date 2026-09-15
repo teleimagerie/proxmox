@@ -273,9 +273,11 @@ des **host overrides** :
 | **`pve1.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.2`** | administration des hyperviseurs par le chemin privé — [04-securite.md](04-securite.md#accès-dadministration-par-vpn-31082026) |
 | **`pve2.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.3`** | idem |
 | **`pve3.infra.teleimagerie.net`** (31/08/2026) | **`10.40.0.4`** | idem |
+| **`pve4.infra.teleimagerie.net`** (15/09/2026) | **`10.40.0.5`** | idem — extension du cluster à GRA3 ; posé par [scripts/unbound-overrides-pve.py](scripts/unbound-overrides-pve.py) (idempotent, couvre les cinq nœuds), sauvegarde `config.xml.bak-pve-overrides-20260915` |
+| **`pve5.infra.teleimagerie.net`** (15/09/2026) | **`10.40.0.6`** | idem |
 | `app.`, `gestion.`, `mailer.staging.teleimagerie.net` et `.isoteam.mn` (14/09/2026) | `10.40.0.10` (proxy-tim) | pré-productions VM 103/104 — [20-mytim-staging.md](20-mytim-staging.md) ; six blocs `<host>` insérés dans `unboundplus/hosts` par [scripts/unbound-overrides-staging.py](scripts/unbound-overrides-staging.py) (via `opnrun.sh`, idempotent, `configctl unbound restart` + contrôle de `host_entries.conf`), sauvegarde `/conf/config.xml.bak-staging-20260914` |
 
-Les trois overrides `pve*` ne sont **pas un confort** : garder le *nom* plutôt
+Les cinq overrides `pve*` ne sont **pas un confort** : garder le *nom* plutôt
 que l'IP privée conserve un **certificat Let's Encrypt valide** et laisse
 intactes les URI de redirection Keycloak `https://pve{1,2,3}…:8006/*`
 ([16-keycloak.md](16-keycloak.md)). Vérifié le 31/08 depuis le VPN :

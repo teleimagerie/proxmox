@@ -7,13 +7,19 @@ ff02::2	ip6-allrouters
 10.100.0.11	pve1.tim.lan	pve1
 10.100.0.12	pve2.tim.lan	pve2
 10.100.0.13	pve3.tim.lan	pve3
+10.100.0.14	pve4.tim.lan	pve4
+10.100.0.15	pve5.tim.lan	pve5
 
 # --- Ceph : vRack VLAN 200 (MTU 9000) ---
 10.200.0.11	pve1-ceph
 10.200.0.12	pve2-ceph
 10.200.0.13	pve3-ceph
+10.200.0.14	pve4-ceph
+10.200.0.15	pve5-ceph
 
 # --- IP publiques OVH ---
 91.134.84.222	pve1-pub	ns3245256.ip-91-134-84.eu
 51.68.240.48	pve2-pub	ns3245278.ip-51-68-240.eu
 51.68.240.191	pve3-pub	ns3258339.ip-51-68-240.eu
+79.137.100.184	pve4-pub	ns3240079.ip-79-137-100.eu
+79.137.100.185	pve5-pub	ns3240118.ip-79-137-100.eu

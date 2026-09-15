@@ -107,7 +107,7 @@ Clients OIDC du realm `tim` (confidentiels, flux standard seul) :
 
 | Client | Redirect URIs |
 |---|---|
-| `proxmox` | `https://pve{1,2,3}.infra.teleimagerie.net:8006/*` |
+| `proxmox` | `https://pve{1,2,3}.infra.teleimagerie.net:8006/*` — ⚠️ **`pve4` et `pve5` (15/09/2026) manquent encore** : à ajouter avec `kcadm update clients/<id> -r tim -s 'redirectUris=[…]'` (session kcadm expirée, mot de passe admin hors serveur) ; en attendant, le SSO échoue sur ces deux nœuds avec un `invalid redirect_uri`, le realm `pve` local reste la voie |
 | `pbs` | `https://10.30.0.20:8007/*`, `https://10.40.0.20:8007/*`, `https://localhost:8007/*` (l'interface s'ouvre par tunnel SSH — [10-sauvegardes.md](10-sauvegardes.md#accès-à-linterface-pbs)) |
 | `headscale` | `https://headscale.teleimagerie.net/oidc/callback` |
 | `mytim` (créé le 30/08/2026, PKCE S256 imposé ; audité le 01/09/2026 : confidentiel, standard flow seul, scopes `email`/`profile` ; secret vaulté dans l'Ansible du dépôt gestion le 01/09/2026) | `https://app.teleimagerie.net/oidc/callback` |

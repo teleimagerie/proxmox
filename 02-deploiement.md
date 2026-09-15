@@ -196,3 +196,44 @@ Renouvellement automatique par `pve-daily-update.timer` (quotidien, ~03:03 UTC).
 - Scripts temporaires, comptes jetables (`tfatest@pve`, `probe@pve`, `rtest@pve`)
 - Service `corosync-restore.service` (filet de sécurité du test HA)
 - Minuteries `fw-rollback`
+
+## Extension à cinq nœuds — 15 septembre 2026
+
+Les deux ex-dédiés de staging (`ns3240079` → **pve4**, `ns3240118` → **pve5**,
+GRA3, [20-mytim-staging.md](20-mytim-staging.md)) ont été réinstallés depuis
+l'espace client OVH avec le template `proxmox9_64` (nom d'hôte et clé SSH
+posés à l'installation), partitionnement identique à celui de pve1-3 —
+738,4 Gio libres par disque, marqueur `p6` sur `nvme0n1`. Ordre réellement
+suivi, en une après-midi :
+
+1. **Côté cluster, avant toute jonction** : IP publiques ajoutées à l'ipset
+   `cluster` (minuterie `fw-rollback` armée puis désarmée), ACL du NAS-HA
+   étendue (`ovh-nasha.py`), enregistrements A `pve4/pve5.infra` créés
+   (`ovh-dns.py`), overrides Unbound `pveN.infra → 10.40.0.5/.6`
+   ([scripts/unbound-overrides-pve.py](scripts/unbound-overrides-pve.py)),
+   `/etc/hosts` des trois nœuds complété, clés root croisées.
+2. **Côté nouveaux nœuds** : `full-upgrade` (9.2.18 → 9.2.20), `chrony gdisk
+   parted ifupdown2`, `pveceph install`, `/etc/hosts` du dépôt, bloc `VRACK`
+   de `/etc/network/interfaces` posé avec la méthode de la phase 1 (jumbo
+   GRA3→GRA4 vérifié : `ping -M do -s 8972` passe, 0,15-0,3 ms), durcissement
+   SSH/Postfix/fail2ban, tailnet en `userspace` (`100.72.0.8` pve4, `.9`
+   pve5), redémarrage sur le noyau 7.0.14-17, chemin VPN `10.40.0.5/.6`
+   vérifié **avant** la jonction (c'est lui qui reste quand `cluster.fw`
+   ferme l'IP publique).
+3. **Jonction** : `pvecm add 10.100.0.11 --link0 10.100.0.14 --link1
+   79.137.100.184 --use_ssh 1`, puis pve5 ; 5 nœuds, 8 liens Corosync,
+   5 stockages actifs, certificats Let's Encrypt émis dans la foulée.
+4. **Ceph** : premier `pveceph mon create` **raté** — piège n° 43 (mon 20.2.4
+   contre quorum 20.2.2, OOM des trois anciens mons, ~12 min sans quorum
+   MON, aucune perte). Mise à niveau de pve1-3 (Ceph 20.2.4, PVE 9.2.20, sans
+   redémarrage), rotation cephx (piège n° 44), puis MON/MGR sur pve4 et
+   pve5 (quorum en 8 s), OSD 6-9, `size 4` — deux vagues de rééquilibrage
+   (15 min puis 4 min, 90 à 580 Mio/s), `MAX AVAIL` final 1,5 Tio, occupation
+   à ±5 % par hôte.
+5. **Contrôles** : diagnostic express vert sur les cinq nœuds (5 / 8 liens /
+   5 stockages, firewall, fail2ban, certificats), migration à chaud
+   VM 103 → pve4 (12 s, coupure 121 ms) et VM 104 → pve5 (39 s, 20 ms) —
+   les deux pré-productions **restent à GRA3** ; `make controle` sans écart,
+   carte régénérée. Zabbix : aucun problème High ouvert, `HEALTH_WARN`
+   volontaire (piège n° 44). Non fait : test KVM OVH des deux nœuds, SSO
+   Keycloak (redirect URIs), redémarrage noyau de pve1-3 — [06 §13](06-reste-a-faire.md#13-extension-du-cluster-à-gra3-pve4pve5---faite-le-15092026-suites).

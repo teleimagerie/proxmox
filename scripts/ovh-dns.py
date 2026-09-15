@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Cree les enregistrements A pve{1,2,3}.infra.teleimagerie.net via l'API OVH."""
+"""Cree les enregistrements A pve{1..5}.infra.teleimagerie.net via l'API OVH.
+
+Idempotent : cree ce qui manque, corrige ce qui differe, ne touche pas au reste.
+Identifiants dans OVH_AK / OVH_AS / OVH_CK (application « proxmox », ceux du
+plugin ACME : `pvenode acme plugin list` sur pve1). pve4/pve5 ajoutes le
+15/09/2026 (extension du cluster a GRA3)."""
 import hashlib
 import os
 import json
@@ -16,6 +21,8 @@ RECORDS = {
     "pve1.infra": "91.134.84.222",
     "pve2.infra": "51.68.240.48",
     "pve3.infra": "51.68.240.191",
+    "pve4.infra": "79.137.100.184",
+    "pve5.infra": "79.137.100.185",
 }
 
 

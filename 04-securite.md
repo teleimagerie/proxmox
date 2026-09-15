@@ -130,7 +130,8 @@ vaut pour les trois) :
   distinguer — et révoquer — chaque clé indépendamment. Sur le poste actuel
   (`ZENBOOK-MCA`) il n'y a plus de trousseau Windows natif au 04/09/2026 :
   seule la clé WSL sert, c'est elle qui est déposée sur les serveurs Windows ;
-- les clés root croisées des 3 nœuds (nécessaires à `pvecm` et à la migration) ;
+- les clés root croisées des 5 nœuds (nécessaires à `pvecm` et à la migration ;
+  pve4/pve5 ajoutées le 15/09/2026) ;
 - `brtrnd@thinkpad` (ed25519, ajoutée le 2026-08-26).
 
 > **Cette clé est l'issue de secours ultime du cluster.** Sa perte, combinée à un
@@ -152,7 +153,9 @@ Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.
 | **udp/41641** | tout Internet | **tailnet headscale** — seconde porte d'administration (31/08/2026). Sans restriction de source **à dessein** : c'est ce qui permet au poste de rejoindre le nœud **en direct sur son IP publique** quand OPNsense (donc le DERP et le plan de contrôle) est mort. WireGuard ne répond rien à un paquet non authentifié |
 | ICMP echo | tout Internet | diagnostic |
 
-L'ipset `cluster` contient les 3 IP publiques et les trois sous-réseaux vRack.
+L'ipset `cluster` contient les 5 IP publiques et les trois sous-réseaux vRack
+(`79.137.100.184/.185` ajoutées le 15/09/2026 **avant** la jonction de pve4/pve5 :
+c'est ce qui laisse passer le ring1 Corosync sur IP publiques).
 
 ### Accès d'administration par VPN (31/08/2026)
 
@@ -282,7 +285,7 @@ port supplémentaire ouvert.
 ```
 compte ACME   default → mcapon@teleimagerie.net (acct/3620811681)
 plugin        ovh (dns), validation-delay 120 s
-domaines      pve{1,2,3}.infra.teleimagerie.net
+domaines      pve{1..5}.infra.teleimagerie.net   (pve4/pve5 : 15/09/2026)
 renouvellement pve-daily-update.timer, quotidien ~03:03 UTC
 ```
 

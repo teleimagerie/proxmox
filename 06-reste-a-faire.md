@@ -68,9 +68,9 @@ le mail direct n'est que le filet si Zabbix tombe.
   [15-pacs-secours.md](15-pacs-secours.md#reste-à-faire).
 - **Le matériel livré ne correspond pas au devis demandé** : la demande du
   05/08/2026 portait sur 128 Go de RAM et 2 × 1,92 To de NVMe supplémentaires par
-  serveur ; les machines ont 64 Go et 2 disques. À vérifier auprès d'OVH — c'est
-  la voie la plus directe pour agrandir *Ceph*, là où le NAS n'apporte qu'un
-  stockage lent.
+  serveur ; les machines ont 64 Go et 2 disques. À vérifier auprès d'OVH.
+  Depuis le 15/09/2026, l'extension à cinq nœuds (§ 13) a porté Ceph à
+  ~1,5 Tio pratiques ; la question du devis reste ouverte pour la RAM.
 - **Faire le ménage dans les tokens OVH** : deux clés antérieures ont été révoquées
   le 11/08/2026 et n'ont plus d'usage. **Deux applications doivent subsister** :
   `proxmox` (AK `0357cf99f1ed0548`), qui porte le renouvellement TLS, et
@@ -399,3 +399,47 @@ session. **À refaire avant toute fermeture du même genre.**
 - 📋 **`3128` (SPICE)** : compteur à 0 depuis la fermeture — candidat à la
   suppression pure comme `5900-5999`, à confirmer sur 30 jours (échéance
   01/10/2026).
+
+---
+
+## 13. Extension du cluster à GRA3 (pve4/pve5) — ✅ faite le 15/09/2026, suites
+
+Les deux ex-dédiés de staging sont pve4 et pve5 ([01-architecture.md](01-architecture.md),
+journal dans [02-deploiement.md](02-deploiement.md#extension-à-cinq-nœuds--15-septembre-2026),
+pièges n° 43 et 44). Ce qui reste :
+
+- ⚠️ **Redémarrer pve1, pve2 et pve3 sur le noyau 7.0.14-17** (installé le
+  15/09 avec la mise à niveau 9.2.20 / Ceph 20.2.4, non chargé). Un nœud à la
+  fois, par `ha-manager crm-command node-maintenance enable` — rappel : les
+  CT (201-204) migrent par arrêt/relance, ~14 s de coupure chacun.
+- ⚠️ **Terminer la migration cephx** (piège n° 44) : `client.admin` est encore en
+  `aes`, d'où un `HEALTH_WARN` permanent. Préalable : que **tous les processus
+  QEMU** aient été relancés sur la librbd 20.2.4 (les VM tournaient déjà
+  pendant la mise à jour) — une migration à chaud de chaque VM suffit, à
+  faire dans la même fenêtre que les redémarrages ci-dessus. Puis, sur pve1 :
+  `pve-cephx-rotate-service-keys --rotate-admin-key --apply`, contrôle
+  `pveceph auth status`, et enfin `ceph mon set auth_allowed_ciphers aes256k`
+  + `ceph config set mon mon_auth_allow_insecure_key false`. Garder
+  `/etc/pve/priv/cephx-key-migration.json` jusque-là.
+- ⚠️ **Ajouter `https://pve4.infra.teleimagerie.net:8006/*` et `pve5` aux redirect URIs
+  du client OIDC `proxmox`** du realm `tim` ([16-keycloak.md](16-keycloak.md)) —
+  `kcadm.sh config credentials` puis `kcadm update clients/<id>` sur le CT 203 ;
+  sans cela le bouton SSO de l'interface web de pve4/pve5 échoue
+  (`invalid redirect_uri`). Le realm local `pve` (`matt` + TOTP) fonctionne.
+- 📋 **Tester la porte tailnet de pve4/pve5 depuis un appareil admin** (`ssh
+  root@100.72.0.8` / `.9`) : les deux nœuds sont enrôlés et `online` dans
+  headscale, chemin non éprouvé de bout en bout le 15/09 (le poste WSL de la
+  session n'était pas membre du tailnet).
+- ⚠️ **Tester la console KVM OVH** de pve4 et pve5 (mot de passe root reçu par
+  mail à l'installation, à ranger dans le gestionnaire de secrets) — fait sur
+  pve1-3 le 31/08, pas encore sur les deux nouveaux.
+- 📋 **Rejouer un test HA** sur un nœud GRA3 (test 5 de [05-tests-ha.md](05-tests-ha.md))
+  et **mesurer la perte de GRA3** (pve4 + pve5 coupés par l'espace client) :
+  quorum 3/5 attendu, PG `active+undersized` sans blocage — c'est la mesure
+  qui valide `size=4`.
+- 📋 **Surveiller la mémoire des nœuds GRA3** (32 Go, ~19 Go pour les VM) : sans
+  règle d'affinité, le CRM peut y relancer n'importe quelle ressource HA.
+  Poser des `ha-manager rules` si un jour une VM n'y tient pas.
+- 📋 Mettre à jour la `Documentation` de la fiche 12 (périmètre HDS) : les deux
+  datacentres GRA4 et GRA3 portent désormais des données de santé
+  (répliques Ceph).

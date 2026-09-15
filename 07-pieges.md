@@ -7,9 +7,9 @@ Ordre chronologique : 1 à 21 le déploiement (11/08), 22 le proxy et le premier
 tunnel (12-13/08), 23 le site-à-site pfSense vers TELLIS (14/08), 24 à 28 le NAS-HA et les
 sauvegardes (13-15/08), 29 le déploiement headscale (15/08), 30 le diagnostic
 certificats syngo-via (24/08), 31 les premiers enrôlements headscale (25/08),
-puis 32 à 39 les chantiers suivants — 38 (05/09) vaut pour la documentation
+puis 32 à 42 les chantiers suivants — 38 (05/09) vaut pour la documentation
 elle-même, pas pour l'infrastructure, 39 (11/09) pour le routage retour vers
-TELLIS.
+TELLIS — et 43-44 l'extension du cluster à GRA3 (15/09).
 
 ---
 
@@ -1080,3 +1080,92 @@ d'emblée à la création de l'hôte et ne regarder que l'agent. Et quand un mai
 « revient sans arrêt », chercher d'abord pourquoi le problème ne se ferme pas,
 avant de toucher à la répétition : une escalade infinie n'est un défaut que
 sur un faux positif.
+
+## 43. Un moniteur plus récent que le quorum ne le rejoint jamais, et fait exploser la mémoire des anciens
+
+**Symptôme** — Le 15/09/2026, extension du cluster à pve4/pve5 (ex-dédiés de
+staging réinstallés, `01-architecture.md`). `pveceph mon create` sur pve4
+rend la main normalement (« monmaptool: writing epoch 3 … (4 monitors) »,
+service démarré), mais le nouveau mon reste en `probing`, rang `-1`, et
+n'entre jamais dans la monmap. Une minute plus tard, `ceph -s` ne répond
+plus : le mon de pve1 (leader) est **tué par l'OOM à 36-42 Go de RSS**, relancé
+par systemd, retué, six fois de suite ; puis ceux de pve2 et pve3 suivent.
+Plus aucun quorum MON pendant ~12 minutes ; les VM ont continué de tourner
+(sessions RBD établies), Ceph est revenu `HEALTH_OK` sans perte.
+
+**Cause** — Écart de version : le template OVH `proxmox9_64` livre PVE 9.2.18,
+mis à jour en 9.2.20 avec **Ceph 20.2.4**, alors que pve1-3 étaient restés en
+9.2.10 / **Ceph 20.2.2** (installés le 11/08, jamais mis à jour depuis). Le
+code de `pveceph mon create` est identique (même `MON.pm`) ; c'est le sondage
+du mon 20.2.4 par le quorum 20.2.2 qui dégénère : les anciens mons journalisent
+« adding peer [v2:10.200.0.14:3300/0,…] to list of hints » des milliers de fois
+par seconde jusqu'à l'épuisement de la mémoire. Les paquets 20.2.2 ayant
+disparu du dépôt `ceph-tentacle`, aucun retour arrière possible côté nouveaux
+nœuds.
+
+**Résolution immédiate** — `systemctl stop ceph-mon@pve4 ceph-mon@pve5` sur
+les nouveaux nœuds (le sondage cesse), puis `systemctl reset-failed` +
+`start` du mon sur pve1, pve2, pve3 : quorum reformé en moins d'une minute.
+Nettoyage : sections `[mon.pve4]`/`[mon.pve5]` et `.14/.15` retirés de
+`mon_host` dans `/etc/pve/ceph.conf`, répertoires `/var/lib/ceph/mon/ceph-pveN`
+et `/var/lib/ceph/mgr/ceph-pveN` supprimés, `ceph auth del mgr.pveN`.
+
+**Résolution de fond** — mettre pve1-3 au même niveau **avant** d'ajouter un
+mon : `apt full-upgrade` (sans corosync ni pve-cluster dans le lot, donc sans
+risque pour le quorum PVE), puis `ceph osd set noout`, redémarrage des
+`ceph-mon@`, `ceph-mgr@` et `ceph-osd@` d'un nœud, attente `active+clean`,
+nœud suivant, `unset noout`. Aucune migration d'invité, aucun redémarrage
+de nœud (le noyau 7.0.14-17 attend une fenêtre : `06-reste-a-faire.md`).
+Relancé ensuite, `pveceph mon create` a mis pve4 dans le quorum **en 8 s**
+(surveillé par un garde-fou : RSS du mon de pve1 et compteur de « hints »,
+arrêt automatique du nouveau mon au-delà de 2 Go ou 150 lignes).
+
+**Leçon** — **Avant tout ajout de nœud, aligner les versions Ceph du
+cluster sur celles que le dépôt va installer** (`ceph versions` doit rendre
+une seule ligne). Un nœud neuf est toujours plus récent que le cluster, et
+un mon plus récent que le quorum n'est pas « un peu en avance » : il peut ne
+jamais rejoindre, et faire tomber les autres. Corollaire : garder
+`pve-no-subscription` **à jour sur les nœuds existants** (un nœud à la fois),
+sans quoi chaque extension rejoue ce piège.
+
+## 44. Ceph 20.2.4 passe en `HEALTH_ERR` sur les clés `aes` — et Zabbix envoie un Disaster
+
+**Symptôme** — Dans la foulée du piège 43, dès le premier mon mis à jour :
+`HEALTH_ERR 8 auth client entities with insecure key types; … 9 auth service
+entities with insecure key types`, alors que les 33 PG sont `active+clean`.
+Zabbix ouvre « Ceph HEALTH_ERR » (Disaster, mail ALERTE HAUTE, escalade
+horaire tant que le problème est ouvert — piège 42).
+
+**Cause** — Ceph 20.2.4 (et 19.2.6) ajoute des contrôles cephx liés à la
+CVE-2025-30156 : les clés et tickets au chiffre historique `aes` sont
+déclarés « insecure », niveau ERR pour les clés de service et les tickets. Ce
+n'est pas une panne, c'est un état de migration ; un cluster qui n'a rien
+changé passe rouge après la mise à jour.
+
+**Résolution** — Proxmox livre un outil de migration, `pveceph auth status`
+pour l'état et `/usr/share/pve-manager/migrations/pve-cephx-rotate-service-keys`
+pour la rotation (plan à blanc sans `--apply`, préflight, journal des
+anciennes clés dans `/etc/pve/priv/cephx-key-migration.json`). Exécuté le
+15/09/2026 avec `--rotate-cluster-keys --apply --assume-yes` : clé `mon.`
+tournée avec redémarrage des mons un par un, clés MGR et OSD **échangées à
+chaud** (aucun redémarrage), clés bootstrap et `client.crash` réécrites,
+tickets de service basculés en `aes256k` — ~3 minutes, sans interruption.
+Puis `ceph mon set auth_preferred_cipher aes256k` **avant** de créer les
+MGR/OSD des nouveaux nœuds (le MGR pve5, créé avant ce réglage, est né en
+`aes` et a dû être tourné à part : `--only mgr.pve5`). Entre-temps,
+`ceph health mute AUTH_INSECURE_SERVICE_KEY_TYPE 2h` a refermé le Disaster.
+
+Reste **volontairement** en `HEALTH_WARN` : `client.admin` (et sa copie
+`/etc/pve/priv/ceph/vm-storage.keyring`, lue par chaque QEMU) est encore en
+`aes`. Le tourner (`--rotate-admin-key`) suppose que **chaque processus QEMU
+ait été relancé** sur la librbd 20.2.4 — les VM en cours d'exécution ont
+chargé l'ancienne bibliothèque avant la mise à jour. À faire en fenêtre
+planifiée, après migration à chaud de toutes les VM ; puis `auth_allowed_ciphers
+aes256k` et `mon_auth_allow_insecure_key false` ferment les deux derniers
+avertissements ([06-reste-a-faire.md](06-reste-a-faire.md)).
+
+**Leçon** — Lire les notes de version **avant** une mise à jour de point
+release Ceph, même mineure : celle-ci change la couleur du cluster. Et le
+déclencheur Zabbix `HEALTH_ERR` (Disaster) ne distingue pas une panne d'un
+avertissement de sécurité : quand la cause est connue, `ceph health mute`
+avec durée est le bon geste pour ne pas noyer les vraies alertes.
