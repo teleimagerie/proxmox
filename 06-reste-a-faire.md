@@ -446,10 +446,12 @@ pièges n° 43 et 44). Ce qui reste :
   répondent, chemin direct en 18 ms ([11-headscale.md](11-headscale.md#test--porte-2-seule---01092026-rejoué-sur-pve4pve5-le-15092026)).
 - ✅ ~~Tester la console KVM OVH de pve4 et pve5~~ — fait par l'admin le
   15/09/2026 au soir, mots de passe root rangés dans le gestionnaire de secrets.
-- 📋 **Rejouer un test HA** sur un nœud GRA3 (test 5 de [05-tests-ha.md](05-tests-ha.md))
-  et **mesurer la perte de GRA3** (pve4 + pve5 coupés par l'espace client) :
-  quorum 3/5 attendu, PG `active+undersized` sans blocage — c'est la mesure
-  qui valide `size=4`.
+- ✅ ~~Rejouer un test HA sur un nœud GRA3 et mesurer la perte de GRA3~~ — **test 7
+  du 15/09/2026 au soir** ([05-tests-ha.md](05-tests-ha.md#test-7--perte-de-gra3--reboot-planifié-double-coupure-matérielle-isolation-durable-15092026)) :
+  reboot planifié de pve4 (55 ms), reset simultané de pve4 et pve5 (quorum 3/5,
+  0 PG bloqué, un gel d'I/O de 7 s, retour seul en 2 min 11 s), isolation
+  durable de pve4 (fencing 58 s, ct:202 relancé sur pve1 en 2 min 06 s,
+  headscale coupé 2 min 20 s). `size=4` validé en réel.
 - 📋 **Surveiller la mémoire des nœuds GRA3** (32 Go, ~19 Go pour les VM) : sans
   règle d'affinité, le CRM peut y relancer n'importe quelle ressource HA.
   Poser des `ha-manager rules` si un jour une VM n'y tient pas.

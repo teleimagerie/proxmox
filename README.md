@@ -110,6 +110,7 @@ Réseau                   vRack 25 Gb/s · bridge VLAN-aware · jumbo MTU 9000 v
                          non tagué = bloc public 57.130.34.120/29
 HA                       7 ressources : vm:100 à vm:102 · ct:201 à ct:204
                          watchdog softdog · fencing testé en conditions réelles
+                         perte de GRA3 (2 nœuds) mesurée le 15/09 : 0 PG bloqué
 Sécurité                 firewall actif · SSH par clé · fail2ban · TLS · TOTP
                          admin VPN-only depuis le 01/09 (8006/22/3128 fermés
                          à Internet) · 2 portes : wg0 + tailnet · KVM OVH testé

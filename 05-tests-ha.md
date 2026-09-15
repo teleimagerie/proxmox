@@ -265,6 +265,80 @@ entre chaque phase.
   suivant chaque retour.
 - `10.40.0.2` de pve1 à nouveau perdue puis reposée ([08-opnsense.md](08-opnsense.md#accès-dadministration)).
 
+## Test 7 — Perte de GRA3 : reboot planifié, double coupure matérielle, isolation durable (15/09/2026)
+
+Réalisé le **15 septembre 2026** au soir, en production, six heures après
+l'extension du cluster à cinq nœuds ([01-architecture.md](01-architecture.md)).
+But : prouver ce que promet la topologie 3 + 2 avec `size=4` — la perte des
+deux nœuds de GRA3 (même baie `GRA0329A05C`) laisse les I/O et le quorum
+intacts — et la relocalisation HA **depuis** un nœud GRA3. Pour que la
+bascule soit réelle, ct:202 (headscale) a été posé sur pve4 avant le test
+(`ha-manager crm-command migrate`, 33 s). `ceph osd set noout` pendant tout
+le test (sinon les OSD passent `out` au bout de 10 min et Ceph déplace
+~280 Gio, puis les ramène). Sonde toutes les 3 s, détachée par `systemd-run`
+sur pve3 (nœud tiers) : Odoo (pve2), headscale (pve4), staging TIM (VM 103),
+PG non actifs, OSD `up`, nœuds du quorum, état de ct:202. Coupures lancées
+par l'utilisateur depuis l'espace client OVH (phase B) et par isolation
+Corosync (phase C).
+
+### Phase A — reboot planifié de pve4 (test 5 rejoué sur GRA3)
+
+`node-maintenance enable pve4` : ct:202 relogé en 43 s, VM 103 migrée à chaud
+avec **55 ms** de coupure ; reboot ; pve4 de retour en **142 s** ; Ceph
+`active+clean` sans rééquilibrage (noout). Aucun échantillon perdu sur Odoo
+ni le staging ; un seul échantillon `ceph_notactive=1` (3 s) au retour des OSD,
+le temps du re-peering. Puis `node-maintenance disable`, ct:202 remis sur pve4.
+
+### Phase B — reset matériel simultané de pve4 et pve5 (espace client OVH)
+
+| Heure UTC | Événement |
+|---|---|
+| 21:42:15 | quorum à **3 nœuds** (`Quorate: Yes`), headscale muet (le CT est sur pve4) |
+| 21:42:34 | les 4 OSD de GRA3 marqués `down` (`6 up`) ; **Odoo perd un échantillon** (7 s) : re-peering des PG, gel bref des I/O |
+| 21:42:41 | Odoo à 200, et sans interruption ensuite ; **0 PG non actif** pendant toute la phase ; staging TIM (pve3) jamais touché |
+| 21:44:26 | **les deux nœuds sont revenus seuls** (2 min 11 s), quorum 5/5 |
+| 21:44:33 → 21:44:40 | OSD `9 up` puis `10 up`, un échantillon de re-peering ; `33 active+clean` |
+| 21:45:59 | headscale à 200 : ct:202 **repris par pve4 lui-même** |
+
+Ce que la phase prouve : avec `size=4` et cinq hôtes, la perte simultanée de
+deux nœuds ne bloque **aucun** PG — Ceph passe `active+undersized+degraded`
+et les VM continuent ; le quorum PVE (3/5) et MON (3/5) tiennent ; VM 104,
+hors HA, est restée arrêtée le temps du reset et relancée par `onboot`. Ce
+qu'elle ne prouve pas : la relocalisation HA — le reset OVH revient en
+2 min 11 s, **avant** l'expiration du fencing (~2 min 15 s), et le LRM de
+pve4 reprend son service, exactement le piège n° 8 du test 2. Un reset
+matériel n'est pas une panne durable.
+
+### Phase C — isolation durable de pve4 (`systemctl mask corosync ; stop corosync`)
+
+| Heure UTC | Événement |
+|---|---|
+| 21:47:44 | Corosync arrêté et masqué sur pve4 → quorum à 4 nœuds, ct:202 tourne encore sur pve4 |
+| 21:48:42 | ct:202 en **`fence`** (58 s) |
+| 21:48:56 | headscale muet : **watchdog de pve4** (72 s) |
+| 21:49:16 | OSD de pve4 `down` (`8 up`), Odoo perd de nouveau un échantillon (7 s) |
+| 21:49:50 | ct:202 **`starting` sur pve1** (2 min 06 s) |
+| 21:50:39 | pve4 redémarré par le watchdog, revient avec Corosync masqué (`nodes=4`) |
+| 21:51:09 | ct:202 `started` : le `vzstart` a attendu **~80 s** la libération de l'image RBD encore verrouillée par pve4 |
+| 21:51:16 | headscale à 200 — **coupure totale 2 min 20 s** (21:48:56 → 21:51:16) |
+| 21:51:31 | Corosync démasqué et relancé sur pve4, `pve-ha-lrm` relancé : quorum 5/5, 8 liens, `HEALTH_OK` |
+
+La relocalisation HA **depuis GRA3 vers GRA4** est prouvée, dans les mêmes
+temps que les tests 3 et 6. À retenir pour la remise en service : un nœud
+isolé par ce moyen revient **sans Corosync** (masqué) — `systemctl unmask
+corosync && systemctl start corosync && systemctl start pve-ha-lrm` à la main.
+
+### Deux observations propres à la topologie 3 + 2
+
+- **Le re-peering coûte un échantillon à chaque changement d'état des OSD** :
+  quand les OSD de GRA3 sont marqués `down` (ou reviennent `up`), les PG
+  concernés re-peerent et les I/O des VM gèlent 3 à 7 s — Odoo, sur pve2,
+  l'a subi deux fois alors que son nœud n'était pas touché. C'est le prix
+  d'un Ceph réparti : bref, sans erreur applicative visible, mais réel.
+- **La sonde vivait sur le tailnet, pas sur wg0** : administration et mesures
+  faites par la seconde porte (`100.72.0.7`), indépendante d'OPNsense — c'est
+  la première fois qu'un test est piloté entièrement par ce chemin.
+
 ## Synthèse
 
 | Scénario | Indisponibilité | Perte de données |
@@ -275,11 +349,15 @@ entre chaque phase.
 | Panne d'un nœud | ~2 min 15 s | **aucune** (RPO = 0) |
 | Coupure matérielle d'un nœud, services réels (test 6) | **2 min 43 s à 4 min 51 s** selon le service porté (pire cas : OPNsense) | aucune |
 | Panne d'un disque | 0 s | aucune |
-| Panne de deux nœuds | **totale** | aucune, mais quorum perdu |
+| Reboot planifié d'un nœud GRA3 (test 7 A) | 55 ms (VM) / 43 s d'évacuation pour le CT | aucune |
+| Perte simultanée de deux nœuds (GRA3 entier, test 7 B) — depuis le 15/09/2026 | **0 s** pour les services des autres nœuds (un gel d'I/O de ~7 s au re-peering) ; services du nœud perdu : bascule HA ~2 min 15 s | **aucune** |
+| Panne durable d'un nœud GRA3 (test 7 C) | 2 min 20 s pour le CT porté (dont ~80 s d'attente du verrou RBD) | aucune |
+| Panne de deux nœuds **avant le 15/09/2026** (3 nœuds) | totale | aucune, mais quorum perdu |
+| Perte de GRA4 (3 nœuds sur 5) | **totale** | aucune, mais quorum perdu |
 
-La dernière ligne est la limite structurelle d'un cluster à 3 nœuds : deux pertes
-simultanées font tomber le quorum Corosync **et** violent `min_size=2`. Le
-stockage se met en lecture seule et les VM gèlent.
+L'avant-dernière ligne était la limite structurelle du cluster à 3 nœuds ;
+l'extension à cinq nœuds sur deux datacentres avec `size=4` l'a repoussée à
+la perte de trois nœuds, c'est-à-dire de GRA4 — mesuré au test 7.
 
 ## Rejouer les tests
 
