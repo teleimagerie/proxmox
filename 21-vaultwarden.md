@@ -184,6 +184,10 @@ services:
     environment:
       DOMAIN: https://vault.teleimagerie.net
       SIGNUPS_ALLOWED: "false"
+      # Inscriptions fermées SAUF e-mails du domaine — c'est ce qui permet la
+      # création de compte à la volée au premier login SSO (les e-mails
+      # n'arrivent que par Google : audience Interne + hd vérifié par Keycloak).
+      SIGNUPS_DOMAINS_WHITELIST: teleimagerie.net
       INVITATIONS_ALLOWED: "true"
       SSO_ENABLED: "true"
       SSO_ONLY: "true"
@@ -217,10 +221,19 @@ services:
 `curl -s https://auth.teleimagerie.net/realms/tim/.well-known/openid-configuration | jq -r .issuer`.
 
 - `SSO_ONLY` : la page de login n'offre que « Enterprise single sign-on » ;
-  le compte naît au premier passage SSO (l'e-mail Google vérifié fait foi).
+  le compte naît au premier passage SSO (l'e-mail Google vérifié fait foi,
+  `SIGNUPS_DOMAINS_WHITELIST` autorise cette création malgré
+  `SIGNUPS_ALLOWED=false`). L'utilisateur définit alors son master password.
+  Les comptes admin Keycloak non liés à Google (`matt`, `brtrnd`) passent par
+  le même bouton SSO mais s'authentifient en local + TOTP sur la page Keycloak.
 - `ORG_CREATION_USERS` : seuls les admins créent des organisations — la
-  structure des collections partagées reste gouvernée.
-- `/admin` est protégé par l'`ADMIN_TOKEN` ; durcissement optionnel plus bas.
+  structure des collections partagées reste gouvernée. L'appartenance à une
+  organisation reste manuelle (invitation Mailjet, acceptation après login
+  SSO, **confirmation** par l'admin d'orga — échange de clés du modèle
+  Bitwarden) : pas de SCIM, pas de mapping automatique des groupes Google.
+- `/admin` (gestion serveur : liste des comptes, invitations, suppression)
+  n'est **pas un compte** : un seul secret, l'`ADMIN_TOKEN` (hash Argon2),
+  sans aucun accès aux coffres ; durcissement optionnel plus bas.
 
 ### 4. Expéditeur Mailjet
 
