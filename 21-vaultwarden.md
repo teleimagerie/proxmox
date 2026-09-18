@@ -384,9 +384,10 @@ curl -sI http://vault.teleimagerie.net | head -1     # 301
 - [x] DNS créé (TTL 60) + vhost + certificat (échéance 17/12/2026),
       `certbot renew --dry-run` ✅ pour `vault` (l'échec du même dry-run sur
       `auth` était un `rateLimited` passager de l'endpoint staging Let's Encrypt)
-- [ ] **Override Unbound** `vault → 10.40.0.10` (accès OPNsense : clé du poste
-      absente de `/conf/config.xml`, GUI ou Matthieu — le script
-      [scripts/unbound-override-vaultwarden.py](scripts/unbound-override-vaultwarden.py) est prêt)
+- [x] **Override Unbound** `vault → 10.40.0.10` — posé le 18/09 par
+      [scripts/unbound-override-vaultwarden.py](scripts/unbound-override-vaultwarden.py)
+      après ajout de la clé SSH du poste dans OPNsense (Matthieu) ; vérifié
+      depuis la VM 105 : résolution `10.40.0.10`, `/alive` → 200 via le proxy
 - [ ] Matrice de vérification déroulée : SSO de bout en bout (extérieur), puis
       intérieur après l'override ; `dns-vaultwarden.py ttl3600` après validation
 - [x] `vw-pgdump` en place (premier dump prouvé) — 📋 première sauvegarde
