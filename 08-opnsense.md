@@ -344,9 +344,23 @@ puis `qm terminal 100` depuis le nœud, qui ne dépend d'aucune configuration
 réseau.
 
 Clés autorisées sur le compte root d'OPNsense : celle du poste d'administration
-(`matt@LENOVO-MCA2`) et celle de root sur pve1 (nécessaire aux scripts).
+(`matt@LENOVO-MCA2`), celle de root sur pve1 (nécessaire aux scripts) et,
+depuis le 18/09/2026, celle de Bertrand (`brtrnd@thinkpad`, ed25519).
 Elles sont inscrites dans `config.xml` — voir le piège n° 20, une clé posée
 directement dans `authorized_keys` ne survit pas à un redémarrage.
+
+> **Ajouter une clé sans l'interface web (26.1).** Le champ `authorizedkeys`
+> relève du modèle MVC `OPNsense\Auth\User` : le script PHP charge
+> `script/load_phalcon.php`, ajoute la ligne à l'utilisateur `root`, valide,
+> puis appelle `serializeToConfig()` et `Config::getInstance()->save()`. Le
+> champ est un `StoreB64Field`, qui fait l'encodage base64 tout seul.
+> **`configctl auth user changed root` répond `OK` mais ne réécrit pas le
+> fichier** : c'est `local_user_set()` (`auth.inc`) qui le fait, appelé sur
+> l'entrée `root` de `config_read_array('system', 'user')`. Il n'a pas touché
+> à la base des comptes (`master.passwd` inchangé). Sauvegarde préalable :
+> `/conf/backup/config-avant-cle-brtrnd-20260918.xml`. En dehors de la clé et
+> de la révision, `config.xml` n'a changé que dans sa mise en forme : les
+> sections écrites à la main ont été réindentées.
 
 > Le shell root d'OPNsense est **tcsh** : `$(...)` et `2>/dev/null` y échouent.
 > Encapsuler dans `sh -c "..."`.

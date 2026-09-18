@@ -114,7 +114,8 @@ posés par [scripts/unbound-overrides-staging.py](scripts/unbound-overrides-stag
    --onboot 1`, `qm disk import` de l'image noble, `--ide2 vm-storage:cloudinit`,
    `--ipconfig0 ip=10.40.0.80/24,gw=10.40.0.1 --nameserver 10.40.0.1`,
    `qm disk resize … 100G`), clés SSH = les 4 clés de `ssh_authorized_keys` du
-   dépôt + `root@pve1`. `qemu-guest-agent` installé à la main (absent de
+   dépôt + `root@pve1`. La liste du dépôt compte 5 clés depuis le 18/09/2026 :
+   l'ed25519 de Bertrand y a été ajoutée. `qemu-guest-agent` installé à la main (absent de
    l'image cloud). Vérifié : `resolv.conf` → `10.40.0.1` (piège 33),
    `ip route get 10.90.0.2` par `eth0` (piège 37), `auth.teleimagerie.net` →
    `10.40.0.10` depuis la VM.

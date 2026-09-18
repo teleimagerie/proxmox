@@ -242,7 +242,8 @@ ces cinq-là (anti-doublon). Le ménage du même jour : les `XnTELEMEDCLOUD_*`
 ### Accès SSH et pare-feu (30/08/2026)
 
 **SSH opérationnel et verrouillé.** OpenSSH serveur (natif Windows) activé le
-30/08 ; la clé `id_ed25519` du poste d'admin est dans
+30/08 ; la clé `id_ed25519` du poste d'admin (et celle de Bertrand depuis le
+18/09/2026) est dans
 `C:\ProgramData\ssh\administrators_authorized_keys` (ACL restreinte par SID
 `S-1-5-18`/`S-1-5-32-544` — obligatoire, sinon sshd ignore le fichier en
 silence ; et c'est **ce** fichier qui vaut pour tout compte admin, pas

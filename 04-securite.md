@@ -137,6 +137,26 @@ vaut pour les trois) :
 > **Cette clé est l'issue de secours ultime du cluster.** Sa perte, combinée à un
 > TOTP inaccessible, ne laisserait que la console KVM/IPMI OVH.
 
+**La clé de Bertrand est posée partout où nous avons un accès SSH (18/09/2026).**
+`brtrnd@thinkpad`, ed25519, `SHA256:CCXg5hvs04z+ylM6MXzZQanYgtuFsRtj57VpWa+ipaI`.
+Le relevé du 18/09 l'a trouvée déjà en place sur proxy-tim, headscale,
+keycloak, zabbix, odoo (`ubuntu`), PBS et vaultwarden (VM 105, qui n'a que
+cette clé). Elle a été ajoutée le même jour, sans rien retirer, sur :
+- OPNsense, dans `config.xml` ([08-opnsense.md](08-opnsense.md#accès-dadministration)) ;
+- les cinq serveurs gestion (compte `ubuntu`) : tim-prod, isoteam-prod, rappro,
+  VM 103 et VM 104. Elle est aussi déclarée dans `ssh_authorized_keys` du
+  dépôt gestion (branche `chore/ansible-cle-ssh-brtrnd-ed25519`, à fusionner),
+  sinon la tâche exclusive d'Ansible la retirerait. Sa clé RSA du même nom y
+  reste ;
+- pacs03 ;
+- les huit serveurs Windows de Tellis et ProxyVia ([13-tellis.md](13-tellis.md)).
+
+Un ajout ne change pas l'ACL de `administrators_authorized_keys` : `icacls`
+est identique avant et après sur les neuf serveurs Windows. **À Tellis, la
+clé ne suffit pas** : Bertrand n'est pas pair du VPN nomade du pfSense
+(`tun_wg0`), la seule source que ces serveurs laissent entrer ou savent
+router au retour.
+
 ## Firewall
 
 Actif au niveau datacenter (`/etc/pve/firewall/cluster.fw`), `policy_in: DROP`.

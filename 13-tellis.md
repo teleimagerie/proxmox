@@ -139,7 +139,8 @@ tâches `wfm_*`/`fir_*` très nombreux — l'applicatif s'auto-surveille.
 
 ##### Accès SSH (30/08/2026)
 
-OpenSSH serveur activé sur TIMWFMCORE, clé `id_ed25519` du poste d'admin dans
+OpenSSH serveur activé sur TIMWFMCORE, clé `id_ed25519` du poste d'admin (et
+celle de Bertrand depuis le 18/09/2026) dans
 `C:\ProgramData\ssh\administrators_authorized_keys` (compte **`Administrator`**),
 `PasswordAuthentication no`. Alias `ssh timwfmcore` du `~/.ssh/config`, en
 direct ; le rebond par pacs03 a été **obligatoire du 30/08 au 11/09/2026** et
@@ -200,7 +201,8 @@ l'exploitant que pour TIMWFMCORE — mais ici la cartographie est simple
 
 OpenSSH serveur **9.5p2** (capacité Windows native) installé le 11/09/2026 par
 [scripts/installer-openssh-windows.ps1](scripts/installer-openssh-windows.ps1)
-lancé depuis le compte `philipsadm` : clé `id_ed25519` du poste dans
+lancé depuis le compte `philipsadm` : clé `id_ed25519` du poste (et celle de
+Bertrand depuis le 18/09/2026) dans
 `administrators_authorized_keys` (ACL SYSTEM + Administrateurs vérifiée),
 `PasswordAuthentication no` **vérifié** (`Permission denied (publickey)` sans clé).
 Alias `ssh vuemotion` (ou `timvueexplorer`) du `~/.ssh/config`, compte
@@ -415,7 +417,8 @@ Les statistiques d'ouverture de session sont identiques sur les deux
 
 Relevé : [`configs/inventaire-dicomproxy-2026-09-09.md`](configs/inventaire-dicomproxy-2026-09-09.md)
 (par SSH `ssh dicom@192.168.101.58`, lecture seule, clé du poste posée le 09/09 ;
-rien déposé ni modifié sur la machine).
+rien déposé ni modifié sur la machine). Le 18/09/2026, la clé de Bertrand a été
+ajoutée à `~dicom/.ssh/authorized_keys`, qui compte désormais trois clés.
 
 **Ce que c'est** : une VM Debian 11 (QEMU/KVM du Proxmox de site, 4 vCPU, 8 Gio,
 disque 128 Go rempli à 13 %, **439 jours d'uptime**) qui fait tourner **Siemens
@@ -494,7 +497,8 @@ serveurs syngo.via.
 ##### Accès SSH aux serveurs Syngo et TSplus (02/09/2026)
 
 OpenSSH serveur (10.0) **installé le 02/09/2026** sur les trois machines, clé
-`id_ed25519` du poste d'admin dans `administrators_authorized_keys` ; comptes
+`id_ed25519` du poste d'admin (et celle de Bertrand depuis le 18/09/2026) dans
+`administrators_authorized_keys` ; comptes
 **`remoteadmin`** sur les deux syngo.via et **`matthieu`** sur TSplus, shell
 `cmd.exe`, PowerShell 5.1 (en *ConstrainedLanguage* sur les syngo). Alias
 `syngovia1`, `syngovia2` et `tsplus` dans le `~/.ssh/config` du poste.
@@ -635,7 +639,8 @@ relevé). Machine bien plus récente que les deux autres.
 Accès par clé posé sur les **trois** serveurs, tous **Windows Server 2022
 Standard** (build 20348), compte local **`nicesoft_appli`** (membre du groupe
 Administrateurs), passerelle par défaut `192.168.111.254` (pfSense principal).
-Clé `id_ed25519` du poste dans `C:\ProgramData\ssh\administrators_authorized_keys`
+Clé `id_ed25519` du poste (et celle de Bertrand depuis le 18/09/2026) dans
+`C:\ProgramData\ssh\administrators_authorized_keys`
 (ACL SID `S-1-5-32-544`/`S-1-5-18`), mot de passe interdit. Alias `venus1`,
 `venus2`, `venus3` dans le `~/.ssh/config` du poste. Chemin : **le poste est
 pair du VPN nomades du pfSense** (`172.31.0.3`, tunnel `DC-TELLIS2`, voir

@@ -11,7 +11,7 @@ re-collectés dans les 4 minutes suivant le switch.
 | Adresse interne | `10.40.0.60/24` (VLAN 400), passerelle `10.40.0.1` |
 | Nom public | `zabbix.teleimagerie.net` — derrière **proxy-tim** (VIP `.122`), pas de VIP dédiée |
 | Ressources | **2 vCPU, 4 Go RAM** (réduits le 30/08 sur mesures : 608 Mio utilisés, load 0,00 — caches Zabbix ramenés à 128M/128M, remplis à 2 %/0 %, et `innodb_buffer_pool_size` **monté** 128M → 512M pour la base de 3,2 Gio), disque 40 Go sur Ceph |
-| Accès | `ssh root@10.40.0.60` depuis un nœud (clés cluster + clé WSL de matt) |
+| Accès | `ssh root@10.40.0.60` depuis un nœud (clés cluster + clé WSL de matt + clé de Bertrand) |
 | Haute dispo | ressource HA depuis le 29/08/2026 (`max_restart 3`, `max_relocate 3`) |
 | Bascule mesurée | **~19-20 s** (relocalisation pve2 → pve3, sonde 1 s sur l'UI publique) |
 | Nœud courant | **pve3** (relocalisé pour équilibrage post-migration) |
