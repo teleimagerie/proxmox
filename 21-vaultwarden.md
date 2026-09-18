@@ -328,6 +328,40 @@ seuil High sur la mémoire réelle.
 
 ---
 
+## Organisations et collections — gouvernance du partage
+
+Le coffre **personnel** est individuel et irrécupérable sans le master
+password. Le partage d'équipe passe par une **organisation**, dont les
+éléments appartiennent à l'entreprise, pas à un employé : un départ ne fait
+perdre aucun secret partagé.
+
+Modèle retenu (18/09/2026) :
+
+- **Une seule organisation « TIM »**. Seuls `bleroux` et `mcapon` peuvent en
+  créer (`ORG_CREATION_USERS`) et en sont *Owners*.
+- **Une collection par équipe** (ex. `Compta`, `Secrétariat`, `IT / Infra`,
+  `Direction`). Un membre ne voit que ses collections. Droits par collection :
+  lecture seule, modification, ou « masquer les mots de passe » (autofill
+  sans lecture — pour les comptes sensibles).
+- **Entrée d'un membre, cycle en trois temps, tous obligatoires** :
+  1. *Inviter* (Organisation → Membres, par e-mail — passe par Mailjet) ;
+  2. l'employé *accepte* après son login SSO habituel ;
+  3. un Owner/Admin *confirme* — c'est l'échange de clés : la clé de
+     l'organisation est chiffrée vers la clé publique du membre. Le serveur
+     ne voit jamais rien en clair ; tant que la confirmation n'est pas faite,
+     le membre ne voit rien.
+- **Partager un secret existant** : coffre perso → ⋮ → « Attribuer à une
+  organisation » → choisir les collections. L'élément **déménage** (il quitte
+  le coffre perso).
+- Pas de mapping automatique des groupes Google/Keycloak vers les
+  collections (pas de SCIM) : l'affectation reste un geste d'admin.
+
+Démarrage conseillé : organisation + 3-4 collections, inviter `mcapon`
+(le cycle complet valide Mailjet au passage), quelques secrets tests, puis
+inviter les employés par vagues.
+
+---
+
 ## Vérification de bout en bout
 
 ```bash
@@ -379,8 +413,10 @@ curl -sI http://vault.teleimagerie.net | head -1     # 301
       `vaultwarden.env`, admin temporaire détruit
 - [x] Compose lancé (1.37.2), `/alive` → 200 en local, `ADMIN_TOKEN` vérifié
       **dans** le conteneur (pièges n° 46-47)
-- [ ] Expéditeur Mailjet validé + `SMTP_USERNAME`/`SMTP_PASSWORD` renseignés
-      dans `vaultwarden.env`, mail de test reçu depuis `/admin`
+- [x] SMTP Mailjet ✅ le 18/09 : `SMTP_USERNAME`/`SMTP_PASSWORD` renseignés
+      (l'erreur `535 authentication failed` bloquait la création de compte —
+      Vaultwarden envoie le mail de bienvenue dans la transaction) et **mail
+      de bienvenue réellement reçu** : expéditeur `vaultwarden@` actif
 - [x] DNS créé (TTL 60) + vhost + certificat (échéance 17/12/2026),
       `certbot renew --dry-run` ✅ pour `vault` (l'échec du même dry-run sur
       `auth` était un `rateLimited` passager de l'endpoint staging Let's Encrypt)
@@ -388,8 +424,10 @@ curl -sI http://vault.teleimagerie.net | head -1     # 301
       [scripts/unbound-override-vaultwarden.py](scripts/unbound-override-vaultwarden.py)
       après ajout de la clé SSH du poste dans OPNsense (Matthieu) ; vérifié
       depuis la VM 105 : résolution `10.40.0.10`, `/alive` → 200 via le proxy
-- [ ] Matrice de vérification déroulée : SSO de bout en bout (extérieur), puis
-      intérieur après l'override ; `dns-vaultwarden.py ttl3600` après validation
+- [x] **SSO de bout en bout validé le 18/09** (poste externe au VLAN) : web-vault
+      → Enterprise SSO → Keycloak → Google → master password → coffre ouvert,
+      compte créé à la volée. Restent : clients mobiles/extension,
+      `dns-vaultwarden.py ttl3600` après quelques jours
 - [x] `vw-pgdump` en place (premier dump prouvé) — 📋 première sauvegarde
       vzdump à constater demain, restauration à tester une fois peuplé
 - [x] Zabbix : hôte agent (`available=1`) + `cert-vault` + macro mémoire 200 + seuil
