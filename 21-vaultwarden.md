@@ -1,11 +1,12 @@
 # Vaultwarden — coffre de mots de passe d'entreprise (VM 105)
 
-> 📋 **PRÉPARÉ le 18/09/2026 — non déployé.** Cette fiche est le dossier de
-> déploiement : décisions arrêtées, runbook complet, configurations prêtes
-> ([configs/vault.teleimagerie.net.conf](configs/vault.teleimagerie.net.conf),
-> [scripts/dns-vaultwarden.py](scripts/dns-vaultwarden.py),
-> [scripts/unbound-override-vaultwarden.py](scripts/unbound-override-vaultwarden.py)).
-> Au fil du déploiement, remplacer les 📋 par des ✅ et compléter la
+> ✅ **DÉPLOYÉ le 18/09/2026** (Vaultwarden **1.37.2**) : VM 105, client OIDC,
+> compose, DNS public, certificat, vhost, HA, dump 01:15, Zabbix — le tout en
+> une matinée, runbook déroulé tel quel (trois accrocs, devenus les
+> [pièges n° 46-47](07-pieges.md#46-le-fichier-env-dun-projet-compose-est-interpolé-et-un-hash-argon2-est-truffé-de) et
+> une correction de recette : la clé SSH cloud-init vient du poste d'admin,
+> pas de pve1). **Reste** : override Unbound (accès OPNsense — Matthieu),
+> identifiants SMTP Mailjet, test SSO de bout en bout —
 > [checklist de fin de chantier](#checklist-de-fin-de-chantier).
 
 > ✅ vérifié/mesuré · 📋 déclaré/préparé · ⚠️ à vérifier / inconnu
@@ -108,9 +109,11 @@ qm create 105 --name vaultwarden --cpu host --cores 2 --memory 4096 --balloon 0 
   --scsihw virtio-scsi-single
 qm disk import 105 /mnt/pve/nas-vm/template/iso/noble-server-cloudimg-amd64.img vm-storage
 qm set 105 --scsi0 vm-storage:vm-105-disk-0,discard=on,iothread=1 --boot order=scsi0
+# la clé qui entre dans la VM est celle du POSTE D'ADMIN (pve1 n'a pas de
+# paire de clés propre) : scp ~/.ssh/id_ed25519.pub root@pve1:/tmp/vm105-key.pub
 qm set 105 --ide2 vm-storage:cloudinit \
   --ipconfig0 ip=10.40.0.100/24,gw=10.40.0.1 --nameserver 10.40.0.1 \
-  --ciuser ubuntu --sshkeys /root/.ssh/id_ed25519.pub
+  --ciuser ubuntu --sshkeys /tmp/vm105-key.pub
 qm disk resize 105 scsi0 20G
 qm start 105
 ```
@@ -170,7 +173,7 @@ sert tel quel.
 # /srv/vaultwarden/compose.yaml
 services:
   vaultwarden:
-    image: vaultwarden/server:1.35.1   # vérifier la dernière 1.3x au déploiement
+    image: vaultwarden/server:1.37.2
     restart: unless-stopped
     depends_on:
       - db
@@ -180,7 +183,7 @@ services:
       - "10.40.0.100:8080:80"
     volumes:
       - ./vw-data:/data
-    env_file: .env          # secrets — jamais versionné
+    env_file: vaultwarden.env   # secrets — jamais versionné ; PAS « .env » (piège n° 43)
     environment:
       DOMAIN: https://vault.teleimagerie.net
       SIGNUPS_ALLOWED: "false"
@@ -208,14 +211,18 @@ services:
     environment:
       POSTGRES_DB: vaultwarden
       POSTGRES_USER: vaultwarden
-    env_file: .env          # POSTGRES_PASSWORD
+    env_file: vaultwarden.env   # POSTGRES_PASSWORD
 ```
 
-`.env` (mode 600, contenu depuis le gestionnaire de secrets) :
-`SSO_CLIENT_SECRET`, `POSTGRES_PASSWORD`,
+`vaultwarden.env` (mode 600) : `SSO_CLIENT_SECRET` (écrit directement depuis
+le CT 203 par le chantier, jamais affiché — relecture :
+`kcadm get clients/<uuid>/client-secret -r tim`), `POSTGRES_PASSWORD`,
 `DATABASE_URL=postgresql://vaultwarden:<mdp>@db:5432/vaultwarden`,
-`ADMIN_TOKEN` (hash Argon2 : `docker run --rm -it vaultwarden/server:1.35.1
-/vaultwarden hash`), `SMTP_USERNAME`/`SMTP_PASSWORD` (compte Mailjet).
+`ADMIN_TOKEN` (hash Argon2 via le paquet `argon2` : `echo -n "<mdp>" |
+argon2 "$(openssl rand -base64 16)" -id -e -k 65540 -t 3 -p 4` — le mot de
+passe en clair ne vit que dans le gestionnaire de secrets, et **chaque `$` du
+hash est doublé en `$$`**, [piège n° 46](07-pieges.md#46-le-fichier-env-dun-projet-compose-est-interpolé-et-un-hash-argon2-est-truffé-de)),
+`SMTP_USERNAME`/`SMTP_PASSWORD` (compte Mailjet).
 
 `SSO_AUTHORITY` doit être **exactement** l'issuer du discovery — contrôle :
 `curl -s https://auth.teleimagerie.net/realms/tim/.well-known/openid-configuration | jq -r .issuer`.
@@ -308,12 +315,16 @@ vise les commandes qui dépendent de l'entrypoint). Le volume `vw-data/`
 
 ### 7. Supervision Zabbix
 
-Agent passif dans la VM + hôte certificat `cert-vault.teleimagerie.net`,
-sur le patron idempotent de
-[scripts/zabbix-provision-staging.py](scripts/zabbix-provision-staging.py) —
-y compris la macro `{$PVE.VM.MEMORY.PUSE.MAX.WARN:"qemu/105"}` = 200 sur
+Agent 2 passif dans la VM (**dépôt officiel Zabbix 7.0** — `zabbix-agent2`
+n'existe pas dans les dépôts Ubuntu noble : installer `zabbix-release` depuis
+`repo.zabbix.com` d'abord ; `Server=10.40.0.60`, `Hostname=vaultwarden`),
+puis [scripts/zabbix-provision-vaultwarden.py](scripts/zabbix-provision-vaultwarden.py)
+(`tout`, sur le CT 204, idempotent) : hôte agent, hôte certificat `cert-vault`
+(sonde via `10.40.0.10` — piège n° 32), macro
+`{$PVE.VM.MEMORY.PUSE.MAX.WARN:"qemu/105"}` = 200 posée **d'emblée** sur
 `cluster-pve` (VM sans balloon,
-[piège n° 42](07-pieges.md#42-une-vm-sans-balloon-est-toujours-pleine-pour-lhyperviseur-et-une-escalade-sans-fin-transforme-un-faux-positif-en-80-mails)).
+[piège n° 42](07-pieges.md#42-une-vm-sans-balloon-est-toujours-pleine-pour-lhyperviseur-et-une-escalade-sans-fin-transforme-un-faux-positif-en-80-mails)),
+seuil High sur la mémoire réelle.
 
 ---
 
@@ -363,20 +374,30 @@ curl -sI http://vault.teleimagerie.net | head -1     # 301
 
 ## Checklist de fin de chantier
 
-- [ ] VM 105 créée, provisionnée, HA ajoutée, `make controle` sans écart
-- [ ] Client `vaultwarden` créé (realm `tim`), secret vaulté, admin temporaire détruit
-- [ ] Compose lancé, `/alive` → 200 en local
-- [ ] Expéditeur Mailjet validé, mail de test reçu
-- [ ] DNS créé + override Unbound + vhost + certificat, `certbot renew --dry-run` OK
-- [ ] Matrice de vérification ci-dessus déroulée (extérieur + intérieur)
-- [ ] `vw-pgdump` en place, première sauvegarde vzdump constatée, restauration testée
-- [ ] Zabbix : hôte agent + `cert-vault.teleimagerie.net` + macro mémoire 200
-- [ ] Relevés mis à jour : [configs/zone-teleimagerie.net](configs/zone-teleimagerie.net),
-      [09-proxy-tim.md](09-proxy-tim.md) (tables « Ce qui est publié » et « Certificats »),
-      [14-noms-de-domaine.md](14-noms-de-domaine.md),
-      [16-keycloak.md](16-keycloak.md) (tables raccordé + clients),
-      [README.md](README.md) (état en une page, compte de machines),
-      [12-architecture-hds.md](12-architecture-hds.md) (revue contractuelle)
-- [ ] `make liens` propre, cette fiche passée de 📋 à ✅ avec les chiffres réels
+- [x] VM 105 créée et provisionnée (18/09/2026), HA ajoutée — 📋 `make controle` à repasser
+- [x] Client `vaultwarden` créé (realm `tim`), secret posé directement dans
+      `vaultwarden.env`, admin temporaire détruit
+- [x] Compose lancé (1.37.2), `/alive` → 200 en local, `ADMIN_TOKEN` vérifié
+      **dans** le conteneur (pièges n° 46-47)
+- [ ] Expéditeur Mailjet validé + `SMTP_USERNAME`/`SMTP_PASSWORD` renseignés
+      dans `vaultwarden.env`, mail de test reçu depuis `/admin`
+- [x] DNS créé (TTL 60) + vhost + certificat (échéance 17/12/2026),
+      `certbot renew --dry-run` ✅ pour `vault` (l'échec du même dry-run sur
+      `auth` était un `rateLimited` passager de l'endpoint staging Let's Encrypt)
+- [ ] **Override Unbound** `vault → 10.40.0.10` (accès OPNsense : clé du poste
+      absente de `/conf/config.xml`, GUI ou Matthieu — le script
+      [scripts/unbound-override-vaultwarden.py](scripts/unbound-override-vaultwarden.py) est prêt)
+- [ ] Matrice de vérification déroulée : SSO de bout en bout (extérieur), puis
+      intérieur après l'override ; `dns-vaultwarden.py ttl3600` après validation
+- [x] `vw-pgdump` en place (premier dump prouvé) — 📋 première sauvegarde
+      vzdump à constater demain, restauration à tester une fois peuplé
+- [x] Zabbix : hôte agent (`available=1`) + `cert-vault` + macro mémoire 200 + seuil
+- [x] Relevés mis à jour : zone, 09 (publié + certificats), 14, 16 (raccordé +
+      clients + candidats), README (dix machines, état, HA 8, pièges 47),
+      [configs/ha-resources.cfg](configs/ha-resources.cfg), topologie
+- [ ] Test HA : migration à chaud de la VM 105, coupure à mesurer et consigner ici
 - [ ] Communication employés : lancement, master password irrécupérable,
       comportement hors-ligne, organisations/collections par service
+- [x] ~~chantier « 5 nœuds » à ouvrir~~ — pve4/pve5 (ex-dédiés staging, GRA3)
+      étaient déjà documentés par la session du 15/09 (README, test 7 de la
+      fiche 05) ; constat fait pendant ce chantier, rien à ouvrir

@@ -101,6 +101,7 @@ Ce que le proxy est **configuré** pour servir. Depuis la bascule du
 | `auth.teleimagerie.net` | terminaison TLS | `http://10.40.0.50:8080` — Keycloak (CT 203), depuis le 27/08/2026 — [16-keycloak.md](16-keycloak.md) |
 | `zabbix.teleimagerie.net` | terminaison TLS | `http://10.40.0.60:8080` — Zabbix (CT 204), **en production depuis la bascule du 29/08/2026 15:51 UTC** (`/zabbix/*` → 301 `/*`) — [17-zabbix.md](17-zabbix.md) |
 | `odoo.teleimagerie.net` | terminaison TLS | `http://10.40.0.70:8069` — Odoo (VM 101), **en production depuis la bascule du 29/08/2026 16:18 UTC** (websocket, CORS images, corps 1G) — [18-odoo.md](18-odoo.md) |
+| `vault.teleimagerie.net` | terminaison TLS | `http://10.40.0.100:8080` — Vaultwarden (VM 105), **publié le 18/09/2026** (WebSocket `/notifications/hub` sans tamponnage) — [21-vaultwarden.md](21-vaultwarden.md) |
 | `syngo.teleimagerie.net` | redirection 301 | → `syngo-via.teleimagerie.net` |
 | `syngo.isoteam.mn` | redirection 301 | → `syngo-via.isoteam.mn` |
 | `syngo-via.teleimagerie.net` | **relais TLS brut** | `37.61.243.246:443` (TSplus, DC TELLIS) |
@@ -272,6 +273,7 @@ Relevé du 24/08/2026 :
 | `staging-teleimagerie` | `/etc/nginx/certs/staging-teleimagerie/` | `*.staging.teleimagerie.net`, `app-staging.teleimagerie.net`, `gestion-staging.teleimagerie.net` | **13/12/2026** (émis le 14/09) | acme.sh sur pve1 (DNS-01, wildcard impossible en HTTP-01), hook [scripts/deploy-staging-teleimagerie.sh](scripts/deploy-staging-teleimagerie.sh) |
 | `staging-isoteam` | `/etc/nginx/certs/staging-isoteam/` | `*.staging.isoteam.mn`, `app-staging`, `gestion-staging`, `preprod-app`, `preprod-gestion` `.isoteam.mn` | **13/12/2026** (émis le 14/09) | idem, hook [scripts/deploy-staging-isoteam.sh](scripts/deploy-staging-isoteam.sh) |
 | `odoo` | `/etc/letsencrypt/live/odoo.teleimagerie.net/` | `odoo.teleimagerie.net` | **27/11/2026** | certbot du conteneur (webroot, émis à la bascule du 29/08) ; l'auto-signé provisoire de `/etc/nginx/certs/odoo-selfsigned/` ne sert plus |
+| `vault` | `/etc/letsencrypt/live/vault.teleimagerie.net/` | `vault.teleimagerie.net` | **17/12/2026** | certbot du conteneur (webroot, émis le 18/09 ; dry-run de renouvellement ✅) |
 
 **Le proxy ne gère aucun certificat pour `syngo-via.*`** : ces noms sont en
 relais TLS brut, c'est TSplus qui présente et renouvelle le sien. Les SAN
