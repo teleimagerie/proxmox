@@ -32,6 +32,10 @@ nouveau hors des interconnexions entre les deux sites.
 > « l'IdP est-il dans le périmètre ? » ne bloque donc plus le raccordement
 > SSO de MyTIM (y compris son extension future aux médecins) ; reste à
 > consigner cette couverture dans la revue contractuelle ci-dessus.
+> 📋 Même logique pour le **coffre de mots de passe Vaultwarden**
+> ([21-vaultwarden.md](21-vaultwarden.md), en préparation le 18/09/2026) :
+> il donnera accès aux applications de santé, il est hébergé sur le cluster
+> (offre HDS), et sa couverture est à consigner dans la même revue.
 
 Un troisième lieu intervient, sans être un datacenter opéré : le **NAS-HA
 OVH de Roubaix**, qui reçoit les sauvegardes du cluster

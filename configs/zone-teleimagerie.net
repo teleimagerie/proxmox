@@ -92,6 +92,7 @@ test01        IN A     162.19.25.107
 testwp        IN A     51.83.79.119
 timfact        IN A     77.158.128.112
 timfact        IN AAAA     2001:41d0:304:200::f5c
+vault     60 IN A     57.130.34.122
 voip        IN A     51.38.33.236
 welcome        IN CNAME     ghs.googlehosted.com.
 www        IN MX     1 aspmx.l.google.com.

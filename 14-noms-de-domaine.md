@@ -135,6 +135,7 @@ du site TELLIS 📋, à confirmer avec [13-tellis.md](13-tellis.md).
 | `api`, `api1`, `www1`, `test01` | `162.19.25.107` (+ AAAA) | API 📋 |
 | `e-learning`, `elearning` | `51.210.149.58` | e-learning 📋 |
 | `odoo` | `57.130.34.122` | ERP Odoo — **sur le cluster depuis le 29/08/2026** (VM 101 via proxy-tim, AAAA supprimé — [18-odoo.md](18-odoo.md)) |
+| `vault` | `57.130.34.122` | coffre de mots de passe Vaultwarden ✅ **créé le 18/09/2026** (VM 105 via proxy-tim, TTL 60 le temps de la mise en service, pas d'AAAA — [21-vaultwarden.md](21-vaultwarden.md)) |
 | `zabbix` | `57.130.34.122` | supervision ✅ **basculé sur le CT 204 le 29/08/2026** (TTL 60 le temps de la fenêtre d'observation, `revert` possible tant que le VPS vit) — [17-zabbix.md](17-zabbix.md) |
 | `voip` | `51.38.33.236` | téléphonie 📋 |
 | `bastion` | `51.38.189.223` | bastion d'accès 📋 |

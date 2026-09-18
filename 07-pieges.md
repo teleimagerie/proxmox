@@ -1204,3 +1204,53 @@ service va bien », elle dit « la socket s'ouvre depuis ici » ; sur un port qu
 devrait pas être joignable, c'est un signal de sécurité, pas de disponibilité.
 Et avant de crier à la panne sur une alerte de port : regarder `last` et les dates
 des fichiers de configuration, l'éditeur passe sans prévenir.
+## 46. Le fichier `.env` d'un projet Compose est interpolé, et un hash Argon2 est truffé de `$`
+
+**Symptôme** — Au premier `docker compose up` de Vaultwarden (VM 105, 18/09/2026),
+une pluie de warnings : `The "argon2id" variable is not set. Defaulting to a
+blank string.`, idem pour `v`, `m` et des fragments du sel. Le conteneur
+démarre pourtant, `/alive` répond — mais l'`ADMIN_TOKEN` reçu par le processus
+est un hash amputé de tous ses segments : le panneau `/admin` aurait refusé le
+mot de passe sans autre indice.
+
+**Cause** — Le fichier s'appelait `.env`. Pour Compose, `.env` à la racine du
+projet n'est pas un `env_file` comme un autre : c'est le fichier
+d'**interpolation du `compose.yaml`**. Tout `$mot` y est traité comme une
+variable à substituer — et un hash Argon2 PHC (`$argon2id$v=19$m=65540…`) en
+est plein. Renommer le fichier n'a pas suffi : cette version de Compose
+(v5.5.1) interpole **aussi** le contenu des `env_file:` déclarés.
+
+**Résolution** — Fichier renommé `vaultwarden.env` (référencé par `env_file:`)
+et, sur la ligne `ADMIN_TOKEN`, chaque `$` doublé en `$$` — la séquence
+d'échappement Compose pour un `$` littéral. Contrôle qui fait foi : comparer
+la valeur **vue par le processus** (`docker compose exec -T vaultwarden
+printenv ADMIN_TOKEN`) avec celle du fichier, pas se fier à l'absence de
+warning.
+
+**Leçon** — Un secret qui contient `$` (hash Argon2/bcrypt, mot de passe
+généré) ne traverse pas Compose intact sans `$$`. Et le warning « variable is
+not set » sur un nom qui ressemble à un morceau de secret n'est pas cosmétique :
+c'est le secret en train d'être broyé.
+
+## 47. Dans un script servi par `ssh 'bash -s'`, toute commande qui lit stdin mange la suite du script
+
+**Symptôme** — Deux exécutions de suite (18/09/2026), le script de contrôle du
+déploiement Vaultwarden s'arrête net après `=== controle du token ===` : pas
+d'erreur, pas de sortie, code retour 0 du ssh. Les lignes suivantes du script
+ne s'exécutent simplement jamais.
+
+**Cause** — Le script arrive par `ssh hôte 'bash -s' <<EOF` : **le texte du
+script est le stdin du bash distant**. La première commande qui lit stdin —
+ici `docker compose exec -T` , qui attache le flux au conteneur — consomme le
+reste du heredoc. `bash -s` n'a plus rien à lire : fin silencieuse, sans code
+d'erreur. Cousin du [piège n° 36](#36-docker-compose-exec-court-circuite-lentrypoint-de-limage-odoo)
+(même commande, défaut différent) ; `psql`, `ssh` imbriqué ou `read` font pareil.
+
+**Résolution** — `</dev/null` sur la commande fautive
+(`docker compose exec -T … printenv X </dev/null`). Le script est reparti au
+premier essai.
+
+**Leçon** — Dans tout script transmis par stdin (`bash -s`, `pct exec`… ),
+rediriger `</dev/null` chaque commande susceptible de lire l'entrée. Un script
+qui « s'arrête sans erreur toujours au même endroit » est le signe de ce vol
+de stdin, pas d'un plantage.

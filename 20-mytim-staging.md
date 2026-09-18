@@ -312,6 +312,16 @@ et évite un arrêt/relance périodique dont personne n'a besoin.
   Proxmox VE 9 le 15/09/2026 et intégrés au cluster comme **pve4** (`ns3240079`,
   `.184`) et **pve5** (`ns3240118`, `.185`) — [01-architecture.md](01-architecture.md).
   Le retour arrière de la bascule staging est **clos** depuis cette date ;
+- [ ] **première sauvegarde des VM 103/104 le dimanche 20/09** — relevé le 15/09 :
+  les deux VM n'ont **aucune sauvegarde** depuis leur mise en service (`pvesm list
+  pbs --vmid 103` et `104` vides, confirmé par `pvesh`). Le job hebdomadaire
+  `039513a0` est correctement configuré (`sun 03:00`, `keep-last=1`,
+  `vmid 103,104`) mais a été créé le lundi 14/09, après le dernier dimanche. La
+  première passe sera la plus lourde (rien à dédupliquer, ~70 Go sur la 103) et
+  tombera à 03:00 sur les deux VM à la fois, une heure après le job quotidien de
+  02:00 : vérifier durée, occupation réelle du datastore et absence de
+  chevauchement. C'est aussi là qu'on mesurera l'effet de l'extension à 150 Go
+  (a priori nul : les 50 Go ajoutés sont des blocs nuls, dédupliqués) ;
 - [x] `bascule-staging.py ttl3600` — fait le 14/09 à 10:33 UTC, sans attendre la résiliation (bascule validée, aucun retour arrière envisagé) ;
 - [x] `feat/staging-proxmox` fusionnée dans `main` du dépôt gestion (`28d57036`, 14/09) ;
 - [ ] **SFTP GRU** (`81.255.38.171:2222`, compte `sftp_timgru_test`) : **filtre par IP
