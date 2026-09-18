@@ -69,7 +69,7 @@ Si vous en voyez un, c'est le signe d'un problème — ne cliquez pas au travers
 | [04-securite.md](04-securite.md) | Durcissement, TOTP, firewall, emplacement des secrets |
 | [05-tests-ha.md](05-tests-ha.md) | Mesures réelles de bascule (chiffres, pas estimations) |
 | [06-reste-a-faire.md](06-reste-a-faire.md) | Points ouverts : sauvegardes, VPN site-à-site, DC TELLIS, authentification |
-| [07-pieges.md](07-pieges.md) | **Les 47 pièges rencontrés et leur résolution** |
+| [07-pieges.md](07-pieges.md) | **Les pièges rencontrés et leur résolution** (numérotés pour les renvois des fiches) |
 | [08-opnsense.md](08-opnsense.md) | Pare-feu OPNsense : WAN, filtrage, WireGuard, accès |
 | [09-proxy-tim.md](09-proxy-tim.md) | Reverse proxy nginx : aiguillage SNI, relais TLS TSplus, certificats |
 | [10-sauvegardes.md](10-sauvegardes.md) | **NAS-HA, Proxmox Backup Server, restauration** |
