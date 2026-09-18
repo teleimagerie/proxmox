@@ -145,7 +145,7 @@ cette clé). Elle a été ajoutée le même jour, sans rien retirer, sur :
 - OPNsense, dans `config.xml` ([08-opnsense.md](08-opnsense.md#accès-dadministration)) ;
 - les cinq serveurs gestion (compte `ubuntu`) : tim-prod, isoteam-prod, rappro,
   VM 103 et VM 104. Elle est aussi déclarée dans `ssh_authorized_keys` du
-  dépôt gestion (branche `chore/ansible-cle-ssh-brtrnd-ed25519`, à fusionner),
+  dépôt gestion (fusionné dans main le 18/09/2026, merge `336046a8e`),
   sinon la tâche exclusive d'Ansible la retirerait. Sa clé RSA du même nom y
   reste ;
 - pacs03 ;
