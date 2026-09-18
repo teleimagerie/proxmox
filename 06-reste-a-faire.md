@@ -304,6 +304,10 @@ brokering Google Workspace et SMTP Mailjet en place. Ce qui reste :
   Accounts` est resté actif (second bouton inutile sur la page de login) et
   `web.base.url.freeze` n'est pas positionné
   ([18-odoo.md](18-odoo.md#sso-keycloak)).
+- **Vaultwarden** (coffre de mots de passe, VM 105) : dossier de déploiement
+  préparé le 18/09/2026 — dérouler le runbook de
+  [21-vaultwarden.md](21-vaultwarden.md) (SSO obligatoire via le realm `tim`,
+  identités Google par le broker existant, pas de SAML).
 - **Applications d'entreprise** (Zabbix en SAML/LDAP, CRM, e-learning,
   bastion) : collecter les accès, tableau des candidats dans
   [16-keycloak.md](16-keycloak.md#candidats-au-raccordement--étude-du-27082026).

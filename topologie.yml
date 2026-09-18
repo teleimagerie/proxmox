@@ -172,6 +172,18 @@ machines:
       Pas de HA (staging) ; sauvegarde hebdomadaire, une copie conservée.
       Exposée par proxy-tim (app./gestion./mailer.staging.isoteam.mn).
 
+  vaultwarden:
+    role: Coffre de mots de passe d'entreprise (Vaultwarden, VM 105)
+    zone: vlan400
+    attendu:
+      tag: 400
+      ip: 10.40.0.100
+    note: >
+      Déclarée le 18/09/2026 en préparation du déploiement (fiche
+      21-vaultwarden.md) — un écart « machine absente » sur la carte est
+      normal tant que la VM n'est pas créée. Exposée par proxy-tim
+      (vault.teleimagerie.net), SSO Keycloak obligatoire.
+
   pbs:
     role: Serveur de sauvegarde
     zone: vlan300
